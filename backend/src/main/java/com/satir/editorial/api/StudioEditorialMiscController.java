@@ -32,7 +32,7 @@ import com.satir.platform.api.Preconditions;
 @RequestMapping("/api/v1/studio")
 class StudioEditorialMiscController {
 
-    private static final List<String> PUBLICATION_JOBS = List.of(ArticleCommands.PUBLICATION_EMAIL_JOB);
+    private static final List<String> PUBLICATION_JOBS = List.of(ArticleCommands.PUBLICATION_EMAIL_JOB, ArticleCommands.READER_PUBLICATION_EMAIL_JOB);
 
     private final CategoryCommands categories;
     private final StudioContentQuery query;

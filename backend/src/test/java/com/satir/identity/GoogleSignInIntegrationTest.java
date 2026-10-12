@@ -152,15 +152,20 @@ class GoogleSignInIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void ownerCannotUseGoogle() {
-        UUID ownerId = createOwner();
-        jdbc.sql("INSERT INTO external_identity (id, user_id, provider, subject, created_at) VALUES (:id, :user, 'GOOGLE', 'g-owner', :now)")
-                .param("id", UUID.randomUUID()).param("user", ownerId).param("now", new Timestamp(System.currentTimeMillis())).update();
-        ApiClient api = client();
-        api.refreshCsrf();
-        Response callback = signIn(api, "/api/v1/auth/google/start", Map.of("returnTo", "/"), "g-owner", "x@example.test", true);
-        assertThat(callback.header("Location")).isEqualTo("/?google_error=owner_google_disabled");
-        assertThat(api.get("/api/v1/studio/articles").status()).isEqualTo(401);
+    void ownerLinksGoogleOnlyAfterReauthAndRoleStillComesFromTheServer() {
+        createOwner();
+        ApiClient owner = ownerClient();
+        assertThat(owner.post("/api/v1/me/connections/google/start", Map.of("returnTo", "/hesap")).code())
+                .isEqualTo("REAUTH_REQUIRED");
+        assertThat(owner.post("/api/v1/auth/reauthenticate", Map.of("password", OWNER_PASSWORD)).status()).isEqualTo(200);
+        assertThat(signIn(owner, "/api/v1/me/connections/google/start", Map.of("returnTo", "/hesap"),
+                "g-owner", OWNER_EMAIL, true).header("Location")).isEqualTo("/hesap?google=linked");
+        ApiClient again = client(); again.refreshCsrf();
+        Response callback = signIn(again, "/api/v1/auth/google/start", Map.of("returnTo", "/"),
+                "g-owner", OWNER_EMAIL, true);
+        assertThat(callback.header("Location")).isEqualTo("/?google=signed_in");
+        assertThat(again.get("/api/v1/me").text("role")).isEqualTo("owner");
+        assertThat(again.get("/api/v1/studio/articles").status()).isEqualTo(200);
     }
 
     @Test

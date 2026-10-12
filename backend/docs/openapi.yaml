@@ -355,7 +355,7 @@ paths:
       tags: [me]
       operationId: updatePreferences
       security: [{sessionCookie: [], csrfHeader: []}]
-      summary: Account-wide publication e-mail and time zone (shares the profile version)
+      summary: Reader subscription, author publication e-mail and time zone (shares the profile version)
       parameters: [{$ref: '#/components/parameters/IfMatch'}]
       requestBody:
         required: true
@@ -365,7 +365,8 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                publicationEmail: {type: boolean}
+                publicationEmail: {type: boolean, description: Notification when your own writing is published}
+                publicationSubscription: {type: boolean, description: Subscribe to first publications; enabled by default}
                 timeZone: {type: string, description: IANA zone}
       responses:
         '200': {$ref: '#/components/responses/ProfileWithEtag'}
@@ -1784,9 +1785,10 @@ components:
         preferences:
           type: object
           additionalProperties: false
-          required: [publicationEmail, timeZone]
+          required: [publicationEmail, publicationSubscription, timeZone]
           properties:
-            publicationEmail: {type: boolean}
+            publicationEmail: {type: boolean, description: Author notification preference}
+            publicationSubscription: {type: boolean, description: Reader subscription; defaults to true}
             timeZone: {type: string, description: IANA zone, examples: [Europe/Istanbul]}
         version: {type: integer, format: int64}
 

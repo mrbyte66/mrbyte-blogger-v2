@@ -21,6 +21,9 @@ public class UserPreferenceEntity {
     @Column(name = "publication_email", nullable = false)
     private boolean publicationEmail;
 
+    @Column(name = "publication_subscription", nullable = false)
+    private boolean publicationSubscription;
+
     @Column(name = "preferred_timezone", nullable = false)
     private String preferredTimezone;
 
@@ -31,6 +34,7 @@ public class UserPreferenceEntity {
         UserPreferenceEntity preference = new UserPreferenceEntity();
         preference.userId = userId;
         preference.publicationEmail = true;
+        preference.publicationSubscription = true;
         preference.preferredTimezone = DEFAULT_TIME_ZONE;
         return preference;
     }
@@ -38,6 +42,8 @@ public class UserPreferenceEntity {
     public boolean isPublicationEmail() {
         return publicationEmail;
     }
+
+    public boolean isPublicationSubscription() { return publicationSubscription; }
 
     public String getPreferredTimezone() {
         return preferredTimezone;

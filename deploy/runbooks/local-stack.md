@@ -55,3 +55,9 @@ Volume silme normal yenileme değildir; asistan kullanıcı verisini reset etmez
 Yeni checkout Masaüstündeki `mrbyte-blogger-v2`. Backend, frontend, PostgreSQL ve Mailpit sağlıklı; site tarayıcıda açıldı. Ayrı DB'ye 25 yazı, 4 seri, 3 üye ve development owner yüklendi. Owner parolası yalnız git dışı `deploy/owner.local.txt` içinde; production hesabı değildir. Seed yeni kararlara tam uyumlu sayılmaz; özel yazı örnekleri ve sayaçlar #12/#3/#9'da denetlenir.
 
 Eski `com.satir.ci-monitor` LaunchAgent durduruldu; plist `.disabled` uzantısıyla korundu. Normal CI workflow'ları korunur. Bu servisi yeni çalışma düzeninde yeniden kurma. Kayıt eşitleme servisi yalnız Project özel alanını günceller; AI/agent çalıştırmaz.
+
+## Yerel üyelik hesabı ve Google
+
+3011 test ortamındaki owner bilgisi `deploy/owner-account.local.env`, parola `deploy/owner.local.txt` içindedir; ikisi de git dışıdır. Hesap/parola bu çalışma sırasında yerel API ile güncellendi; canlı ortama seed veya sabit kimlik bilgisi eklenmez. Eski 3010 ortamı başka hesaba/veritabanına aittir; onun doğru parola dosyasını yeni ortam için kullanma. Eski servislerin pause durumu korundu.
+
+Google bilgileri mevcut git dışı yapılandırmadan `deploy/google.local.env` içine alındı. 3011 akışı için Google Console'da `http://127.0.0.1:3011/api/v1/auth/google/callback` izinli dönüş adresi olmalıdır. Kaydedilmiş ve gerçek hesapla doğrulanmış saymak için Console kaydı ile gerçek OAuth dönüşü ayrı kontrol edilir.

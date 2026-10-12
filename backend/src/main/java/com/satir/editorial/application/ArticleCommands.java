@@ -49,6 +49,7 @@ import com.satir.platform.audit.AuditLog;
 import com.satir.platform.db.IdGenerator;
 import com.satir.platform.text.Slugs;
 import com.satir.platform.validation.ValidationException;
+import com.satir.identity.application.PublicationSubscriptions;
 
 /**
  * Owner article commands (API contract §7). Every command row-locks the article; when series are
@@ -59,6 +60,7 @@ import com.satir.platform.validation.ValidationException;
 public class ArticleCommands {
 
     public static final String PUBLICATION_EMAIL_JOB = "PUBLICATION_EMAIL";
+    public static final String READER_PUBLICATION_EMAIL_JOB = "READER_PUBLICATION_EMAIL";
 
     public record VersionRef(UUID id, long version) {
     }
@@ -78,6 +80,7 @@ public class ArticleCommands {
     private final MediaService media;
     private final EditorialJson json;
     private final Outbox outbox;
+    private final PublicationSubscriptions subscriptions;
     private final AuditLog audit;
     private final IdGenerator ids;
     private final Clock clock;
@@ -85,7 +88,7 @@ public class ArticleCommands {
 
     ArticleCommands(ArticleRepository articles, SeriesRepository series, CategoryRepository categories,
             SlugRepository slugs, MediaService media, EditorialJson json, Outbox outbox, AuditLog audit,
-            IdGenerator ids, Clock clock, @Value("${satir.site.time-zone}") String siteZone) {
+            IdGenerator ids, Clock clock, PublicationSubscriptions subscriptions, @Value("${satir.site.time-zone}") String siteZone) {
         this.articles = articles;
         this.series = series;
         this.categories = categories;
@@ -93,6 +96,7 @@ public class ArticleCommands {
         this.media = media;
         this.json = json;
         this.outbox = outbox;
+        this.subscriptions = subscriptions;
         this.audit = audit;
         this.ids = ids;
         this.clock = clock;
@@ -248,6 +252,13 @@ public class ArticleCommands {
         }
         outbox.enqueue(PUBLICATION_EMAIL_JOB, row.id(), generation, "publication-email:" + row.id() + ":" + generation,
                 Map.of("articleId", row.id().toString()));
+        if (row.firstPublishedAt() == null) {
+            for (UUID recipient : subscriptions.subscribersExcept(row.ownerId())) {
+                outbox.enqueue(READER_PUBLICATION_EMAIL_JOB, row.id(), generation,
+                        "reader-publication:" + row.id() + ":" + recipient,
+                        Map.of("recipientId", recipient.toString()));
+            }
+        }
     }
 
     private void schedule(ArticleRow row, ActionInput input, Instant now) {

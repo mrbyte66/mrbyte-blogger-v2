@@ -81,6 +81,18 @@
 .account-session p { margin:8px 0; font-size:13px; }
 .account-outline,.account-danger { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:10px 16px; border:1px solid var(--line); border-radius:10px; font-size:14px; }
 .account-delete { border-top:1px solid var(--line); padding:32px 0 0; }
+.account-delete summary { color:var(--muted); font-size:13px; cursor:pointer; padding:8px 0; }
+.account-delete section { padding-top:20px; }
+.auth-dialog.is-closing { animation:auth-dismiss 180ms ease-in forwards; pointer-events:none; }
+.auth-dialog.is-closing::backdrop { animation:auth-backdrop-dismiss 180ms ease-in forwards; }
+.auth-session-transition { position:fixed; inset:0; z-index:95; pointer-events:none; background:var(--surface,#f1f2ed); }
+.auth-session-transition.is-out { animation:auth-backdrop-reveal 180ms ease-out forwards; }
+.auth-session-transition.is-in { animation:auth-backdrop-dismiss 450ms ease-out forwards; }
+@keyframes auth-dismiss { to { opacity:0; transform:translateY(10px) scale(.98); } }
+@keyframes auth-backdrop-dismiss { from { opacity:1; } to { opacity:0; } }
+@keyframes auth-backdrop-reveal { from { opacity:0; } to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .auth-dialog.is-closing,.auth-session-transition { animation:none; } }
+html[data-motion=off] .auth-dialog.is-closing,html[data-motion=off] .auth-session-transition { animation:none; }
 .account-danger { color:#944c5b; border-color:#944c5b66; }
 html[data-theme=dark] .account-danger,.surface-night .account-danger { color:#e2a3b0; border-color:#e2a3b066; }
 html[data-theme=light] .surface-night .account-danger { color:#944c5b; border-color:#944c5b66; }

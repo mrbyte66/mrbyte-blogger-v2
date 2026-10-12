@@ -39,7 +39,7 @@ class MeController {
     record ProfilePatch(String name, String avatar) {
     }
 
-    record PreferencesPatch(Boolean publicationEmail, String timeZone) {
+    record PreferencesPatch(Boolean publicationEmail, Boolean publicationSubscription, String timeZone) {
     }
 
     record PasswordChange(String password, String passwordConfirmation) {
@@ -90,7 +90,7 @@ class MeController {
     ResponseEntity<ProfileResponse> updatePreferences(@AuthenticationPrincipal SatirPrincipal principal,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch, @RequestBody PreferencesPatch body) {
         var current = profileQuery.ownProfile(principal.userId()).orElseThrow(SessionSupport::unauthenticated);
-        membership.updatePreferences(principal.userId(), Preconditions.requireVersion(ifMatch), body.publicationEmail(),
+        membership.updatePreferences(principal.userId(), Preconditions.requireVersion(ifMatch), body.publicationEmail(), body.publicationSubscription(),
                 body.timeZone(), current);
         return withEtag(profile(principal));
     }

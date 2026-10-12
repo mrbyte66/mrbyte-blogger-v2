@@ -289,7 +289,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Account-wide publication e-mail and time zone (shares the profile version) */
+        /** Reader subscription, author publication e-mail and time zone (shares the profile version) */
         patch: operations["updatePreferences"];
         trace?: never;
     };
@@ -1300,7 +1300,10 @@ export interface components {
             /** @enum {string} */
             role: "owner" | "member";
             preferences: {
+                /** @description Author notification preference */
                 publicationEmail: boolean;
+                /** @description Reader subscription; defaults to true */
+                publicationSubscription: boolean;
                 /**
                  * @description IANA zone
                  * @example Europe/Istanbul
@@ -2848,7 +2851,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Notification when your own writing is published */
                     publicationEmail?: boolean;
+                    /** @description Subscribe to first publications; enabled by default */
+                    publicationSubscription?: boolean;
                     /** @description IANA zone */
                     timeZone?: string;
                 };

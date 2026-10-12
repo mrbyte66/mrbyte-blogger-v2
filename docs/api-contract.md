@@ -27,3 +27,7 @@ Kesin route, method, schema, limit ve status kodu için OpenAPI’yi oku. Mevcut
 Ayrı draft/published revision; yazı/seri ilk-yayın slug kilidi; bağımsız Yazılar kataloğu; ilk bölümle seri yayını; okuyucu bildirim tercihi/ilk-yayın fanout; site genelinde Studio indeksleme kontrolü. Bunların DTO/endpoint ayrıntıları Mac’te uygulama sırasında gerçek use-case’e göre belirlenecek; bu hazırlık OpenAPI’yi değiştirmez.
 
 İstatistik UI’sı ve dış kapak araması şimdilik çıkarılacak. Eski stats/özel yazı/export sözleşmesini yeni ürün gereksinimi diye kopyalama. Üyelerin private veri/annotation/media güvenliği gevşetilmez. Herkesin özel notları vardır; public owner annotation endpoint planı yok. [Ürün](product.md), [mimari](backend-architecture.md).
+
+## Okuyucu yayın aboneliği (#2)
+
+`Profile.preferences.publicationSubscription` ve `PATCH /me/preferences` aynı boolean alanını kullanır. Varsayılan true; `publicationEmail` yazarın kendi yayın bildirimi olarak korunur. Abone okuyucu yalnız doğrulanmış aktif hesap ve açık tercih ile ilk yayın e-postası alır. Yeniden yayın/güncelleme okuyucu mail işi oluşturmaz. Kişi başına iş retry'si, tamamlanan alıcıları yeniden kuyruğa koymaz; SMTP kabulü ile iş kaydı arasındaki çökme için exactly-once garanti verilmez. Yeni abonelik geçmiş yayınları göndermez.

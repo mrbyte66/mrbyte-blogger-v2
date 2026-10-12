@@ -84,12 +84,12 @@ public class MembershipRepository {
     }
 
     /** Preferences share the profile version (API contract §4). */
-    public int updatePreferences(UUID id, long expectedVersion, boolean publicationEmail, String timeZone, Instant now) {
+    public int updatePreferences(UUID id, long expectedVersion, boolean publicationEmail, boolean publicationSubscription, String timeZone, Instant now) {
         int bumped = jdbc.sql("UPDATE app_user SET updated_at = :now, version = version + 1 WHERE id = :id AND version = :version")
                 .param("id", id).param("version", expectedVersion).param("now", Timestamp.from(now)).update();
         if (bumped == 1) {
-            jdbc.sql("UPDATE user_preference SET publication_email = :publication, preferred_timezone = :zone WHERE user_id = :id")
-                    .param("id", id).param("publication", publicationEmail).param("zone", timeZone).update();
+            jdbc.sql("UPDATE user_preference SET publication_email = :publication, publication_subscription = :subscription, preferred_timezone = :zone WHERE user_id = :id")
+                    .param("id", id).param("publication", publicationEmail).param("subscription", publicationSubscription).param("zone", timeZone).update();
         }
         return bumped;
     }

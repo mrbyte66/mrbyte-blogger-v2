@@ -86,12 +86,6 @@ public class GoogleSignIn {
         if (purpose != Purpose.LOGIN && currentUser == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "UNAUTHENTICATED", "Giriş yapman gerekiyor");
         }
-        if (currentUser != null && purpose != Purpose.LOGIN) {
-            Account account = members.byId(currentUser, false).orElseThrow(MembershipService::unauthenticated);
-            if ("OWNER".equals(account.role())) {
-                throw new ApiException(HttpStatus.CONFLICT, "OWNER_GOOGLE_DISABLED", "Site sahibi hesabında Google kullanılamaz");
-            }
-        }
         String verifier = Secrets.randomUrlSafe(32);
         Pending pending = new Pending(Secrets.randomUrlSafe(32), Secrets.randomUrlSafe(32), verifier, purpose,
                 safeReturn(returnTo), purpose == Purpose.LOGIN ? null : currentUser, clock.instant().plus(PENDING_TTL));
@@ -132,9 +126,6 @@ public class GoogleSignIn {
             Account account = members.byId(linked.get().userId(), false).orElse(null);
             if (account == null || account.deleted()) {
                 return new Result.Failed("google_failed");
-            }
-            if ("OWNER".equals(account.role())) {
-                return new Result.Failed("owner_google_disabled");
             }
             audit.record(account.id(), "LOGIN_GOOGLE", "USER", account.id(), AuditLog.Outcome.SUCCESS);
             return accountAccess.current(account.id()).<Result>map(Result.SignedIn::new).orElse(new Result.Failed("google_failed"));

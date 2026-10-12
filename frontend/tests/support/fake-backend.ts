@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { memberApi, memberApiState } from "./fake-member-api";
 
-type Profile = { id: string; name: string; email: string; verified: boolean; avatar: string | null; role: "member" | "owner"; preferences: { publicationEmail: boolean; timeZone: string }; version: number };
+type Profile = { id: string; name: string; email: string; verified: boolean; avatar: string | null; role: "member" | "owner"; preferences: { publicationEmail: boolean; publicationSubscription: boolean; timeZone: string }; version: number };
 export type Call = { method: string; path: string; body?: Record<string, unknown>; headers: Record<string, string> };
 
 /**
@@ -9,7 +9,7 @@ export type Call = { method: string; path: string; body?: Record<string, unknown
  * Records requests so tests can assert what the browser sent (never storing passwords itself).
  */
 export function fakeBackend(options: { signedIn?: Partial<Profile> | null; password?: string } = {}) {
-  const account = (patch: Partial<Profile> = {}): Profile => ({ id: "11111111-1111-4111-8111-111111111111", name: "Alice", email: "alice@example.com", verified: true, avatar: null, role: "member", preferences: { publicationEmail: true, timeZone: "Europe/Istanbul" }, version: 0, ...patch });
+  const account = (patch: Partial<Profile> = {}): Profile => ({ id: "11111111-1111-4111-8111-111111111111", name: "Alice", email: "alice@example.com", verified: true, avatar: null, role: "member", preferences: { publicationEmail: true, publicationSubscription: true, timeZone: "Europe/Istanbul" }, version: 0, ...patch });
   const state = {
     profile: options.signedIn === undefined || options.signedIn === null ? null : account(options.signedIn),
     password: options.password ?? "dogru-parola-123",
@@ -52,6 +52,12 @@ export function fakeBackend(options: { signedIn?: Partial<Profile> | null; passw
         return json(204);
       }
       case "POST /auth/password/forgot": return json(202, { message: "E-postanı kontrol et" });
+      case "PATCH /me/preferences": {
+        if (!state.profile) return problem(401, "UNAUTHENTICATED", "Giriş yapman gerekiyor");
+        state.profile = { ...state.profile, preferences: { ...state.profile.preferences, ...body }, version: state.profile.version + 1 };
+        state.accounts.set(state.profile.email, state.profile);
+        return json(200, state.profile);
+      }
       case "PATCH /me": {
         if (!state.profile) return problem(401, "UNAUTHENTICATED", "Giriş yapman gerekiyor");
         state.profile = { ...state.profile, name: body?.name ?? state.profile.name, avatar: body?.avatar ?? state.profile.avatar, version: state.profile.version + 1 };

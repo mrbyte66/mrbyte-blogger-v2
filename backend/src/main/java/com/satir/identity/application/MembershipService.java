@@ -248,11 +248,12 @@ public class MembershipService {
     }
 
     @Transactional
-    public void updatePreferences(UUID userId, long expectedVersion, Boolean publicationEmail, String timeZone,
+    public void updatePreferences(UUID userId, long expectedVersion, Boolean publicationEmail, Boolean publicationSubscription, String timeZone,
             ProfileQuery.ProfileView current) {
         String zone = timeZone == null ? current.timeZone() : validZone(timeZone);
         boolean publication = publicationEmail == null ? current.publicationEmail() : publicationEmail;
-        if (members.updatePreferences(userId, expectedVersion, publication, zone, clock.instant()) == 0) {
+        boolean subscription = publicationSubscription == null ? current.publicationSubscription() : publicationSubscription;
+        if (members.updatePreferences(userId, expectedVersion, publication, subscription, zone, clock.instant()) == 0) {
             throw Preconditions.stale();
         }
     }

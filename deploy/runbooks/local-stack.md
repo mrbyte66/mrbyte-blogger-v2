@@ -1,120 +1,51 @@
-# Yerel tam yığın (arayüz testi için)
+# Mac’te yerel Docker
 
-`deploy/compose.local.yml` bu çalışma kopyasından backend ve frontend imajlarını derler; PostgreSQL 18 ve Mailpit ile birlikte çalıştırır. Üretim değildir: `dev` profili (HTTP çerezleri, açılışta migration), atılabilir parolalar, bütün e-postalar Mailpit'te kalır. Portlar yalnız `127.0.0.1`'e bağlanır ve 3000/3001/5432/8080 kullanan başka yerel yığınlarla çakışmaz.
+Asistan kullanıcı Mac’inde bu çalışma kopyasından derler; remote branch/PR seçimi veya push gerekmez. Eski scripts/local-refresh remote hedefi çekebildiği için yeni önizleme akışında kullanılmaz.
 
-| Adres | İçerik |
-| --- | --- |
-| http://127.0.0.1:3010 | Site (Next.js; `/api` istekleri içeride backend'e gider) |
-| http://127.0.0.1:3010/studio | Studio (yalnız sahip) |
-| http://127.0.0.1:8025 | Mailpit gelen kutusu (doğrulama, sıfırlama, yayın e-postaları) |
-| `127.0.0.1:55432` | PostgreSQL (`satir` / `satir-local`), isteğe bağlı `psql` erişimi |
-
-Portlar `LOCAL_WEB_PORT`, `LOCAL_MAIL_UI_PORT`, `LOCAL_DB_PORT` ortam değişkenleriyle değiştirilebilir (web portu değişirse e-postalardaki bağlantılar da ona göre üretilir).
-
-## Başlatma
+## İlk başlatma
 
 Repo kökünden:
 
 ```sh
 docker compose -f deploy/compose.local.yml up -d --build
-docker compose -f deploy/compose.local.yml ps          # backend ve frontend "healthy" olmalı
+docker compose -f deploy/compose.local.yml ps
 ```
 
-İlk kez: sahip hesabını oluştur. Parolayı (en az 12 karakter) git dışı bir dosyaya yaz (`deploy/*.local.txt` yok sayılır) ve dosya olarak ver; komut satırına yazma. Docker'a TCP üzerinden (`DOCKER_HOST=tcp://…`, WSL forwarder) bağlanılıyorsa `run -T … < dosya` stdin'i güvenilir taşımaz, bu yüzden dosyayı geçici olarak medya volume'una kopyala:
+Site http://127.0.0.1:3010, Studio /studio, Mailpit http://127.0.0.1:8025. Portlar LOCAL_WEB_PORT, LOCAL_MAIL_UI_PORT, LOCAL_DB_PORT ile değişebilir. Owner henüz yoksa parola git dışı dosyada, en az 12 karakter:
 
 ```sh
-docker cp deploy/owner-password.local.txt satir-local-backend-1:/var/lib/satir/media/.owner-pw
-docker compose -f deploy/compose.local.yml run --rm backend bootstrap-owner --email=sahip@satir.localhost --username=mrbyte --name="Mr Byte" --password-file=/var/lib/satir/media/.owner-pw
-docker compose -f deploy/compose.local.yml run --rm --entrypoint rm backend -f /var/lib/satir/media/.owner-pw
+docker compose -f deploy/compose.local.yml run --rm -T backend bootstrap-owner --email=<email> --username=<username> --name=<name> < <git-disi-parola-dosyasi>
 ```
 
-Yerel Docker soketiyle çalışıyorsan stdin de olur: `… run --rm -T backend bootstrap-owner … < deploy/owner-password.local.txt`.
+Mevcut owner üzerine yazma reddedilir. Kullanıcı register → Mailpit → açık verification onayıyla test hesabı açabilir. Parola/token hiçbir kayda girmez.
 
-Sonra `/studio`'dan kullanıcı adı veya e-posta ile gir. Okur hesabı için sitede "Üye ol" → Mailpit'teki doğrulama bağlantısı.
-
-## Main veya PR ile yenileme (`scripts/local-refresh`)
-
-İlk kurulumdan sonra yığını tek komutla yenile. Betik çalışma kopyana dokunmadan hedef commiti geçici bir worktree'de derler, `backend`/`frontend` imajlarını yeniden kurar ve sağlıklı başlamalarını bekler. Veritabanı ve medya volume'ları korunur; betikte `down -v` gibi veri silen komut yoktur.
-
-```sh
-./scripts/local-refresh            # menü: panodaki In Test işleri (#numara ve başlık) + "güncel main'e dön"
-./scripts/local-refresh main       # origin/main'i çeker ve yığını ondan kurar
-./scripts/local-refresh pr 43      # PR #43'ün son commitini kurar; sonunda "local-refresh main" ile dönmeyi hatırlatır
-./scripts/local-refresh durum      # şu an hangi kaynak ve commitin çalıştığını yazar
-```
-
-- Menüde iş numarası seçilir; bağlı açık PR betik tarafından panodan bulunur. `gh` girişi gerekir.
-- `:3010`'da aynı anda tek kaynak çalışır. Başka PR için komutu yeniden çalıştır. Her yenilemeden sonra çıktı `Gösterilen: PR #43 · commit abc1234` biçiminde neyin çalıştığını yazar. Bilgi imaj etiketlerinden (`satir.source`, `org.opencontainers.image.revision`) okunur.
-- Geçici worktree başarıdan sonra silinir. Derleme veya sağlık kontrolü başarısız olursa inceleme için yerinde bırakılır; çıktı yolunu, günlük ve silme komutunu yazar. Ayrı dal açılmaz (detached worktree).
-- `deploy/google.local.env` varsa geçici kopyaya alınır ve worktree ile birlikte silinir.
-- PR, `main`'de olmayan veya `main`'den farklı bir migration içeriyorsa (`backend/src/main/resources/db/migration/`) betik dosyaları listeler, riski ve geri dönüş komutlarını (yedek al → main'e dönerken şemayı silip yedeği yükle → `local-refresh main`) yazar ve onay ister: `y` yedeği `~/satir-local-yedek-<tarih>.dump` olarak alıp devam eder, `e` yedeksiz devam eder, boş/başka cevap vazgeçer ve yığına dokunmaz. Etkileşimsiz çalıştırmada onay yoksa durur; bilerek devam için `local-refresh pr N --migration-onay`. Migration değişikliği yoksa soru sorulmaz. Testi: `bash scripts/tests/local-refresh-migrations.sh` (CI'da da çalışır).
-- `main` modu çalışma kopyan temiz `main` dalındaysa onu da ileri alır; değilse yalnız `origin/main`'i derler.
-
-Her yerden çalıştırmak için kısayol (bir kez, `~/.zshrc`):
-
-```sh
-echo "alias local-refresh='$HOME/Documents/mrbyte-blogger/scripts/local-refresh'" >> ~/.zshrc && source ~/.zshrc
-```
-
-Deneme için ayrı yığın: `SATIR_LOCAL_PROJECT`, `LOCAL_IMAGE_TAG` ve port değişkenleri (`LOCAL_WEB_PORT` vb.) asıl `satir-local` yığınından ayrı volume, imaj ve port kullanır.
-
-## Kod değişince (çalışma kopyasından)
+## Değişiklikten sonra
 
 ```sh
 docker compose -f deploy/compose.local.yml up -d --build backend frontend
+docker compose -f deploy/compose.local.yml ps
 ```
 
-Bu yol imaj etiketini `working-tree` olarak bırakır; `local-refresh durum` bunu gösterir.
+DB/media volume’ları korunur. Sağlıklı yeni imaj ve beklenen içerik doğrulanır; kullanıcı yerelde bakar, sonra push talimatı verir. Compose build commit edilmemiş çalışma dosyalarını da kapsar.
 
-## Örnek içerik ve test üyeleri
+## Test verisi
 
-Site boş açılmasın diye (sahip hesabı oluşturulduktan sonra):
+Ayrı development DB/media ortamında, gerçek backend kayıt akışı:
 
 ```sh
 docker compose -f deploy/compose.local.yml run --rm backend seed-demo --file=/opt/satir/seed/demo.json
 ```
 
-25 yazı (yayında, taslak, planlı, kilitli; bir kısmı kapaklı), 4 seri, 2 ek kategori ve doğrulanmış üç üye ekler (`uye1@gmail.com` … `uye3@gmail.com`). İçerik ve üye parolaları `deploy/seed/demo.json` dosyasındadır; yığın onu salt okunur bağlar, dosya imaja ve jar'a girmez. Tekrar çalıştırmak güvenlidir: var olan yazı, seri ve hesaplara dokunmaz. Yalnız `dev` profilinde çalışır; üretimde reddedilir.
+Mevcut seed private yazı örnekleri de içerebilir; yeni kapsamda özel yazı olmayacağı için Mac’te seed uyarlanacak. Seed yalnız dev’de; production’da kullanılmaz. Cookie/localStorage demo hesap/veri sistemi yok. Authentication cookie’si kalır.
 
-## Durdurma ve sıfırlama
+Başka eski klon Mac’te çalışıyorsa aynı Compose adı/port/volume kullanımını kontrol et. Mevcut name satir-local teknik addır; ikinci repo otomatik ayrı DB yaratmaz. Asistan gerçek veriyi koruyarak ayrımı yerel altyapı issue’sunda yapar.
 
-```sh
-docker compose -f deploy/compose.local.yml stop                # veriyi korur
-docker compose -f deploy/compose.local.yml down -v             # veritabanı ve medya dahil HER ŞEYİ siler
-```
+## Google ve durdurma
 
-Pexels kapak araması bu yığında yapılandırılmamıştır; arayüz bunu "yapılandırılmadı" olarak gösterir. Google ile giriş için aşağıdaki adımlar gerekir.
-
-## Google ile giriş (yerel)
-
-1. Google Cloud Console → *APIs & Services → Credentials* → *OAuth client ID* (Web application).
-2. *Authorized redirect URI*: `http://127.0.0.1:3010/api/v1/auth/google/callback`. Backend bunu `PUBLIC_SITE_ORIGIN`'den türetir; siteyi bu adresle aç (`localhost` ile açılan oturum geri dönüşte kaybolur).
-3. Kimlik bilgilerini git dışı `deploy/google.local.env` dosyasına yaz (kayda, sohbete veya komut satırına girmez):
-
-   ```sh
-   SATIR_GOOGLE_CLIENT_ID=…
-   SATIR_GOOGLE_CLIENT_SECRET=…
-   ```
-
-4. `docker compose -f deploy/compose.local.yml up -d backend` (dosyayı `env_file` olarak okur). Yapılandırma doğruysa `POST /api/v1/auth/google/start` 503 `GOOGLE_NOT_CONFIGURED` yerine bir `authorizationUrl` döndürür.
-
-## Docker'sız: yerel PostgreSQL + jar (isteğe bağlı)
-
-Backend'i hızlı yeniden başlatmak gerektiğinde. Site `http://localhost:3000`, backend `8080` (`dev` profili); yukarıdaki Docker yığınıyla aynı anda çalışabilir. Gerekenler: JDK 25, Node 22, PostgreSQL (16 ile elle, 18 ile testlerde denendi).
+Google redirect http://127.0.0.1:3010/api/v1/auth/google/callback. SATIR_GOOGLE_CLIENT_ID/SECRET yalnız git dışı deploy/google.local.env; configured backend yeniden başlatılır. Google callback için aynı origin kullanılır.
 
 ```sh
-# 1. Boş veritabanı (dev profilinin varsayılanları: satir / satir-dev)
-psql -h 127.0.0.1 -d postgres -c "CREATE ROLE satir LOGIN PASSWORD 'satir-dev'" -c "CREATE DATABASE satir OWNER satir"
-
-# 2. Jar, migration ve sahip (parola git dışı dosyada; komut satırına yazma)
-cd backend && ./mvnw package -DskipTests
-export DB_PASSWORD=satir-dev SATIR_RATE_LIMIT_KEY=dev-only-rate-limit-key-not-for-production
-java -jar target/satir-backend-0.1.0-SNAPSHOT.jar migrate
-java -jar target/satir-backend-0.1.0-SNAPSHOT.jar bootstrap-owner --email=sahip@satir.localhost --username=mrbyte --name="Mr Byte" --password-file=../deploy/owner-password.local.txt
-
-# 3. Backend ve site
-SPRING_PROFILES_ACTIVE=dev java -jar target/satir-backend-0.1.0-SNAPSHOT.jar
-cd ../frontend && npm ci && npm run dev     # /api istekleri 127.0.0.1:8080'e gider
+docker compose -f deploy/compose.local.yml stop
 ```
 
-Farklı bir dalın şemasıyla kurulmuş eski bir veritabanı varsa (`flyway_schema_history` main'den fazla sürüm içerir) migration başarısız olur veya sayfalar 500 verir; yedekleyip silin ve 1. adımdan kurun. E-posta gönderen akışlar Mailpit'i `localhost:1025` (SMTP) bekler; yoksa bu akışlar hata kaydı bırakır.
+Volume silme normal yenileme değildir; asistan kullanıcı verisini reset etmez. SMTP gerçek sağlayıcı değildir, bütün dev postaları Mailpit’te kalır. Pexels yeni kapsamda şimdilik kullanılmaz.

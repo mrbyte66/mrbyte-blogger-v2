@@ -1,156 +1,89 @@
-# SATIR proje yol haritası
+# Kategorili issue bağlantıları
 
-Bu belge konuşmalarda kararlaştırılan işleri tek listede toplar. Durumlar:
+İş durumu GitHub issue/Project’tedir; bu belge ikinci yapılacaklar panosu değildir. İlk ürün hedefi V1, sonraki sürüm adları henüz seçilmedi. Kullanıcı gereken işleri Backlog’dan Todo’ya alır.
 
-- **Prototipte var:** İlk olarak tarayıcıda denenen özellikler; backend V1 main'de olduğu için çoğu artık sunucu verisiyle çalışır.
-- Açık maddelerin başındaki `(#N)` ilgili GitHub issue'sudur.
-- **Sıradaki işler:** Sahip odaklı V1'i gerçek kullanım için tamamlamak üzere bekleyen işler.
-- **Üyelik V1:** Ziyaretçi hesabı ve özel kişisel özellikler; içerik yazarlığı vermez.
-- **V2:** Talebe bağlı çok yazarlı portal ve sosyal özellikler.
-- **İleri fikirler:** Kararı, tasarımı, lisansı veya uygun medya/altyapısı ayrıca gerektiren özellikler.
+[blog-v2 panosu](https://github.com/users/mrbyte66/projects/3/views/1) kullanıcı tarafından oluşturuldu. Bu ortamın integration’ı panoya erişemiyor; issue’lar hazır, gerçek view/alan/otomasyon kurulumu [pano rehberinde](github-project.md) açık iş olarak tutuluyor. Hiçbir kayıt asistan tarafından Done/kapatıldı olarak işaretlenmedi.
 
-Her konunun ayrıntılı kabul koşulları bağlantılı özellik belgesinde. Bu yol haritası öncelik sırasını yaklaşık gösterir; henüz tarih taahhüdü değildir.
+“Mevcut temel” klonla gelen özelliğin gereksinim kaydıdır; yeniden doğrulama bekler. Tamamlanmamış aynı hedefler tek issue’da tutulur; ayrı geliştirme başlığı mevcut teslimden farklı bir hedefi anlatır.
 
-## 1. Prototipte hazır olanlar
+## Üyelik
 
-Bunlar yol haritasında tamamlanmış arayüz/prototip işleri olarak kayıtlıdır. Üretim için backend gerektiren kısımlar ayrıca aşağıda listelenmiştir.
+| Issue | Kayıt |
+| --- | --- |
+| [#2 Üyelik: hesap yönetimi ve yayın aboneliği](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/2) | Mevcut temel + gerekli uyarlamalar |
+| [#13 Yazarlık: çok yazarlı içerik ve takip](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/13) | Planlanan / Backlog |
+| [#14 Topluluk: okuyucu yorumları](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/14) | Planlanan / Backlog |
+| [#26 Profil: fotoğraf yükleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/26) | Planlanan / Backlog |
+| [#30 Bildirim: kategori ve seri abonelikleri](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/30) | Planlanan / Backlog |
 
-- [x] Sahne, akış ve dergi temaları; Studio'da ana sayfa bloklarını ve yazı/seri sayfalarını ziyaretçiyle aynı tuvalde düzenleme, önizleme ve uygulama.
-- [x] Yazı oluşturma, seriye bağlama veya bağımsız tutma; seri oluşturma, bölüm sıralama, taslak/yayında/arşiv/çöp kutusu işlemleri.
-- [x] Üç örnek seri, seri başına örnek bölümler, görselli yazı/seri kartları ve beşli artımlı listeleme.
-- [x] Çoklu yazı kategorileri, düzenlenebilir yazı tarihi ve tarihe göre yazı sıralama; seri bölümlerinde Studio sırası.
-- [x] Yazı özeti, kalıcı okuma sayfası ve yerel Studio içeriği.
-- [x] Üyelik/giriş ekranı demosu, hesap sayfası, 60 profil avatarı ve aynı tarayıcı sekmelerinde demo oturumu. Studio ayrı sunucu oturumuyla korunur.
-- [x] Kişisel kitaplık/koleksiyon demosu, anonim alkış, görüntülenme ve paylaşım kontrolleri.
-- [x] Kalıcı yazı sayfalarında yerel not, fosforlu işaret ve altını çizme araçları.
-- [x] İsteğe bağlı Mozart oynatımı; aynı site sekmeleri arasında tek oynatıcı, konum paylaşımı ve ses kontrolü.
-- [x] Yazı yayın tarihi planlama prototipi, planları listeleme/sıralama ve 1/3/7 gün sonrasına örnek plan üretme. Bu örnekler otomatik yayımlanmaz.
+## Yazı
 
-## 2. Sıradaki işler — V1 sahibi ve üretim temeli
+| Issue | Kayıt |
+| --- | --- |
+| [#3 Yazı: taslak, yayın ve kalıcı bağlantılar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/3) | Mevcut temel + gerekli uyarlamalar |
+| [#9 Etkileşim: alkış ve paylaşım](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/9) | Mevcut temel + gerekli uyarlamalar |
+| [#20 Keşif: popüler yazı ve seri önerileri](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/20) | Planlanan / Backlog |
+| [#23 İçerik: yeni yayın türleri](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/23) | Planlanan / Backlog |
+| [#25 Editör: zengin metin ve blok düzenleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/25) | Planlanan / Backlog |
+| [#28 Nostalji: medya ve hikâye köşesi](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/28) | Planlanan / Backlog |
 
-### Backend, veritabanı ve yayın güvenilirliği
+## Seri
 
-- [x] Spring Boot API ve veritabanı mimarisini belirle; alan modeli, migration, hata/versiyonlama ve API sözleşmelerini frontend'le birlikte netleştir.
-- [x] İçerik, temalar, medya, seriler ve hesap tercihleri için kalıcı saklama ve güvenli sahip yetkisi ekle. Tarayıcı depolamasını üretim kaynağı kabul etme.
-- [x] Gerçek üye girişi, e-posta doğrulama, şifre sıfırlama, güvenli oturum/çıkış ve Google OAuth bağlantısını tamamla. Yerel demo girişi kimlik doğrulama sayılmaz.
-- [x] Planlanmış yazıları sunucu tarafında, tarayıcı kapalı olsa da doğru zamanda yayımla. Saat dilimi/yaz saati, yeniden planlama, iptal, gecikmiş işler, tekrar çalışmada tek yayın ve işlem kayıtlarını ele al.
-- [x] Yayın başarılı olduktan sonra yazara “Yazınız yayınlandı” e-postası gönder. Hesap genelindeki tercih kapalıysa gönderme; hata/tekrar denemeyi ve idempotent gönderimi kaydet.
-- [x] Alkış, görüntülenme ve kaydedilme sayılarını gerçek ortak sunucu verisine geçir; tekrar isteklerini çift sayma ve kötüye kullanımı sınırla.
+| Issue | Kayıt |
+| --- | --- |
+| [#4 Seri: bölüm akışı ve katalog ayrımı](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/4) | Mevcut temel + gerekli uyarlamalar |
 
-Ayrıntılar: [yayın planlama](features/publication-scheduling.md), [alkış ve görüntülenme](features/claps-and-sharing.md).
+## Studio
 
-### Özel yazılar ve güvenli erişim
+| Issue | Kayıt |
+| --- | --- |
+| [#5 Studio: görsel düzenleme ve site indeksleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/5) | Mevcut temel + gerekli uyarlamalar |
+| [#19 İstatistik: yönetim ve karşılaştırmalı raporlar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/19) | Planlanan / Backlog |
+| [#24 Tema: kütüphane ve gelişmiş bloklar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/24) | Planlanan / Backlog |
 
-- [x] Önce site sahibine **kilitli/özel yazı** durumu ekle. Kamu katalogları, arama, seri, kalıcı URL, sitemap, API, kapak/medya, önizleme ve cache katmanlarında içeriği ifşa etme.
-- [x] Kilitli yazının taslak/yayında/planlandı/arşiv/çöp kutusu geçişlerini açıkça tasarla. Yazı yalnız sahibin açık yayınlama işlemiyle kamuya açılsın.
-- [x] Erişimi sadece arayüzle gizleme; sunucu kimliğine göre yetkilendir. Üyelere özel yazı desteğini ilk sürüme dahil etme.
+## Okuma
 
-Ayrıntılar: [kilitli yazılar](features/private-articles.md).
+| Issue | Kayıt |
+| --- | --- |
+| [#6 Kitaplık: kişisel koleksiyonlar ve sunucu kaydı](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/6) | Mevcut temel + gerekli uyarlamalar |
+| [#7 Okuma: özel notlar ve metin işaretleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/7) | Mevcut temel + gerekli uyarlamalar |
+| [#8 Geçmiş: son açılan yazı ve bölüm](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/8) | Mevcut temel + gerekli uyarlamalar |
+| [#15 Okuma: gelişmiş not alma araçları](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/15) | Planlanan / Backlog |
+| [#16 Okuma: eşitleme ve geçmiş geliştirmeleri](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/16) | Planlanan / Backlog |
+| [#18 Okuma: rozetler ve seviyeler](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/18) | Planlanan / Backlog |
+| [#21 Dışa aktarma: yazılar ve kişisel notlar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/21) | Planlanan / Backlog |
 
-### İçerik üretimi ve site yönetimi
+## Görsel
 
-- [ ] (#27) Yazı ve seri için çevrimiçi, uygun lisanslı kapak bulma akışı ekle. Kaynak/lisans/atıf bilgisi sakla; elle seçme, kendi görselini kullanma ve görselsiz bırakma seçenekleri sun.
-- [x] Yazı kapak görselini düzenleme/yükleme ve gerçek medya depolamasını tamamla. Alakasız veya lisansı belirsiz görseli otomatik seçme.
-- [x] Üretimde kullanılacak SEO, sitemap/robots, paylaşım metaverisi ve özel içeriklerin indekslenmeme kurallarını ekle. Site herkese açılmadan indeksleme kararını kontrol et.
-- [ ] (#16, #21, #20) Mevcut örnek içeriklerden gerçek yazılara geçiş, yedekleme, içerik dışa aktarma ve kurtarma akışlarını belirle.
-- [ ] Proje, alıntı, şiir, öykü ve farklı sayfa türlerinin Studio içerik modelini hangi sırayla destekleyeceğine karar ver.
-- [ ] (#17) Üyelik avantajlarını açıklayan sade bir **site tanıtım/üyelik sayfası** hazırla. Yalnızca gerçek olanakları varmış gibi göster; henüz backend gerektirenleri “planlanıyor” diye ayır.
+| Issue | Kayıt |
+| --- | --- |
+| [#17 Görsel: kütüphane ve içerik önerileri](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/17) | Planlanan / Backlog |
 
-Ayrıntılar: [otomatik kapaklar](features/automatic-covers.md), [site tanıtımı](features/site-introduction.md), [site oluşturucu](site-builder.md).
+## Ses
 
-## 3. Üyelik V1 — okuyucu hesabı
+| Issue | Kayıt |
+| --- | --- |
+| [#10 Ses: mevcut Mozart oynatıcısı](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/10) | Mevcut temel + gerekli uyarlamalar |
+| [#27 Ses: seçenekler ve etkileşimli kontrol](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/27) | Planlanan / Backlog |
 
-Üye olur olmak yazı yazma veya Studio yetkisi sağlamaz. V1 üyeler mevcut sahibin yayımladığı yazıları okur.
+## Tasarım
 
-- [x] Gerçek hesap doğrulaması ve bulut profili; sekmeler/cihazlar arasında güvenli oturum ve hesap yönetimi.
-- [x] Notlar, fosforlu işaretler ve okuma araçlarını üye hesabında saklama/eşitleme. Misafir notlarını içe aktarma kullanıcı tercihiyle olsun.
-- [x] Kitaplığı ve “Genel” varsayılan koleksiyonunu hesapta saklama; kişisel koleksiyon oluşturma, taşıma, kaldırma. Bir üyenin kayıtlarını/koleksiyonlarını başka üyeye gösterme.
-- [x] Seri/yazı ziyaret geçmişini otomatik kaydet ve üyeye kaldığı yeri göster. Ziyaret, yazının tamamlandığı anlamına gelmesin.
-- [ ] Üyelik faydaları için içerik kaydetme, kendi çalışma defteri ve kaldığı yere dönme akışlarını tamamla.
-- [ ] (#26) Üyenin hesabında kendi okuma ilerlemesi ve tanımlı okur rozetlerini göster.
+| Issue | Kayıt |
+| --- | --- |
+| [#11 Tasarım: CRT sahnesi ve okunabilir arayüz](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/11) | Mevcut temel + gerekli uyarlamalar |
+| [#22 Tanıtım: site ve üyelik avantajları](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/22) | Planlanan / Backlog |
+| [#29 Karakter: 360 derece etkileşim](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/29) | Planlanan / Backlog |
 
-Ayrıntılar: [üyelik](features/membership.md), [kişisel kitaplık](features/saved-articles.md), [okuma araçları](features/reading-tools.md), [blog serileri](features/blog-series.md), [okuma rozetleri](features/reader-progress-and-analytics.md).
+## Altyapı
 
-## 4. Sahip paneli — istatistikler
+| Issue | Kayıt |
+| --- | --- |
+| [#12 Yerel çalışma: Mac üzerinde önizleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/12) | Planlanan / Backlog |
+| [#32 Yayın hazırlığı: VPS, e-posta ve yedekleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/32) | Planlanan / Backlog |
 
-- [x] Yönetici üye listesini ve kararlaştırılmış hesap bilgilerini görebilsin; kişisel kitaplıklar, özel notlar ve gereksiz ayrıntılı gezinme geçmişi toplu panelden açığa çıkmasın.
-- [x] Yazı bazında görüntülenme, alkış, kaydetme ve onaylanan diğer ölçüleri göster.
-- [ ] Sahip metrik, tarih aralığı, yazı, cihaz türü gibi kırılımları seçip tabloyu dinamik biçimde kurabilsin; kayıtları sıralayıp karşılaştırabilsin.
-- [ ] (#26) Görüntülenme/tekil ziyaret ve okuma süresi gibi metrikleri açıkça tanımla; sayfa arka plandayken geçen zamanı okuma diye sayma.
-- [ ] (#26, #19, #24) Veri amacı, saklama süresi, erişim, üyeye açıklama ve uygulanacak mahremiyet kurallarını olay toplamaya başlamadan kararlaştır.
+## Proje
 
-Ayrıntılar: [okuma rozetleri ve istatistikler](features/reader-progress-and-analytics.md).
-
-## 5. V2 — çok yazarlı portal ve topluluk (talebe bağlı)
-
-- [ ] Üyelerin kendi yazılarını yazması ve kendilerine ait Studio/yazar alanı.
-- [ ] Herkesin yayımlanmış yazıları gördüğü, içerik sahibi ve yazar profilleri belirgin ortak portal.
-- [ ] İlgi alanlarına göre yazar takip etme, kişisel akış ve öneriler; üyeye kişiselleştirmeyi kontrol etme seçeneği ver.
-- [ ] Üyelerin kendi özel/kilitli yazılarını yönetmesi. Bu özellik sahibi için özel yazı yetkisinden ayrı değerlendirilir.
-- [ ] Yorumları ancak moderasyon, spam/kötüye kullanım, bildirim, raporlama ve gizlilik kurallarıyla birlikte tasarla.
-- [ ] Kullanıcının kendi profil fotoğrafını yüklemesi; güvenli dosya türü/boyut/depolama sınırları.
-- [ ] Üye yazarlar için yayın planlama ve yayın e-postası tercihlerini hesap bazında çalıştır.
-
-Ayrıntılar: [çok yazarlı üyelik](features/membership.md), [kişiselleştirilmiş öneriler](features/personalized-recommendations.md), [kilitli yazılar](features/private-articles.md).
-
-## 6. Daha sonra / deneysel fikirler
-
-### Okuma ve yazı deneyimi
-
-- [ ] (#25) Yazıları PDF olarak dışa aktarma özelliği ekle. Bu işlemi yalnızca sisteme kayıtlı, giriş yapmış üyeler yapabilsin; dışa aktarma mevcut yazı erişim kurallarına tabi olsun.
-- [ ] Sahibin herkese açık yazar notları/açıklamaları için ayrı ve açık yayımlama katmanı.
-- [ ] Okuma araçlarını panel/sahne okumasına da uyarlama; ek kalem/renk ve not dışa aktarma kararları.
-- [ ] Seri ve içerik önerilerini üyenin gerçek okuma ilgisine göre kişiselleştirme.
-
-### Ses ve nostalji
-
-- [ ] Mozart dışı sözsüz seçenekler: solo piyano/gitar, su, yağmur, kuş ve gök gürültüsü.
-- [ ] Mevsim/hava durumuna göre isteğe bağlı ses önerisi; konum izni, sağlayıcı, el ile değiştirme ve çevrimdışı davranışı tanımla. Otomatik ses başlatma yok.
-- [ ] AssistiveTouch benzeri, animasyonlu fakat erişilebilir ve her zaman sessize alınabilen genişletilebilir ses kontrolü.
-- [ ] Sahibin zamanla müzik, fotoğraf, video, hikâye veya küçük etkileşimli içerik ekleyebildiği nostalji sayfası/bloku. Her medyanın kaynağı ve kullanım izni saklanmalı; oynatma kullanıcı başlatmalı.
-
-Ayrıntılar: [ortam sesi](features/ambient-audio.md), [nostalji köşesi](features/nostalgia-corner.md).
-
-### Karakter etkileşimi
-
-- [ ] Karakteri sürükleyerek 360 derece döndürme, etkileşim bitince dinlenme görünümüne yumuşak dönüş ve dönüş sonrası kısa şaşı göz animasyonu.
-- [ ] Bunun için tek görseli CSS ile çevirmek yerine katmanlı/çok açılı/3B uygun karakter varlığı üretme veya seçme. Dokunma/klavye, erişilebilirlik, reduce-motion ve sayfa kaydırma etkileşimini koru.
-
-Ayrıntılar: [karakter etkileşimi](features/character-interaction.md).
-
-### Tema ve editörün ileri adımları
-
-- [ ] Kaydedilmiş tema kütüphanesi ve yeniden kullanılabilir, daha zengin blok çeşitleri.
-- [ ] İç içe kapsayıcılar, destekli sütun/ızgara düzenleri, blok başına görünüm ve etkileşim seçenekleri. Serbest piksel yerleştirme ilk hedef değil.
-- [ ] Yeni tema düzenlerinin aynı içerik ve URL'lerle çalıştığını doğrula.
-
-Ayrıntılar: [site oluşturucu](site-builder.md).
-
-## 7. Açık ürün kararları
-
-- Rozetlerin eşiği, dönem hesabı ve hangi eylemlerin ilerlemeye sayılacağı.
-- Yönetici üye tablosunda gösterilecek kimlik alanları ile yalnız toplu kalması gereken davranış verileri.
-- Okuma süresi ve tekil görüntülenmenin ölçüm tanımı, saklama süresi ve gizlilik açıklaması.
-- Görsel sağlayıcısı/API kotası ve kapakların depolama/atıf politikası.
-- Üyelerin yazarlık/portal özelliğini ne zaman ve hangi talep koşuluyla açma.
-- Yorumların V2'ye alınıp alınmayacağı ve moderasyon yükünü kimin yöneteceği.
-- Nostalji köşesinin ilk medya türleri ve ses kontrolünün sonraki etkileşim düzeyi.
-
-## Özellik belgeleri
-
-- [Site oluşturucu](site-builder.md)
-- [Üyelik ve Studio erişimi](features/membership.md)
-- [Üyelik/site tanıtımı](features/site-introduction.md)
-- [Yayın planı ve e-posta](features/publication-scheduling.md)
-- [Kilitli yazılar](features/private-articles.md)
-- [Okuma rozetleri ve istatistikler](features/reader-progress-and-analytics.md)
-- [Yazı/seri kapakları](features/automatic-covers.md)
-- [Yazı özeti](features/article-summary.md)
-- [Seriler](features/blog-series.md)
-- [Kitaplık](features/saved-articles.md)
-- [Okuma araçları](features/reading-tools.md)
-- [Alkış/paylaşım/görüntülenme](features/claps-and-sharing.md)
-- [Kişiselleştirilmiş öneriler](features/personalized-recommendations.md)
-- [Ortam sesi](features/ambient-audio.md)
-- [Nostalji köşesi](features/nostalgia-corner.md)
-- [Karakter etkileşimi](features/character-interaction.md)
+| Issue | Kayıt |
+| --- | --- |
+| [#1 Proje: yeni çalışma düzeni ve kapsam](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/1) | Aktif MD/pano hazırlığı |
+| [#31 Kimlik: ürün adı seçimi](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/31) | Planlanan / Backlog |

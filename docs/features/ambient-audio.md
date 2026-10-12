@@ -1,9 +1,9 @@
-# Ambient listening — future scope
+# Ses ve etkileşimli kontrol
 
-Accepted direction: optional instrumental or nature listening, without vocals. Categories may include classical music (Mozart), solo piano, solo guitar, water, rain, birds and thunder/rain. The visitor chooses a category; no autoplay. Verify recording licenses independently from composition rights.
+Mevcut isteğe bağlı Mozart kalır; otomatik oynatma yok. Kullanıcı her zaman duraklatabilir/sessize alabilir. Kayıt lisansı eser lisansından ayrı değerlendirilir.
 
-A future opt-in weather/season mode may suggest birds for sunny spring days and rain/thunder for rainy weather. Define location consent, weather source, manual override and offline fallback before implementation. No weather/location integration exists yet.
+Ses seçeneklerini çoğaltma ve Apple AssistiveTouch benzeri erişilebilir, etkileşimli kontrol Backlog. Hava durumu/mevsime göre isteğe bağlı öneri ayrı Backlog; konum izni, kaynak ve manuel tercih işi alınırken kararlaştırılır.
 
-Explore a more advanced animated floating control inspired by AssistiveTouch: one coherent expandable control for listening categories and related actions. Preserve minimalist styling, keyboard/touch access, reduced motion and an always-reachable mute action. Current playback uses a small translucent button with decorative bars only while playing; it is not yet this expanded interaction system.
+[Frontend oynatıcı rehberi](../../frontend/docs/audio.md). Tarayıcı autoplay/sekme kapanışı kesintisiz oynatma garantisi vermez.
 
-Implementation ownership: `../../frontend/docs/audio.md`. Backend media catalogue and weather contracts remain future work.
+Takip: [#10](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/10), [#27](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/27).

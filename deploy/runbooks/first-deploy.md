@@ -1,98 +1,24 @@
 # İlk VPS kurulumu
 
-Kaynak: [VPS planı](../../docs/deployment-vps.md). Komutlar repo kökündeki `deploy/` dizininden çalıştırılır. `<...>` yer tutucularını kendi değerlerinle değiştir; gerçek değerleri bu dosyaya veya Git'e yazma.
+Önce [VPS planı](../../docs/deployment-vps.md). Henüz sunucu/domain/sağlayıcı seçilmedi; hiçbir canlı kurulum yapılmadı.
 
-## 0. Ön koşullar (karar gerektirir)
-
-Canonical domain, VPS (öneri: 4 GiB RAM, 1–2 vCPU, Linux LTS), SMTP sağlayıcısı ve gönderici domain (SPF/DKIM/DMARC), isteğe bağlı Google OAuth istemcisi ve Pexels anahtarı, şifreli offsite yedek hedefi (restic deposu: S3 uyumlu depo, SFTP vb.), uyarı kanalı.
-
-## 1. Sunucu
-
-1. Güvenlik yamaları; parola ile SSH kapalı, yalnız anahtar; ayrı `deploy` kullanıcısı. Docker grubu root eşdeğeridir, yalnız operatöre verilir.
-2. Docker Engine + Compose plugin kur.
-3. Güvenlik duvarı: yalnız 80/tcp, 443/tcp, 443/udp herkese; 22/tcp yönetim IP'lerine. `compose.prod.yml` yalnız `proxy` için port yayınlar; DB/backend/frontend için asla `ports` ekleme.
-4. DNS: `SITE_HOST` ve `SITE_ALT_HOST` için A (ve gerçekten kullanılıyorsa AAAA) kayıtları bu VPS'i göstersin.
-
-## 2. Sırlar ve yapılandırma
-
-```sh
-sudo install -d -m 0700 -o root -g root /etc/satir/secrets
-cd /etc/satir/secrets
-for name in postgres_superuser_password db_migration_password db_app_password db_backup_password rate_limit_key restic_password; do
-  sudo sh -c "umask 022; openssl rand -base64 36 | tr -d '\n' > $name"
-done
-# İsteğe bağlı sırlar: kullanılmıyorsa boş dosya kalır (özellik "yapılandırılmadı" görünür, sahte başarı yok).
-for name in mail_password google_client_secret pexels_api_key; do sudo sh -c "umask 022; : > $name"; done
-sudo chmod 0444 /etc/satir/secrets/*      # konteyner kullanıcıları okuyabilir; dizin 0700 root olduğu için host'ta erişilemez
-sudo sh -c 'umask 077; printf "RESTIC_REPOSITORY=<repo-url>\n" > restic.env'   # + sağlayıcı erişim değişkenleri (ör. AWS_ACCESS_KEY_ID)
-```
-
-- Gerçek SMTP parolasını `mail_password`, Google sırrını `google_client_secret`, Pexels anahtarını `pexels_api_key` dosyasına sonradan editörle yaz (shell geçmişine düşürme).
-- `restic_password` ve `restic.env` içeriğini sunucudan **ayrı** güvenli bir yerde de sakla; bunlar olmadan yedekler açılamaz.
-- `/etc/satir/release.env` dosyasını `deploy/.env.example` içindeki "Release", "Public site / edge" ve gerekli "Backend runtime/E-mail/Google" adlarıyla oluştur (sır içermez, `0640`).
-
-## 3. İmajlar
-
-İmajları GitHub Actions üretir (`.github/workflows/images.yml`); üretim VPS'inde build yapılmaz.
-
-1. Bir commit main'e girer → CI (`./mvnw verify` entegrasyon testleriyle, frontend test/typecheck/build) yeşil biter.
-2. **Images** iş akışı aynı commit için backend ve frontend imajlarını derler, Trivy ile tarar (düzeltmesi olan kritik açık işi durdurur), `ghcr.io/mrbyte66/satir-backend` ve `ghcr.io/mrbyte66/satir-frontend` olarak push eder (`:sha-<commit>` ve `:main` etiketleri) ve cosign ile anahtarsız imzalar.
-3. Çalıştırma sayfasında (Actions → Images) **release manifest** yazılır ve `release-manifest-<commit>` artefaktı olarak 90 gün saklanır: `BACKEND_IMAGE=…@sha256:…`, `FRONTEND_IMAGE=…@sha256:…`, `APP_RELEASE=<commit>` ve son Flyway sürümü.
-
-`release.env` içine bu satırları **digest'leriyle** yaz; `POSTGRES_IMAGE`, `CADDY_IMAGE`, `RESTIC_IMAGE` için de digest sabitle. `latest` veya `:main` kullanma.
-
-GHCR paketleri özelse VPS'te bir kez giriş yap (yalnız `read:packages` yetkili bir token; token kayda ve komut geçmişine girmez):
-
-```sh
-docker login ghcr.io -u <github-kullanıcı> --password-stdin < /root/ghcr-token
-```
-
-İmzayı çekmeden önce doğrula (cosign kurulu olmalı):
-
-```sh
-cosign verify "$BACKEND_IMAGE" \
-  --certificate-identity "https://github.com/mrbyte66/mrbyte-blogger/.github/workflows/images.yml@refs/heads/main" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-## 4. Veritabanı, migration ve sahip hesabı
+1. VPS/Linux, domain ve canonical host, offsite yedek, mail hizmeti, Google OAuth ve alarm kanalını seç. SSH anahtarı, deploy hesabı, firewall; yalnız edge portları public.
+2. deploy/.env.example’den /etc/satir/release.env hazırla; teknik yol adı henüz runtime ile uyumlu kalır. Gerçek sırlar Git dışında /etc/satir/secrets; servislerin okuyabildiği izinler ve parent directory koruması. DB app/migrator/backup password, HMAC, mail/Google/restic sırları ayrı. NEXT_PUBLIC alanına secret koyma.
+3. CI’da testlenmiş frontend/backend image digest’lerini al; registry ve image adlarını bu repo workflow’undan doğrula, eski proje registry’sini varsayma. Üretimde build yapma.
+4. Repo deploy dizininde:
 
 ```sh
 export COMPOSE="docker compose --env-file /etc/satir/release.env -f compose.prod.yml"
 $COMPOSE pull
-$COMPOSE up -d postgres                 # ilk açılışta postgres/init-roles.sh en az yetkili rolleri kurar
-$COMPOSE run --rm migrate               # satir_migrator ile Flyway migrate; başarı/hatayla çıkar
-sudo cat /root/owner-password | $COMPOSE run --rm -T migrate bootstrap-owner \
-  --email=<sahip@domain> --username=<kullanici-adi> --name="<Görünen Ad>"
-```
-
-- Sahip parolası yalnız stdin'den (veya `--password-file`) okunur; komut satırına, env'e veya loga yazılmaz. Dosyayı işlemden sonra güvenle sil.
-- İkinci bir sahip veya mevcut sahibin üzerine yazma reddedilir.
-
-## 5. Uygulamayı açma
-
-```sh
+$COMPOSE up -d postgres
+$COMPOSE run --rm migrate
+$COMPOSE run --rm -T migrate bootstrap-owner --email=<email> --username=<username> --name=<name> < <git-disi-parola-dosyasi>
 $COMPOSE up -d backend frontend proxy
-$COMPOSE ps                              # hepsi healthy olmalı (backend readiness DB'yi de kontrol eder)
+$COMPOSE ps
 ```
 
-Smoke test (indeksleme hâlâ kapalı):
+5. TLS/canonical, csrf/login/logout, member Studio reddi, draft/hidden 404, backend arızası 503, medya ve yeni ürün farklarını smoke test et. Health/actuator ayrıntıları public olmamalı.
+6. Şifreli offsite depo initialize, DB/media backup ve boş ortamda restore deneyini yap; cron ve hata uyarısını kur. Sır/yedek anahtarı sunucudan ayrı saklanır.
+7. Gerçek içerik ve site-wide Studio indeksleme kontrolünü doğrula. Mevcut INDEXING_ENABLED gate’i kodda vardır; yeni hedef uyarlanmadan Studio anahtarını tek kontrol gibi sunma. Test verisi canlıya taşınmaz.
 
-- `https://<SITE_HOST>/` 200, `https://<SITE_ALT_HOST>/` → 308 canonical host.
-- `https://<SITE_HOST>/api/v1/auth/csrf` 200 ve `Cache-Control: no-store`; `https://<SITE_HOST>/actuator/health` dış dünyadan **404** (proxy yönlendirmez).
-- `/studio` sahip girişi; okur hesabıyla Studio reddi; olmayan yazı 404.
-- Mail yapılandırıldıysa kayıt/doğrulama e-postası gelir; yoksa yayın mail işleri `MAIL_NOT_CONFIGURED` olarak görünür.
-- `robots.txt` ve sayfalarda `noindex` (deployment gate kapalı).
-
-## 6. Yedekleme zamanlaması
-
-```cron
-# /etc/cron.d/satir-backup — gece, düşük trafik saatinde
-30 3 * * * deploy sh -c 'cd /opt/satir/deploy && C="docker compose --env-file /etc/satir/release.env -f compose.prod.yml" && $C run --rm backup && $C run --rm offsite' >> /var/log/satir-backup.log 2>&1
-```
-
-İlk çalıştırmadan önce restic deposunu bir kez başlat: `$COMPOSE run --rm offsite init`. Saklama: `$COMPOSE run --rm offsite forget --keep-daily 7 --keep-weekly 4 --keep-monthly 3 --prune` (haftalık). Son başarılı yedek zamanını izle; başarısızlık sessiz geçmemeli. Restore tatbikatı: [backup-restore.md](backup-restore.md).
-
-## 7. Yayına açma (indeksleme)
-
-Gerçek içerik sahibin kontrolünde yayımlandıktan, restore tatbikatı ve SEO kontrol listesi ([VPS planı §9](../../docs/deployment-vps.md)) geçtikten sonra: `release.env` içinde `INDEXING_ENABLED=true`, `$COMPOSE up -d backend frontend`, ardından Studio'da site ayarı "indekslenebilir". Search Console doğrulaması ve sitemap gönderimi elle yapılır.
+İmza/digest, resource budget, least-privilege DB ve proxy ayarları mevcut dosyalara karşı kontrol edilir. Canlıya deploy kullanıcı talimatıyla; V1 etiketi özellik kontrolünden önce başarı ilanı değildir.

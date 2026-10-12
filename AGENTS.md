@@ -1,32 +1,32 @@
-# Repository guide
+# Proje çalışma kuralları
 
-This repository contains separate frontend and backend applications.
+## İletişim
 
-| Task | Read first |
+Kısa ve açık Türkçe yaz. Teknik adlar İngilizce kalabilir. Tercih ve kapsam sorularını kısa anketlerle sor; her tur en fazla 5 soru olsun. Gelen cevapları kaydet. Aynı tercihi tekrar tekrar sorma.
+
+## Çalışma düzeni
+
+- Tek kodlayıcı mevcut Codex session’ıdır. Kullanıcı isterse ayrı session yalnız analiz yapabilir. Kendiliğinden agent veya session başlatma.
+- Kullanıcı işi sohbetten söyler. GitHub issue ve Project takibini asistan yönetir; Markdown görev panosu değildir.
+- Aynı konudaki tamamlanmamış işler tek büyük issue’da birleşir. Başlık kategori ve hedef söyler; açıklama birkaç kısa maddeden oluşur.
+- Ertelenen her iş Backlog issue’su olur. Backlog → Todo ve her Done geçişini yalnız kullanıcı yapar. Seçilen işi asistan In Progress yapar; teslim sonrası kullanıcı Done yapana kadar bu durumda kalır.
+- Doğrudan main üzerinde çalış. Branch, worktree, PR, puan, agent etiketi ve bağımsız testçi zorunluluğu yok.
+- Gerekli testleri ve davranış kontrollerini kendin yap. Kullanıcı gerek duyduğunda ayrıca inceler. Kendi testlerinin geçmesi Done yetkisi vermez.
+- Commit yapabilirsin. Push yalnız kullanıcının açık talimatıyla; yerel sonucu görüp “olmuş/tamam, gönder” demesi yeterlidir. Yerel önizleme için push gerekmez.
+- Bütün çalışma kullanıcının Mac’indeki yerel Codex oturumunda yapılır: kod, belgeler, test, Docker, issue ve Project takibi. Bulut devam eden çalışma ortamı değildir. Bu bulutta hazırlanmış belgeler tek seferlik devir paketiyle aktarılır.
+- Project takibinde erişilebilen yerel tarayıcı araçlarını kullan; tarayıcı kontrolü yoksa yetkili yerel GitHub CLI/API kullan. Makine, tarayıcı ve Project erişimini gerçekten kontrol etmeden erişim sözü verme.
+
+## Kaynaklar
+
+| Konu | Belge |
 | --- | --- |
-| Product direction and accepted decisions | `docs/product.md` |
-| Consolidated categorized project roadmap | `docs/roadmap.md` |
-| Cross-project coordination and decisions | `docs/coordination.md` |
-| Theme system and visual builder scope | `docs/site-builder.md` |
-| Local reading tools and future annotation layers | `docs/features/reading-tools.md` |
-| Future instrumental/nature audio and weather mode | `docs/features/ambient-audio.md` |
-| Planned owner-managed nostalgia corner | `docs/features/nostalgia-corner.md` |
-| Planned editable article summaries | `docs/features/article-summary.md` |
-| Automatic article/series covers and visual cards | `docs/features/automatic-covers.md` |
-| Article publication scheduling and author email preferences | `docs/features/publication-scheduling.md` |
-| Membership UI, Studio access and V2 portal | `docs/features/membership.md` |
-| Private member bookmarks and collections | `docs/features/saved-articles.md` |
-| Anonymous claps, aggregate counts and article sharing | `docs/features/claps-and-sharing.md` |
-| Blog series and chapter journeys | `docs/features/blog-series.md` |
-| Future reader badges and configurable owner analytics | `docs/features/reader-progress-and-analytics.md` |
-| Owner-only private/locked articles and access rules | `docs/features/private-articles.md` |
-| Public membership introduction | `docs/features/site-introduction.md` |
-| Interactive character rotation | `docs/features/character-interaction.md` |
-| Scene featured writing/series and future member recommendations | `docs/features/personalized-recommendations.md` |
-| Frontend implementation/design/tests | `frontend/AGENTS.md` |
-| Backend implementation/API/domain/tests | `backend/AGENTS.md` |
-| AI-assisted issue, coding, and test workflow | `docs/ai-workflow.md` |
+| Ürün ve kapsam | [docs/product.md](docs/product.md) |
+| Kesin kararlar | [docs/decisions.md](docs/decisions.md) |
+| Issue ve pano düzeni | [docs/ai-workflow.md](docs/ai-workflow.md), [docs/github-project.md](docs/github-project.md) |
+| Kategorili issue bağlantıları | [docs/roadmap.md](docs/roadmap.md) |
+| Frontend / backend | [frontend/AGENTS.md](frontend/AGENTS.md), [backend/AGENTS.md](backend/AGENTS.md) |
+| Yerel teslim | [docs/local-handoff.md](docs/local-handoff.md) |
 
-Keep product requirements and cross-application contracts here. Keep frontend design and implementation rules in `frontend/`; backend architecture and test rules belong in `backend/`. Update the document that owns a decision when it changes.
+Mevcut kodu geliştirip sadeleştir. Next.js/React/TypeScript, Java 25/Spring Boot ve PostgreSQL korunur. Tasarım ve CRT karakteri korunur. Yeni hedefleri mevcut kodun davranışı sanma: kod, OpenAPI ve ürün hedefi farklıysa ilgili issue’da farkı belirt. Kullanıcının değişikliklerinin üzerine yazma; sırları kayda veya commit’e koyma. Uygulanmış Flyway migration’ını değiştirme.
 
-The stack is a Next.js/React frontend and a Spring Boot/Java 25 LTS backend with PostgreSQL. Backend V1 (slices 1–8) is on `main` and the frontend uses its API; status and open items live in `backend/README.md`, the contract in `docs/api-contract.md` and `backend/docs/openapi.yaml`. Do not infer API/database contracts from sample or seed content. Work is tracked in GitHub issues (`docs/ai-workflow.md`); every pull request runs CI.
+İlk ürün sürümü V1’dir. Sonraki sürüm adları V1 çıktıktan sonra seçilir. Eski ürün adı kullanılmaz; mevcut repo, paket ve ortam değişkeni adları kod değiştirilmeden kendiliğinden yeniden adlandırılmaz.

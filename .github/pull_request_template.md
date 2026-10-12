@@ -1,13 +1,9 @@
-Closes #
+# Değişiklik
 
-## Değişiklik
+PR zorunlu değildir; kullanıcı isterse bu kısa şablon kullanılır.
 
-<!-- Ne değişti? Kısa Türkçe yaz. -->
+- Ne değişti:
+- İlgili issue:
+- Yapılan kontrol:
 
-## Kontrol
-
-- [ ] İş kapsamı ve diğer PR’larla çakışma kontrol edildi.
-- [ ] Gerekli testler çalıştırıldı; sonuçları aşağıda.
-- [ ] Sır veya özel veri eklenmedi.
-
-<!-- Test komutları ve sonuçları. Bağımsız test sonucu issueya yazılır. -->
+Bağımsız agent/testçi devir kaydı gerekmiyor. Done kullanıcıya aittir.

@@ -1,20 +1,15 @@
-# Frontend agent guide
+# Frontend çalışma kuralları
 
-Read the repository `../AGENTS.md` first. Then consult only the frontend guides you need:
+Önce [kök kurallar](../AGENTS.md) ve [ürün](../docs/product.md).
 
-| Task | Guide |
+| Konu | Rehber |
 | --- | --- |
-| Visual direction, layout, motion, responsive behavior | `docs/design.md` |
-| React boundaries and frontend/backend integration | `docs/frontend.md` |
-| Theme renderer, blocks, article/series page editor and preview | `docs/builder.md` |
-| Modular article annotations and local notes | `docs/reading.md` |
-| Optional ambient Mozart playback | `docs/audio.md` |
-| Series, chapter order and future member visit history | `docs/series.md` |
-| Member/login/account UI and server Studio gate | `docs/auth.md` |
-| Test and acceptance criteria | `docs/quality.md` |
+| Görsel yön | [docs/design.md](docs/design.md) |
+| Bileşen/API sınırları | [docs/frontend.md](docs/frontend.md) |
+| Studio/tema | [docs/builder.md](docs/builder.md) |
+| Okuma / ses / seri / hesap | [docs/reading.md](docs/reading.md), [docs/audio.md](docs/audio.md), [docs/series.md](docs/series.md), [docs/auth.md](docs/auth.md) |
+| Doğrulama | [docs/quality.md](docs/quality.md) |
 
-This is a Next.js App Router / React / TypeScript application. Keep components focused; content definitions live in `lib/`, screen composition in `components/`, and styling in `app/globals.css`. Business APIs belong in Spring Boot. The explicitly requested server-side Studio login gate is described in `docs/auth.md`; do not extend it into a membership/content backend.
+Next.js App Router, React, TypeScript ve mevcut CSS düzeni korunur. CRT karakterini veya tasarımı kendiliğinden değiştirme. İş API’si ve kalıcı içerik Spring Boot’tadır; Next yalnız render, SSR ve transport sınırını yönetir. Üye verisini localStorage prototipine geri çevirme.
 
-Run `npm test`, `npm run typecheck`, and `npm run build` from this directory after meaningful changes. Update the owning guide when you change a component contract or design decision.
-
-The installed Next.js version writes extra instructions to `AGENTS.md` during development. Keep this file as the stable project guide; generated framework notes should not replace its content.
+Anlamlı uygulama değişikliğinde `npm test`, `npm run typecheck`, `npm run build`; davranış/UI için ilgili tarayıcı kontrolü. Framework API’sini kullanmadan önce kurulu Next sürümünün ilgili rehberini oku. Üretilen framework notları kalıcı proje kurallarını ezmemeli.

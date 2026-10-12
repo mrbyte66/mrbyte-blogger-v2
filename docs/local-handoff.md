@@ -17,14 +17,18 @@ Bütün iş Mac’teki yerel Codex oturumunda yapılır: kod, MD, test, Docker v
 [Yerel runbook](../deploy/runbooks/local-stack.md). Koddan sonra asistan repo kökünde:
 
 ```sh
-docker compose -f deploy/compose.local.yml up -d --build backend frontend
-docker compose -f deploy/compose.local.yml ps
+scripts/local-preview up -d --build backend frontend
+scripts/local-preview ps
 ```
 
-Site http://127.0.0.1:3010. Yeni imaj sağlıklı başlamadan güncellendi deme. İlk çalıştırmada tam yığın ve owner kurulumu gerekir. Mac’te başka klon da çalışıyorsa Compose adı, port ve volume ayrımını kontrol et; aynı `satir-local` adı iki farklı repo için ayrı veri ortamı sağlamaz. İsim/port ayrımı gerekiyorsa yerel altyapı issue’sunda uygula.
+Bu checkout site adresi http://127.0.0.1:3011; ayrı `blog-v2-local` ortamı. Eski 3010 ortamı ve verileri korundu. Yeni imaj sağlıklı başlamadan güncellendi deme. İlk çalıştırmada tam yığın ve owner kurulumu gerekir. Mac’te başka klon da çalışıyorsa Compose adı, port ve volume ayrımını kontrol et; aynı `satir-local` adı iki farklı repo için ayrı veri ortamı sağlamaz. İsim/port ayrımı gerekiyorsa yerel altyapı issue’sunda uygula.
 
 ## V1
 
 Kullanıcı Backlog’dan istediği işleri Todo’ya alır. Yeni ürün adı, VPS, domain, e-posta ve offsite yedek sağlayıcısı kararlaştırılmadan bunları satın alma/yayına çıkarma. Mevcut test verisi gerçek DB’de fakat gerçek içerikten ayrı ortamda tutulur.
 
 Takip: [#12](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/12), [#1](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/1).
+
+## Devir alındı
+
+2026-10-12: boş Masaüstü hedefi klonlandı; temiz main üzerinde `git apply --check` sonrası belge patch'i bir kez uygulandı. Yerel belge commit'i `09fe835`; bulut commit'i `886dc09` paket referansıdır, yerel commit kimliği değildir. Yerel Project erişimi çalışıyor; eski bulut erişim hataları yerel durum değildir. [Pano doğrulaması](github-project.md). Uygulama hedef farkları ilgili mevcut issue'lara kaydedilir; kullanıcı seçmeden geliştirme önceliği atanmaz.

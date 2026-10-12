@@ -2,9 +2,23 @@
 
 ## Mevcut durum
 
-Pano kullanıcı tarafından Project 3 olarak oluşturuldu. Buradaki integration yeni panoyu okumayı da reddediyor; view/field/automation kurulumu API üzerinden doğrulanamadı. 32 kategorili repo issue’su oluşturuldu; hiçbir issue kapatılmadı veya Done yapılmadı. Asistan üzerinden yeni Project oluşturulamadı: bu ortamın GitHub integration’ı `createProjectV2` için `Resource not accessible by integration` döndürdü. Repo erişimi var, Project yetkisi yok. Var olan başka proje panosu değiştirilmedi.
+2026-10-12: yerel `gh` ve Chrome erişimi doğrulandı. Mevcut **blog-v2 / Project 3** kullanıldı; yeni pano veya issue açılmadı. 32 issue kategori ve Kayıt alanlarıyla eşitlendi. #1 In Progress, diğerleri Backlog; hiçbir issue asistan tarafından Done/kapatılmadı. Geçici `durum:*` etiketleri kaldırıldı.
 
-Üç view ve otomasyon tamamlanana kadar issue’lardaki `durum:backlog` / `durum:in-progress` etiketleri geçici görünür kayıttır; Project alanlarıyla aynı şey olduğu iddia edilmez. Kurulumdan sonra asistan alanları eşitler ve gereksiz geçici etiketleri temizler.
+Project ID: `PVT_kwHOBJLPx84Bmr3d`.
+
+| Alan | Kimlik |
+| --- | --- |
+| Status | `PVTSSF_lAHOBJLPx84Bmr3dzhlT3k4` |
+| Kategori | `PVTSSF_lAHOBJLPx84Bmr3dzhlURBs` |
+| Kayıt | `PVTSSF_lAHOBJLPx84Bmr3dzhlURRM` |
+
+| Görünüm | Kimlik / numara | Kaydedilmiş filtre |
+| --- | --- | --- |
+| İş akışı | `PVTV_lAHOBJLPx84Bmr3dzgMBiQQ` / 2 | `status:Todo,"In Progress",Done` |
+| Backlog | `PVTV_lAHOBJLPx84Bmr3dzgMBiLw` / 1 | `status:Backlog` |
+| Gereksinimler | `PVTV_lAHOBJLPx84Bmr3dzgMBiQU` / 3 | `kayıt:Mevcut,Tamamlandı` |
+
+İş akışı ilk sırada Board; diğer ikisi kategori gruplu Table. Görünümlerde Title, Status, Kategori ve Kayıt var; rol/puan alanları gizli. Status tam olarak Backlog / Todo / In Progress / Done. In review boşken kullanıcı onayıyla kaldırıldı. Eski varsayılan Roadmap/My items görünümleri kaldırıldı; kartlar korundu.
 
 ## Hedef pano
 
@@ -24,22 +38,21 @@ Başlık ve kategori issue’da da görünür. Agent, testçi, puan veya Scrum r
 
 Kullanıcı Status’ı Done’a alır → GitHub’ın yerleşik status-change issue-close workflow’u issue’yu kapatır. Bu yönde ayarla; asistan kendi başına Done yapmaz. Varsayılan “issue closed / PR merged → Done” workflow’larını devre dışı bırak; Done dışarıdan otomatik verilmesin. Yeni item’lar Backlog’dan başlar; otomatik Todo vermeyi kapat.
 
-Kayıt=Tamamlandı sınıflaması ve Gereksinimler görünümüne geçiş kullanıcıya ikinci bir işlem yüklemeden asistan/otomasyon tarafından eşitlenmelidir. Gerçek Project yetkisi alındığında native workflow olanakları ve filtre güncellemesi kontrol edilir; desteklenmeyen özel alan otomasyonunu kurulmuş gibi raporlama. Kod/Actions gerekirse yalnız Mac’teki uygulama aşamasında hazırlanır.
+Yerel UI denetimi: Auto-close issue **On**, tetikleyici **Status=Done**. Item closed, Pull request merged ve Pull request linked to issue **Off**. Yeni açık repo issue'ları otomatik eklenir (`is:issue is:open`); Item added to project **On → Backlog**. Code review/change/reopened ve auto-archive akışları etkin değil.
+
+GitHub'ın yerleşik workflow'ları özel Kayıt alanını yazmıyor; farklı alanlar arasında OR filtre de desteklenmiyor. Bu nedenle [scripts/project-sync.py](../scripts/project-sync.py) yalnız kullanıcı tarafından zaten Done yapılmış repo issue kartlarının Kayıt alanını Tamamlandı yapar. Status ve issue state yazmaz; tamamlanmış geçmişi geri almaz. [Kurucu](../scripts/install-project-sync.py) Mac LaunchAgent `com.mrbyte.blog-v2.project-sync` olarak 120 saniyede bir çalıştırır. Mac kapalı/uykuda veya oturum kapalıyken eşitleme bekler; issue kapanışı GitHub'da çalışmaya devam eder.
+
+Kurulumun ilk gerçek çalışması exit 0, hata günlüğü boş. Karar sınırı testleri ve canlı dry run geçti (şu an 0 Done kartı). Gerçek bir Done geçişi ve issue kapanışı henüz kullanıcı tarafından denenmedi; asistan denemek için kartı Done'a almaz. Kullanıcı #1'i Done yapınca kapanış ve Kayıt eşitlemesi ayrıca doğrulanır.
 
 Yerleşik status/issue-close desteği: [GitHub automations](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-built-in-automations).
 
-## Yerelde tamamlama
-
-Bütün çalışma Mac’te sürdürülür. Bulut credential kurulumu tekrar denenmez. Önce belge patch’i yerel çalışma kopyasına aktarılır; sonra asistan yerel makine, mevcut tarayıcı kontrol araçları ve GitHub Project erişimini doğrular. Tarayıcı aracı varsa kullanıcı tarafından açılmış GitHub panosunda çalışır; araç yoksa yerel yetkili gh/API kullanır. Tarayıcıya veya panoya erişimi doğrulamadan kurulumu üstlendiğini söylemez. Kullanıcıdan tokenı sohbete yapıştırmasını istemez.
-
-Yetkili CLI ortamı için örnek:
+## Yerel bakım
 
 ```sh
-gh project view 3 --owner mrbyte66 --format json
+python3 scripts/project-sync.py --dry-run
+python3 scripts/install-project-sync.py
 ```
 
-Asistan repo’ya bağlar, Status seçeneklerini/alanları kurar, [roadmap](roadmap.md) içindeki mevcut issue URL’lerini ekler; ilk çalışma issue’su In Progress, diğerleri Backlog. View adları/düzen/filter ve Workflows UI’dan veya desteklenen API’den gerçekten kurulup doğrulanır. Sadece CLI create çıktısı üç görünümün kurulmuş olduğu anlamına gelmez. Başka issue, repo veya eski projeye dokunma.
-
-Kurulum tamamlanınca Project URL/ID/number ve alan/view kimliklerini bu belgenin Mevcut durum bölümüne yaz. İlk hazırlık issue’sunun kapanışı yine kullanıcıdadır.
+Kurucu güncel script'i `~/Library/Application Support/blog-v2-project/` içine kopyalar; güncelleme sonrası yeniden çalıştırılır. GitHub CLI mevcut keychain girişini kullanır; token dosyaya veya sohbete alınmaz. Loglar aynı destek klasöründe `sync.log` / `errors.log`.
 
 Takip: [#1](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/1).

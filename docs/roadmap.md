@@ -2,7 +2,7 @@
 
 İş durumu GitHub issue/Project’tedir; bu belge ikinci yapılacaklar panosu değildir. İlk ürün hedefi V1, sonraki sürüm adları henüz seçilmedi. Kullanıcı gereken işleri Backlog’dan Todo’ya alır.
 
-[blog-v2 panosu](https://github.com/users/mrbyte66/projects/3/views/1) kullanıcı tarafından oluşturuldu. Bu ortamın integration’ı panoya erişemiyor; issue’lar hazır, gerçek view/alan/otomasyon kurulumu [pano rehberinde](github-project.md) açık iş olarak tutuluyor. Hiçbir kayıt asistan tarafından Done/kapatıldı olarak işaretlenmedi.
+[blog-v2 panosu](https://github.com/users/mrbyte66/projects/3/views/2) yerelde mevcut Project 3 üzerinde düzenlendi. Alanlar, görünümler ve otomasyonun doğrulama sınırı [pano rehberinde](github-project.md). Hiçbir kayıt asistan tarafından Done/kapatıldı olarak işaretlenmedi.
 
 “Mevcut temel” klonla gelen özelliğin gereksinim kaydıdır; yeniden doğrulama bekler. Tamamlanmamış aynı hedefler tek issue’da tutulur; ayrı geliştirme başlığı mevcut teslimden farklı bir hedefi anlatır.
 

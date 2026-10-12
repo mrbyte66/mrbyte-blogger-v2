@@ -1,0 +1,9 @@
+#!/bin/sh
+# Bu checkout'a ayrı DB/media, imaj etiketi ve portlar. Eski satir-local korunur.
+set -eu
+cd "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+export LOCAL_WEB_PORT="${LOCAL_WEB_PORT:-3011}"
+export LOCAL_MAIL_UI_PORT="${LOCAL_MAIL_UI_PORT:-8026}"
+export LOCAL_DB_PORT="${LOCAL_DB_PORT:-55433}"
+export LOCAL_IMAGE_TAG="${LOCAL_IMAGE_TAG:-blog-v2}"
+exec docker compose -p blog-v2-local -f deploy/compose.local.yml "$@"

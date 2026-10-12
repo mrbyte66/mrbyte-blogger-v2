@@ -42,7 +42,7 @@ Yerel UI denetimi: Auto-close issue **On**, tetikleyici **Status=Done**. Item cl
 
 GitHub'ın yerleşik workflow'ları özel Kayıt alanını yazmıyor; farklı alanlar arasında OR filtre de desteklenmiyor. Bu nedenle [scripts/project-sync.py](../scripts/project-sync.py) yalnız kullanıcı tarafından zaten Done yapılmış repo issue kartlarının Kayıt alanını Tamamlandı yapar. Status ve issue state yazmaz; tamamlanmış geçmişi geri almaz. [Kurucu](../scripts/install-project-sync.py) Mac LaunchAgent `com.mrbyte.blog-v2.project-sync` olarak 120 saniyede bir çalıştırır. Mac kapalı/uykuda veya oturum kapalıyken eşitleme bekler; issue kapanışı GitHub'da çalışmaya devam eder.
 
-Kurulumun ilk gerçek çalışması exit 0, hata günlüğü boş. Karar sınırı testleri ve canlı dry run geçti (şu an 0 Done kartı). Gerçek bir Done geçişi ve issue kapanışı henüz kullanıcı tarafından denenmedi; asistan denemek için kartı Done'a almaz. Kullanıcı #1'i Done yapınca kapanış ve Kayıt eşitlemesi ayrıca doğrulanır.
+Kurulumun ilk gerçek çalışması exit 0, hata günlüğü boş. Karar sınırı testleri ve canlı dry run geçti (şu an 0 Done kartı). Kullanıcı #1'i Done yaptıktan sonra issue CLOSED ve Kayıt=Tamamlandı olarak doğrulandı; native kapanış ve yerel alan eşitlemesi gerçek geçişte çalıştı. Asistan test için Done vermedi.
 
 Yerleşik status/issue-close desteği: [GitHub automations](https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-built-in-automations).
 

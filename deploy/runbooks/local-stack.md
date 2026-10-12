@@ -61,3 +61,5 @@ Eski `com.satir.ci-monitor` LaunchAgent durduruldu; plist `.disabled` uzantısı
 3011 test ortamındaki owner bilgisi `deploy/owner-account.local.env`, parola `deploy/owner.local.txt` içindedir; ikisi de git dışıdır. Hesap/parola bu çalışma sırasında yerel API ile güncellendi; canlı ortama seed veya sabit kimlik bilgisi eklenmez. Eski 3010 ortamı başka hesaba/veritabanına aittir; onun doğru parola dosyasını yeni ortam için kullanma. Eski servislerin pause durumu korundu.
 
 Google bilgileri mevcut git dışı yapılandırmadan `deploy/google.local.env` içine alındı. 3011 akışı için Google Console'da `http://127.0.0.1:3011/api/v1/auth/google/callback` izinli dönüş adresi olmalıdır. Kaydedilmiş ve gerçek hesapla doğrulanmış saymak için Console kaydı ile gerçek OAuth dönüşü ayrı kontrol edilir.
+
+Google Console'daki mevcut client'a 3011 callback kullanıcı onayıyla eklendi; eski 3010 callback korundu. Kayıt yeniden açılarak iki URI doğrulandı. Gerçek Google hesabıyla 3011'e dönüş ve doğrulanmış MEMBER oturumu test edildi; Studio yetkisi verilmedi.

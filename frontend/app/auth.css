@@ -38,7 +38,8 @@
 .auth-dialog { min-height:0; width:min(460px,calc(100% - 32px)); max-height:calc(100svh - 40px); overflow-y:auto; padding:20px 32px 8px; border:1px solid var(--line); border-radius:20px; color:var(--ink); background:var(--panel); }
 .auth-dialog::backdrop,.account-confirm::backdrop { background:#17241c55; backdrop-filter:blur(5px); }
 .auth-dialog-close { position:absolute; right:12px; top:12px; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:var(--muted); }
-.auth-dialog[open],.account-confirm[open] { animation:auth-appear 180ms ease-out; }
+.auth-dialog[open] { animation:auth-window-on 480ms cubic-bezier(.22,1,.36,1) both; }
+.account-confirm[open] { animation:auth-appear 180ms ease-out; }
 @keyframes auth-appear { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 .account-entry { display:flex; align-items:center; gap:8px; white-space:nowrap; }
 .account-entry button { min-height:44px; font-size:14px; padding:8px 12px; border:1px solid transparent; border-radius:24px; }
@@ -83,13 +84,56 @@
 .account-delete { border-top:1px solid var(--line); padding:32px 0 0; }
 .account-delete summary { color:var(--muted); font-size:13px; cursor:pointer; padding:8px 0; }
 .account-delete section { padding-top:20px; }
-/* Session changes stay within the dialog; the site itself remains visible. */
-.auth-dialog.is-closing { animation:auth-dismiss 140ms ease-out forwards; pointer-events:none; }
-.auth-dialog.is-closing::backdrop { animation:auth-backdrop-dismiss 140ms ease-out forwards; }
-@keyframes auth-dismiss { from { opacity:1; } to { opacity:0; } }
-@keyframes auth-backdrop-dismiss { from { opacity:1; } to { opacity:0; } }
-@media(prefers-reduced-motion:reduce) { .auth-dialog.is-closing,.auth-dialog.is-closing::backdrop { animation:none; } }
-html[data-motion=off] .auth-dialog.is-closing,html[data-motion=off] .auth-dialog.is-closing::backdrop { animation:none; }
+/* The same CRT power-on / power-off vocabulary stays inside account surfaces. */
+@keyframes auth-window-on {
+  0% { clip-path:inset(49.7% 46% round 20px); transform:translateY(8px); }
+  30% { clip-path:inset(49.7% 0 round 20px); }
+  100% { clip-path:inset(0 round 20px); transform:translateY(0); }
+}
+.auth-dialog.is-closing { overflow:hidden; padding:0; animation:auth-window-settle 420ms cubic-bezier(.22,1,.36,1) forwards,auth-window-off 340ms 1060ms cubic-bezier(.65,0,.35,1) forwards; pointer-events:none; }
+.auth-dialog.is-closing::backdrop { animation:auth-backdrop-dismiss 340ms 1060ms ease forwards; }
+@keyframes auth-window-settle { to { height:280px; } }
+@keyframes auth-window-off {
+  0% { clip-path:inset(0 round 20px); }
+  65% { clip-path:inset(49.7% 0 round 20px); }
+  100% { clip-path:inset(50% 50% round 20px); }
+}
+@keyframes auth-backdrop-dismiss { to { opacity:0; } }
+.auth-signal { min-height:0; --signal-color:var(--accent,#bad1ad); position:relative; display:flex; align-items:center; justify-content:center; gap:24px; padding:44px 28px; color:var(--ink); background:var(--panel); overflow:hidden; isolation:isolate; }
+.auth-dialog .auth-signal { height:100%; min-height:280px; flex-direction:column; gap:16px; text-align:center; }
+.auth-signal::before { content:""; position:absolute; inset:0; z-index:-1; background:radial-gradient(ellipse at 30% 50%,color-mix(in srgb,var(--signal-color) 15%,transparent),transparent 65%); }
+.auth-signal.is-floating { position:fixed; z-index:110; top:clamp(20px,8vh,80px); left:50%; width:min(390px,calc(100vw - 32px)); transform:translateX(-50%); border:1px solid var(--line); border-radius:20px; padding:28px; box-shadow:0 20px 70px #0002; pointer-events:none; animation:auth-signal-arrive 480ms cubic-bezier(.22,1,.36,1) both,auth-signal-leave 360ms 2240ms ease-in forwards; }
+.auth-signal.is-out { --signal-color:var(--muted); }
+.auth-signal-screen { position:relative; flex:none; width:88px; height:80px; display:grid; place-items:center; }
+.auth-signal-screen svg { width:80px; height:64px; position:relative; z-index:1; stroke:var(--ink); stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.auth-signal-screen rect { fill:color-mix(in srgb,var(--signal-color) 20%,var(--panel)); }
+.auth-signal-orbit { position:absolute; inset:0; border:1px solid color-mix(in srgb,var(--signal-color) 50%,transparent); border-radius:50%; animation:auth-signal-ring 1000ms ease-out both; }
+.auth-signal-face { transform-origin:40px 27px; animation:auth-face-on 700ms cubic-bezier(.22,1,.36,1) both; }
+.auth-signal-line { opacity:0; }
+.is-out .auth-signal-face { animation:auth-face-off 750ms 180ms ease-in forwards; }
+.is-out .auth-signal-line { animation:auth-line-off 1050ms ease forwards; }
+.is-out .auth-signal-orbit { animation:auth-ring-off 1100ms ease forwards; }
+.auth-signal-copy { min-width:0; animation:auth-copy-arrive 500ms 130ms both; }
+.auth-signal-label { display:flex; justify-content:inherit; align-items:center; gap:7px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+.auth-dialog .auth-signal-label { justify-content:center; }
+.auth-signal-label i { width:5px; height:5px; border-radius:50%; background:var(--signal-color); box-shadow:0 0 0 3px color-mix(in srgb,var(--signal-color) 15%,transparent); }
+.auth-signal-copy strong { display:block; font-size:25px; font-weight:500; letter-spacing:-.045em; line-height:1.15; }
+.auth-signal-copy p { margin:9px 0 0; font-size:12px; line-height:1.5; color:var(--muted); }
+@keyframes auth-signal-arrive { from { clip-path:inset(49.7% 40% round 20px); translate:0 -10px; } 35% { clip-path:inset(49.7% 0 round 20px); } to { clip-path:inset(0 round 20px); translate:0 0; } }
+@keyframes auth-signal-leave { to { opacity:0; translate:0 -8px; } }
+@keyframes auth-signal-ring { from { transform:scale(.5); opacity:0; } 40% { opacity:1; } to { transform:scale(1.18); opacity:0; } }
+@keyframes auth-ring-off { from { transform:scale(1.1); opacity:.7; } to { transform:scale(.55); opacity:0; } }
+@keyframes auth-face-on { from { transform:scaleY(.02); opacity:0; } 35% { opacity:1; } to { transform:scaleY(1); opacity:1; } }
+@keyframes auth-face-off { to { transform:scaleY(.02); opacity:0; } }
+@keyframes auth-line-off { 0%,45% { opacity:0; } 65% { opacity:1; } 100% { opacity:0; transform:scaleX(0); transform-origin:center; } }
+@keyframes auth-copy-arrive { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:420px) { .auth-signal.is-floating { gap:14px; padding:24px 18px; } .auth-signal-copy strong { font-size:23px; } }
+@media(prefers-reduced-motion:reduce) {
+  .auth-dialog[open],.auth-dialog.is-closing,.auth-dialog.is-closing::backdrop,.auth-signal,.auth-signal * { animation:none !important; }
+  .auth-signal-orbit { display:none; }
+}
+html[data-motion=off] :is(.auth-dialog[open],.auth-dialog.is-closing,.auth-signal,.auth-signal *),html[data-motion=off] .auth-dialog.is-closing::backdrop { animation:none !important; }
+html[data-motion=off] .auth-signal-orbit { display:none; }
 .account-danger { color:#944c5b; border-color:#944c5b66; }
 html[data-theme=dark] .account-danger,.surface-night .account-danger { color:#e2a3b0; border-color:#e2a3b066; }
 html[data-theme=light] .surface-night .account-danger { color:#944c5b; border-color:#944c5b66; }

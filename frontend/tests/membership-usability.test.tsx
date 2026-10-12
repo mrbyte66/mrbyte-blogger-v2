@@ -52,7 +52,8 @@ describe("membership usability", () => {
     fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "dogru-parola-123" } });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Giriş yap" })); await settle(); });
     expect(screen.getByRole("dialog").className).toContain("is-closing");
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Hoş geldin.")).toBeTruthy();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 2000 });
     expect(screen.getByText("Üye")).toBeTruthy();
   });
 
@@ -78,5 +79,6 @@ describe("membership usability", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Çıkış" })); await settle(); });
     await waitFor(() => expect(screen.getByText("Üye")).toBeTruthy());
     expect(backend.state.profile).not.toBeNull();
+    expect(screen.queryByText("Görüşmek üzere.")).toBeNull();
   });
 });

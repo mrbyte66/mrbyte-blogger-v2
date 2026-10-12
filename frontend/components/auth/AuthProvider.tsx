@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { AuthScreen, AvatarStyle } from "../../lib/auth/model";
 import { api, ApiError, describe, resetCsrf } from "../../lib/api/http";
 import { AuthDialog } from "./AuthDialog";
+import { AuthSignal } from "./AuthSignal";
 
 /** The signed-in account as the server reports it. Roles always come from the server session. */
 export type AccountProfile = {
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [screen, setScreen] = useState<AuthScreen | null>(null);
   const [toast, setToast] = useState("");
+  const [signal, setSignal] = useState<{ kind: "in" | "out"; id: number } | null>(null);
   const signingOut = useRef(false);
   const channel = useRef<BroadcastChannel | null>(null);
   const userId = useRef<string | null>(null);
@@ -86,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search);
     const ok = params.get("google"); const failure = params.get("google_error");
     if (ok || failure) {
-      if (ok) { setToast(googleMessages[ok] ?? "Google işlemi tamamlandı"); announce(); }
+      if (ok) { if (ok === "signed_in") setSignal({ kind: "in", id: Date.now() }); else setToast(googleMessages[ok] ?? "Google işlemi tamamlandı"); announce(); }
       if (failure) setError(googleErrors[failure] ?? "Google işlemi tamamlanamadı.");
       params.delete("google"); params.delete("google_error");
       const query = params.toString();
@@ -97,11 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (!session) return; const timer = setTimeout(() => void refresh(), Math.max(1000, session.expiresAt - Date.now() + 1000)); return () => clearTimeout(timer); }, [session, refresh]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(""), 3500); return () => clearTimeout(timer); }, [toast]);
 
+  useEffect(() => {
+    if (!signal || (signal.kind === "in" && !ready)) return;
+    const timer = setTimeout(() => setSignal(null), 2600);
+    return () => clearTimeout(timer);
+  }, [signal, ready]);
+
   async function login(identifier: string, password: string) {
     setError("");
     try {
       await api("POST", "/auth/login", { body: ({ identifier: identifier.trim(), password } satisfies Input<"login">) });
-      resetCsrf(); await refresh(); announce(); return true;
+      resetCsrf(); await refresh(); announce(); if (!screen) setSignal({ kind: "in", id: Date.now() }); return true;
     } catch (cause) { setError(describe(cause)); return false; }
   }
   async function register(name: string, email: string, password: string, confirmation: string) {
@@ -140,11 +148,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
     refreshGeneration.current++;
-    resetCsrf(); setSession(null); userId.current = null; setScreen(null); setError(""); setToast("Çıkış yapıldı"); announce();
+    resetCsrf(); setSession(null); userId.current = null; setScreen(null); setError(""); setSignal({ kind: "out", id: Date.now() }); announce();
     signingOut.current = false;
   }
   return <Context.Provider value={{ session, ready, error, setError, openAuth: (next = "login") => { setError(""); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
     {children}<AuthDialog screen={screen} />
+    {signal && (signal.kind === "out" || session) && <AuthSignal key={signal.id} kind={signal.kind} floating />}
     <div className={`auth-toast ${toast ? "is-visible" : ""}`} role="status" aria-live="polite">{toast}</div>
   </Context.Provider>;
 }

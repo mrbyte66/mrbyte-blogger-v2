@@ -6,12 +6,13 @@ import { themeAppearance } from "../../lib/builder/appearance";
 import { AuthCard } from "./AuthCard";
 import { AuthIcon } from "./AuthIcon";
 import { useAuth } from "./AuthProvider";
-import { authMotionDuration } from "../../lib/auth/transitions";
+import { AuthSignal } from "./AuthSignal";
 export function AuthDialog({ screen }: { screen: AuthScreen | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const { closeAuth, session } = useAuth();
   const [displayed, setDisplayed] = useState(screen);
   const [closing, setClosing] = useState(false);
+  const [closingHeight, setClosingHeight] = useState<number>();
   const { workspace } = useWorkspace();
   const appearance = themeAppearance(workspace.applied);
   useEffect(() => {
@@ -20,8 +21,9 @@ export function AuthDialog({ screen }: { screen: AuthScreen | null }) {
       setDisplayed(screen); setClosing(false);
       if (!element?.open) element?.showModal();
     } else if (element?.open) {
-      const duration = session ? authMotionDuration(140) : 0;
+      const duration = session ? 1400 : 0;
       if (duration) {
+        setClosingHeight(element.getBoundingClientRect().height);
         setClosing(true);
         const timer = setTimeout(() => { element.close(); setDisplayed(null); setClosing(false); }, duration);
         return () => clearTimeout(timer);
@@ -29,8 +31,8 @@ export function AuthDialog({ screen }: { screen: AuthScreen | null }) {
       element.close(); setDisplayed(null); setClosing(false);
     }
   }, [screen, session]);
-  return <dialog ref={dialog} className={`${appearance.className} auth-dialog${closing ? " is-closing" : ""}`} style={appearance.style} aria-label="Hesap erişimi" onCancel={event => { event.preventDefault(); closeAuth(); }} onClose={closeAuth} onClick={event => { if (event.target === event.currentTarget) closeAuth(); }}>
-    <button className="auth-dialog-close" type="button" aria-label="Giriş penceresini kapat" onClick={closeAuth}><AuthIcon kind="close" /></button>
-    {displayed && <AuthCard key={displayed} initial={displayed} onComplete={closeAuth} />}
+  return <dialog ref={dialog} className={`${appearance.className} auth-dialog${closing ? " is-closing" : ""}`} style={{ ...appearance.style, ...(closing ? { height: closingHeight } : {}) }} aria-label="Hesap erişimi" onCancel={event => { event.preventDefault(); closeAuth(); }} onClose={closeAuth} onClick={event => { if (event.target === event.currentTarget) closeAuth(); }}>
+    {!closing && <button className="auth-dialog-close" type="button" aria-label="Giriş penceresini kapat" onClick={closeAuth}><AuthIcon kind="close" /></button>}
+    {closing ? <AuthSignal kind="in" /> : displayed && <AuthCard key={displayed} initial={displayed} onComplete={closeAuth} />}
   </dialog>;
 }

@@ -5,7 +5,6 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import type { AuthScreen, AvatarStyle } from "../../lib/auth/model";
 import { api, ApiError, describe, resetCsrf } from "../../lib/api/http";
 import { AuthDialog } from "./AuthDialog";
-import { authMotionDuration } from "../../lib/auth/transitions";
 
 /** The signed-in account as the server reports it. Roles always come from the server session. */
 export type AccountProfile = {
@@ -49,7 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [screen, setScreen] = useState<AuthScreen | null>(null);
   const [toast, setToast] = useState("");
-  const [transition, setTransition] = useState<"in" | "out" | null>(null);
   const signingOut = useRef(false);
   const channel = useRef<BroadcastChannel | null>(null);
   const userId = useRef<string | null>(null);
@@ -88,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const params = new URLSearchParams(window.location.search);
     const ok = params.get("google"); const failure = params.get("google_error");
     if (ok || failure) {
-      if (ok) { if (ok === "signed_in") setTransition("in"); setToast(googleMessages[ok] ?? "Google işlemi tamamlandı"); announce(); }
+      if (ok) { setToast(googleMessages[ok] ?? "Google işlemi tamamlandı"); announce(); }
       if (failure) setError(googleErrors[failure] ?? "Google işlemi tamamlanamadı.");
       params.delete("google"); params.delete("google_error");
       const query = params.toString();
@@ -98,13 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh, announce]);
   useEffect(() => { if (!session) return; const timer = setTimeout(() => void refresh(), Math.max(1000, session.expiresAt - Date.now() + 1000)); return () => clearTimeout(timer); }, [session, refresh]);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(""), 3500); return () => clearTimeout(timer); }, [toast]);
-  useEffect(() => { if (transition !== "in") return; const timer = setTimeout(() => setTransition(null), authMotionDuration(450)); return () => clearTimeout(timer); }, [transition]);
 
   async function login(identifier: string, password: string) {
     setError("");
     try {
       await api("POST", "/auth/login", { body: ({ identifier: identifier.trim(), password } satisfies Input<"login">) });
-      resetCsrf(); await refresh(); announce(); setTransition("in"); return true;
+      resetCsrf(); await refresh(); announce(); return true;
     } catch (cause) { setError(describe(cause)); return false; }
   }
   async function register(name: string, email: string, password: string, confirmation: string) {
@@ -134,21 +131,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   async function signOut() {
     if (signingOut.current) return;
-    signingOut.current = true; setError(""); setTransition("out");
+    signingOut.current = true; setError("");
     try {
       await api("POST", "/auth/logout");
     } catch (cause) {
       if (!(cause instanceof ApiError && cause.status === 401)) {
-        setTransition(null); signingOut.current = false; setError(describe(cause)); return;
+        signingOut.current = false; setError(describe(cause)); return;
       }
     }
     refreshGeneration.current++;
     resetCsrf(); setSession(null); userId.current = null; setScreen(null); setError(""); setToast("Çıkış yapıldı"); announce();
-    setTransition("in"); signingOut.current = false;
+    signingOut.current = false;
   }
   return <Context.Provider value={{ session, ready, error, setError, openAuth: (next = "login") => { setError(""); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
     {children}<AuthDialog screen={screen} />
-    {transition && <div className={`auth-session-transition is-${transition}`} aria-hidden="true" />}
     <div className={`auth-toast ${toast ? "is-visible" : ""}`} role="status" aria-live="polite">{toast}</div>
   </Context.Provider>;
 }

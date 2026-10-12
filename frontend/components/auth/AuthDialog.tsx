@@ -20,7 +20,7 @@ export function AuthDialog({ screen }: { screen: AuthScreen | null }) {
       setDisplayed(screen); setClosing(false);
       if (!element?.open) element?.showModal();
     } else if (element?.open) {
-      const duration = session ? authMotionDuration(180) : 0;
+      const duration = session ? authMotionDuration(140) : 0;
       if (duration) {
         setClosing(true);
         const timer = setTimeout(() => { element.close(); setDisplayed(null); setClosing(false); }, duration);

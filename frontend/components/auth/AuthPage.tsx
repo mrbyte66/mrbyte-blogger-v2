@@ -7,7 +7,6 @@ import { useWorkspace } from "../../lib/builder/use-workspace";
 import { themeAppearance } from "../../lib/builder/appearance";
 import { AuthCard } from "./AuthCard";
 import { useAuth } from "./AuthProvider";
-import { authMotionDuration } from "../../lib/auth/transitions";
 
 /** Where the sign-in and sign-up pages send a signed-in visitor (password login, Google return or revisit): the home page. */
 export const AUTH_PAGE_DESTINATION = "/";
@@ -18,8 +17,7 @@ export function AuthPage({ initial = "login" }: { initial?: AuthScreen }) {
   const signedIn = ready && session !== null;
   useEffect(() => {
     if (!signedIn) return;
-    const timer = setTimeout(() => router.replace(AUTH_PAGE_DESTINATION), authMotionDuration(180));
-    return () => clearTimeout(timer);
+    router.replace(AUTH_PAGE_DESTINATION);
   }, [signedIn, router]);
   return <main className={`${appearance.className} auth-page`} style={appearance.style}><SitePageHeader theme={workspace.applied} account={false} />{signedIn ? null : <AuthCard initial={initial} onComplete={() => router.replace(AUTH_PAGE_DESTINATION)} />}</main>;
 }

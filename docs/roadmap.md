@@ -40,6 +40,7 @@ Klondan gelen özelliklerin gereksinim:mevcut etiketi korunur; etiket doğrulanm
 | [#5 Studio: görsel düzenleme ve site indeksleme](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/5) |
 | [#19 İstatistik: yönetim ve karşılaştırmalı raporlar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/19) |
 | [#24 Tema: kütüphane ve gelişmiş bloklar](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/24) |
+| [#33 Studio: ücretli yazı şablonunu tuvale aktarma](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/33) |
 
 ## Okuma
 
@@ -73,6 +74,7 @@ Klondan gelen özelliklerin gereksinim:mevcut etiketi korunur; etiket doğrulanm
 | [#11 Tasarım: CRT sahnesi ve okunabilir arayüz](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/11) |
 | [#22 Tanıtım: site ve üyelik avantajları](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/22) |
 | [#29 Karakter: 360 derece etkileşim](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/29) |
+| [#34 Tasarım: Türkçe 404 ve ana sayfaya dönüş](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/34) |
 
 ## Altyapı
 

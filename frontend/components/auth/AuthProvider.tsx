@@ -18,6 +18,7 @@ type ProfileDto = Schema<"Profile">;
 type AuthContext = {
   session: AccountSession | null; ready: boolean; error: string; loginRejected: boolean; verificationRequired: boolean;
   openAuth: (screen?: AuthScreen) => void; closeAuth: () => void; notify: (message: string) => void; setError: (message: string) => void;
+  verificationMailSent: (email: string) => void; verificationWaitUntil: (email: string) => number;
   refresh: () => Promise<void>;
   login: (identifier: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string, confirmation: string) => Promise<boolean>;
@@ -26,7 +27,7 @@ type AuthContext = {
   signOut: () => Promise<void>;
 };
 const noop = async () => false;
-const fallback: AuthContext = { session: null, ready: false, error: "", loginRejected: false, verificationRequired: false, openAuth: () => {}, closeAuth: () => {}, notify: () => {}, setError: () => {}, refresh: async () => {}, login: noop, register: noop, startGoogle: async () => {}, updateProfile: noop, signOut: async () => {} };
+const fallback: AuthContext = { session: null, ready: false, error: "", loginRejected: false, verificationRequired: false, verificationMailSent: () => {}, verificationWaitUntil: () => 0, openAuth: () => {}, closeAuth: () => {}, notify: () => {}, setError: () => {}, refresh: async () => {}, login: noop, register: noop, startGoogle: async () => {}, updateProfile: noop, signOut: async () => {} };
 const Context = createContext<AuthContext>(fallback);
 export function useAuth() { return useContext(Context); }
 
@@ -49,6 +50,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const [loginRejected, setLoginRejected] = useState(false);
   const [verificationRequired, setVerificationRequired] = useState(false);
+  const [verificationWaits, setVerificationWaits] = useState<Record<string, number>>({});
+  function verificationMailSent(email: string) { setVerificationWaits(current => ({ ...current, [email.trim().toLowerCase()]: Date.now() + 60_000 })); }
   const [screen, setScreen] = useState<AuthScreen | null>(null);
   const [toast, setToast] = useState("");
   const [signal, setSignal] = useState<{ kind: "in" | "out"; id: number } | null>(null);
@@ -116,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   async function register(name: string, email: string, password: string, confirmation: string) {
     setError("");
-    try { await api("POST", "/auth/register", { body: ({ name: name.trim(), email: email.trim(), password, passwordConfirmation: confirmation } satisfies Input<"register">) }); return true; }
+    try { await api("POST", "/auth/register", { body: ({ name: name.trim(), email: email.trim(), password, passwordConfirmation: confirmation } satisfies Input<"register">) }); verificationMailSent(email); return true; }
     catch (cause) { setError(describe(cause)); return false; }
   }
   async function startGoogle(purpose: "login" | "reauth" = "login") {
@@ -153,7 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCsrf(); setSession(null); userId.current = null; setScreen(null); setError(""); setSignal({ kind: "out", id: Date.now() }); announce();
     signingOut.current = false;
   }
-  return <Context.Provider value={{ session, ready, error, loginRejected, verificationRequired, setError: message => { setError(message); if (!message) { setLoginRejected(false); setVerificationRequired(false); } }, openAuth: (next = "login") => { setError(""); setLoginRejected(false); setVerificationRequired(false); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
+  return <Context.Provider value={{ session, ready, error, loginRejected, verificationRequired, verificationMailSent, verificationWaitUntil: email => verificationWaits[email.trim().toLowerCase()] ?? 0, setError: message => { setError(message); if (!message) { setLoginRejected(false); setVerificationRequired(false); } }, openAuth: (next = "login") => { setError(""); setLoginRejected(false); setVerificationRequired(false); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
     {children}<AuthDialog screen={screen} />
     {signal && (signal.kind === "out" || session) && <AuthSignal key={signal.id} kind={signal.kind} floating />}
     <div className={`auth-toast ${toast ? "is-visible" : ""}`} role="status" aria-live="polite">{toast}</div>

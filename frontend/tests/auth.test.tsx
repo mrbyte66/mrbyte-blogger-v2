@@ -23,12 +23,13 @@ function Inspector() {
   return <><output data-testid="identity">{auth.session?.profile.email ?? "guest"}</output><output data-testid="records">{saved.library.entries.length}</output><button onClick={() => void auth.signOut()}>Logout</button><button onClick={() => void saved.save(savedArticle.slug)}>Save</button></>;
 }
 beforeEach(() => localStorage.clear());
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("server-backed membership", () => {
   it("registers through the API, sends CSRF and never stores the password in the browser", async () => {
     const backend = fakeBackend();
-    render(<AuthProvider><AuthCard initial="register" /></AuthProvider>);
+    const complete = vi.fn();
+    render(<AuthProvider><AuthCard initial="register" onComplete={complete} /></AuthProvider>);
     await act(settle);
     fireEvent.change(screen.getByLabelText("Adın"), { target: { value: "Alice" } });
     fireEvent.change(screen.getByLabelText("E-posta"), { target: { value: "alice@example.com" } });
@@ -40,10 +41,21 @@ describe("server-backed membership", () => {
     fireEvent.change(screen.getByLabelText("Şifre tekrarı"), { target: { value: "never-store-this-42" } });
     fireEvent.click(screen.getByRole("button", { name: "Şifreyi göster" }));
     expect((screen.getByLabelText("Şifre", { exact: true }) as HTMLInputElement).type).toBe("text");
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Hesap oluştur" })); await settle(); });
-    expect(await screen.findByRole("heading", { name: "E-postanı kontrol et" })).toBeTruthy();
+    vi.useFakeTimers();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Hesap oluştur" })); await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByRole("heading", { name: "E-postanı kontrol et" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Girişe dön" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ana sayfaya dön" }).getAttribute("href")).toBe("/");
+    expect(screen.queryByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_000); });
+    expect(screen.queryByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })); await vi.advanceTimersByTimeAsync(0); });
+    expect(backend.state.calls.filter(c => c.path === "/auth/verification/resend")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeNull();
+    fireEvent.click(screen.getByRole("link", { name: "Ana sayfaya dön" }));
+    expect(complete).not.toHaveBeenCalled();
+    expect(backend.state.profile).toBeNull();
     const call = backend.state.calls.find((c) => c.path === "/auth/register")!;
     expect(call.headers["X-CSRF-TOKEN"]).toBe("csrf-token");
     expect(call.body).toMatchObject({ name: "Alice", email: "alice@example.com", passwordConfirmation: "never-store-this-42" });
@@ -89,6 +101,20 @@ describe("server-backed membership", () => {
     expect(backend.state.calls.find(c => c.path === "/auth/verification/resend")?.body).toEqual({ email: "pending@example.test" });
     expect(screen.getByTestId("identity").textContent).toBe("guest");
     expect(screen.getByRole("heading", { name: "E-postanı kontrol et" })).toBeTruthy();
+  });
+
+  it("keeps resend available after a failed delivery request without starting the wait", async () => {
+    const backend = fakeBackend(); backend.addAccount({ email: "pending@example.test", verified: false });
+    render(<AuthProvider><AuthCard initial="login" /></AuthProvider>); await act(settle);
+    fireEvent.change(screen.getByLabelText("E-posta veya kullanıcı adı"), { target: { value: "pending@example.test" } });
+    fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "dogru-parola-123" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Giriş yap" })); await settle(); });
+    backend.fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify({ status: 503, code: "UNAVAILABLE", detail: "Posta isteği tamamlanamadı" }), { status: 503, headers: { "Content-Type": "application/problem+json" } }));
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })); await settle(); });
+    expect(screen.queryByRole("heading", { name: "E-postanı kontrol et" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Ana sayfaya dön" }).getAttribute("href")).toBe("/");
+    expect(backend.state.profile).toBeNull();
   });
 
   it("confirms an e-mail link only after an explicit button press", async () => {

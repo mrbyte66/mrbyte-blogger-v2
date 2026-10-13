@@ -52,3 +52,5 @@ Form tasarımında hatalı alanlar kırmızı çerçeve ve kısa açıklamayla b
 E-posta adresi doğrulanmadan giriş yapılamaz. Google’ın doğruladığı adres ve e-postaya gönderilen şifre sıfırlama bağlantısıyla açık onay da adres sahipliğinin kanıtıdır. Bir günlük deneme erişimi şimdi uygulanmaz; talep oluşursa tanıtım/üyelik işinde (#22) değerlendirilecek.
 
 Asistan seçilen işi hata durumlarıyla birlikte proaktif denetler; kullanıcıya sorun bulma görevi yüklenmez. Kapsam dışı işler uygun Backlog issue’sunda tutulur.
+
+Kayıt sonrası doğrulama postası gönderilince kullanıcı ana sayfaya dönebilir ve siteyi ziyaretçi olarak gezebilir. Yeniden gönder ilk öneri değildir; 60 saniye bekleme sonrası ikincil seçenek olarak açılır. Bu gezinme, doğrulanmadan giriş yasağını kaldırmaz.

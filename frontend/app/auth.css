@@ -268,3 +268,6 @@ html[data-motion=off] .auth-tabs::after { transition:none; }
 html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dialog.is-dismissing::backdrop { animation:none; }
 
 .auth-submit-hint { margin:10px 0 0; font-size:12px; line-height:1.5; color:var(--muted); }
+
+.auth-mail-help { display:block; margin:16px 0 0; line-height:1.6; }
+.auth-message-actions>.auth-text-button { margin-top:16px; }

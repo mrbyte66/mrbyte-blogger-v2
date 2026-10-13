@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import type { Input } from "../../lib/api/contract";
 import { useEffect, useId, useRef, useState } from "react";
 import { passwordStrength, validEmail, type AuthScreen } from "../../lib/auth/model";
@@ -32,11 +33,20 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const [email, setEmail] = useState(""); const [name, setName] = useState(""); const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState(""); const [confirmationVisible, setConfirmationVisible] = useState(false);
   const [visible, setVisible] = useState(false); const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ title: string; text: string; next?: AuthScreen; resend?: boolean } | null>(null);
+  const [result, setResult] = useState<{ title: string; text: string; next?: AuthScreen; resend?: boolean; home?: boolean } | null>(null);
   const [link, setLink] = useState({ token: "", emailChange: false });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const heading = useRef<HTMLHeadingElement>(null);
   const id = useId();
+  const waitUntil = auth.verificationWaitUntil(email);
+  const [resendReady, setResendReady] = useState(true);
+  useEffect(() => {
+    const remaining = waitUntil - Date.now();
+    setResendReady(remaining <= 0);
+    if (remaining <= 0) return;
+    const timer = setTimeout(() => setResendReady(true), remaining);
+    return () => clearTimeout(timer);
+  }, [waitUntil]);
   useEffect(() => { setLink(linkToken()); }, []);
   useEffect(() => { if (auth.session?.profile.email && !email) setEmail(auth.session.profile.email); }, [auth.session?.profile.email, email]);
   const register = screen === "register";
@@ -48,7 +58,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const passwordError = newPassword ? (password.length < MIN_PASSWORD ? `En az ${MIN_PASSWORD} karakter kullan.` : "") : (!password ? "Şifreni yaz." : "");
   const confirmationError = confirmation !== password || !confirmation ? "Şifreler aynı olmalı." : "";
   const needsEmail = screen !== "reset" && !(screen === "verify" && link.token);
-  const valid = (!newPassword || !confirmationError) && (!register || !nameError) && (!needsEmail || !emailError) && (!hasPassword || !passwordError) && (screen !== "reset" || !!link.token);
+  const valid = !(screen === "verify" && !link.token && !resendReady) && (!newPassword || !confirmationError) && (!register || !nameError) && (!needsEmail || !emailError) && (!hasPassword || !passwordError) && (screen !== "reset" || !!link.token);
   const strength = passwordStrength(password);
   function change(next: AuthScreen) { if (next === screen && !result) return; setLinkInvalid(false); setTabMotion((screen === "login" || screen === "register") && (next === "login" || next === "register")); setScreen(next); setPassword(""); setConfirmation(""); setConfirmationVisible(false); setVisible(false); setTouched({}); setResult(null); auth.setError(""); heading.current?.focus(); }
   async function run(action: () => Promise<void>) {
@@ -68,10 +78,12 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
     setScreen(screen === "reset" ? "forgot" : "verify");
   }
   async function resendVerification() {
-    if (!result) setResult({ title: "E-posta doğrulaması gerekli", text: "Giriş yapmadan önce e-posta adresini doğrula. Yeni bağlantı için yeniden gönder düğmesini kullanabilirsin.", resend: true });
+    if (busy || Date.now() < waitUntil) return;
+    if (!result) setResult({ title: "E-posta doğrulaması gerekli", text: "Giriş yapmadan önce e-posta adresini doğrula. Yeni bağlantı için yeniden gönder düğmesini kullanabilirsin.", resend: true, home: true });
     await run(async () => {
       await api("POST", "/auth/verification/resend", { body: ({ email: email.trim() } satisfies Input<"resendVerification">) });
-      setResult({ title: "E-postanı kontrol et", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik. Bağlantıdaki onay düğmesine basıp daha sonra giriş yap.", resend: true });
+      auth.verificationMailSent(email);
+      setResult({ title: "E-postanı kontrol et", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik. Bağlantıdaki onay düğmesine basıp daha sonra giriş yap.", resend: true, home: true });
     });
   }
   async function submit() {
@@ -83,7 +95,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
       } else if (register) {
         if (await auth.register(name, email, password, confirmation)) {
           setPassword(""); setConfirmation("");
-          setResult({ title: "E-postanı kontrol et", text: `Doğrulama bağlantısını ${email.trim()} adresine gönderdik. E-postanı doğrulamadan giriş yapamazsın.`, resend: true });
+          setResult({ title: "E-postanı kontrol et", text: `Doğrulama bağlantısını ${email.trim()} adresine gönderdik. Gelen kutunu ve spam klasörünü kontrol et. Giriş yapmadan önce e-postandaki bağlantıyı onayla; bu sırada siteyi gezebilirsin.`, resend: true, home: true });
         }
       } else if (screen === "forgot") {
         await api("POST", "/auth/password/forgot", { body: ({ email: email.trim() } satisfies Input<"forgotPassword">) });
@@ -101,7 +113,8 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
             : { title: "E-postan doğrulandı", text: "Hesabın etkin. Giriş yaparak kitaplığını ve hesap ayarlarını kullanabilirsin.", next: auth.session ? undefined : "login" });
         } else {
           await api("POST", "/auth/verification/resend", { body: ({ email: email.trim() } satisfies Input<"resendVerification">) });
-          setResult({ title: "Bağlantı gönderildi", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik." });
+          auth.verificationMailSent(email);
+          setResult({ title: "E-postanı kontrol et", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik. Gelen kutunu ve spam klasörünü kontrol et.", resend: true, home: true });
         }
       }
     });
@@ -113,7 +126,9 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
     <p className="auth-subtitle">{result?.text ?? (screen === "reset" && !link.token ? "Bu ekran, e-postana gelen sıfırlama bağlantısıyla açılır." : headings[screen][1])}</p>
     {result ? <div className="auth-message-actions">
       {result.next && <button type="button" className="auth-primary" onClick={() => change(result.next!)}>{result.next === "login" ? "Girişe dön" : "Devam et"}</button>}
-      {result.resend && <button className="auth-primary" type="button" disabled={busy} onClick={() => void resendVerification()}>{busy ? "Gönderiliyor…" : "Doğrulama postasını yeniden gönder"}</button>}
+      {result.home && <Link href="/" className="auth-primary" onClick={() => auth.closeAuth()}>Ana sayfaya dön</Link>}
+      {result.resend && !resendReady && <p className="auth-field-hint auth-mail-help">Postanın ulaşması biraz sürebilir. Gelmezse bir dakika sonra yeniden gönderebilirsin.</p>}
+      {result.resend && resendReady && <button className="auth-text-button" type="button" disabled={busy} onClick={() => void resendVerification()}>{busy ? "Gönderiliyor…" : "Doğrulama postasını yeniden gönder"}</button>}
       {!result.next && !result.resend && onComplete && <button type="button" className="auth-primary" onClick={onComplete}>Tamam</button>}
     </div> : <>
       {(login || register) && <>
@@ -135,12 +150,13 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
         </div>}
         {newPassword && <div className="auth-field"><label htmlFor={`${id}-confirmation`}>Şifre tekrarı</label><div className="auth-password"><input id={`${id}-confirmation`} type={confirmationVisible ? "text" : "password"} autoComplete="new-password" maxLength={128} value={confirmation} disabled={busy} onCopy={e => { if (register) e.preventDefault(); }} onCut={e => { if (register) e.preventDefault(); }} onDragStart={e => { if (register) e.preventDefault(); }} onPaste={e => { e.preventDefault(); setTouched(v => ({ ...v, confirmation: true })); auth.setError(""); }} onDrop={e => e.preventDefault()} onChange={e => { setConfirmation(e.target.value); setTouched(v => ({ ...v, confirmation: true })); auth.setError(""); }} onBlur={() => setTouched(v => ({ ...v, confirmation: true }))} aria-invalid={!!(touched.confirmation && confirmationError)} aria-describedby={touched.confirmation && confirmationError ? `${id}-confirmation-error` : undefined} /><button type="button" disabled={busy} aria-label={confirmationVisible ? "Şifre tekrarını gizle" : "Şifre tekrarını göster"} aria-pressed={confirmationVisible} onClick={() => setConfirmationVisible(!confirmationVisible)}><AuthIcon kind={confirmationVisible ? "hidden" : "eye"} /></button></div>{touched.confirmation && confirmationError && <span id={`${id}-confirmation-error`} className="auth-field-error">{confirmationError}</span>}</div>}{login && <button type="button" className="auth-text-button auth-forgot" disabled={busy} onClick={() => change("forgot")}>Şifremi unuttum</button>}
         </div><button className="auth-primary" type="submit" aria-describedby={!valid ? `${id}-submit-hint` : undefined} disabled={busy || !valid}>{busy && <span className="auth-spinner" aria-hidden="true" />}{busy ? "Bir an…" : submitLabel}</button>
-        {!valid && !busy && <p id={`${id}-submit-hint`} className="auth-submit-hint">Devam etmek için gerekli alanları doldur; işaretli hataları düzelt.</p>}
+        {!valid && !busy && <p id={`${id}-submit-hint`} className="auth-submit-hint">{screen === "verify" && !link.token && !resendReady ? "Doğrulama postası az önce gönderildi. Yeni posta istemeden önce bir dakika bekle." : "Devam etmek için gerekli alanları doldur; işaretli hataları düzelt."}</p>}
       </form>
       {(screen === "forgot" || screen === "reset" || screen === "verify") && <button type="button" className="auth-text-button auth-back" onClick={() => change("login")} disabled={busy}>← Girişe dön</button>}
     </>}
     {linkInvalid && (screen === "reset" || (screen === "verify" && !link.emailChange)) && <button className="auth-text-button" type="button" onClick={recoverLink}>{screen === "reset" ? "Yeni şifre sıfırlama bağlantısı iste" : "Yeni doğrulama bağlantısı iste"}</button>}
-    {login && auth.verificationRequired && <button className="auth-text-button auth-verification-resend" type="button" disabled={busy} onClick={() => validEmail(email.trim()) ? void resendVerification() : change("verify")}>Doğrulama postasını yeniden gönder</button>}
+    {login && auth.verificationRequired && !resendReady && <p className="auth-field-hint auth-mail-help">Doğrulama postası az önce gönderildi. Gelen kutunu ve spam klasörünü kontrol et.</p>}
+    {login && auth.verificationRequired && resendReady && <button className="auth-text-button auth-verification-resend" type="button" disabled={busy} onClick={() => validEmail(email.trim()) ? void resendVerification() : change("verify")}>Doğrulama postasını yeniden gönder</button>}
     {auth.error && <p id={`${id}-server-error`} className="auth-field-error" role="alert">{auth.error}</p>}
     {(login || register) && !result && <p className="auth-benefit">Üyelik okur hesabıdır; yazı yazma veya yönetim yetkisi vermez.</p>}
   </section>;

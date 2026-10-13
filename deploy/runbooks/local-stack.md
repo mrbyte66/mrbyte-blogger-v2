@@ -54,7 +54,7 @@ Volume silme normal yenileme değildir; asistan kullanıcı verisini reset etmez
 
 Yeni checkout Masaüstündeki `mrbyte-blogger-v2`. Backend, frontend, PostgreSQL ve Mailpit sağlıklı; site tarayıcıda açıldı. Ayrı DB'ye 25 yazı, 4 seri, 3 üye ve development owner yüklendi. Owner parolası yalnız git dışı `deploy/owner.local.txt` içinde; production hesabı değildir. Seed yeni kararlara tam uyumlu sayılmaz; özel yazı örnekleri ve sayaçlar #12/#3/#9'da denetlenir.
 
-Eski `com.satir.ci-monitor` LaunchAgent durduruldu; plist `.disabled` uzantısıyla korundu. Normal CI workflow'ları korunur. Bu servisi yeni çalışma düzeninde yeniden kurma. Kayıt eşitleme servisi yalnız Project özel alanını günceller; AI/agent çalıştırmaz.
+Eski `com.satir.ci-monitor` LaunchAgent durduruldu; plist `.disabled` uzantısıyla korundu. Normal CI workflow'ları korunur. Bu servisi yeni çalışma düzeninde yeniden kurma. Kayıt alanı kaldırıldığından Project eşitleme servisi de durduruldu; plist `.disabled` olarak korundu. Done → issue kapanışı GitHub’ın yerleşik otomasyonudur.
 
 ## Yerel üyelik hesabı ve Google
 

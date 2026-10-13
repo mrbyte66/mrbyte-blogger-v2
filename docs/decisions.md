@@ -54,3 +54,7 @@ E-posta adresi doğrulanmadan giriş yapılamaz. Google’ın doğruladığı ad
 Asistan seçilen işi hata durumlarıyla birlikte proaktif denetler; kullanıcıya sorun bulma görevi yüklenmez. Kapsam dışı işler uygun Backlog issue’sunda tutulur.
 
 Kayıt sonrası doğrulama postası gönderilince kullanıcı ana sayfaya dönebilir ve siteyi ziyaretçi olarak gezebilir. Yeniden gönder ilk öneri değildir; 60 saniye bekleme sonrası ikincil seçenek olarak açılır. Bu gezinme, doğrulanmadan giriş yasağını kaldırmaz.
+
+## Pano sadeleştirmesi — 2026-10-13
+
+Kayıt (Mevcut/Planlanan/Tamamlandı) alanı kaldırıldı; işin durumu yalnız Status ile izlenir. Gereksinimler kategori gruplu tam listedir; klondan gelen özelliklerin mevcut etiketleri kalır. Yerel Project alan eşitlemesi kaldırılır; GitHub’ın Done → issue kapanışı otomasyonu korunur.

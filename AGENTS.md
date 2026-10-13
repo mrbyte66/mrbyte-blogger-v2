@@ -2,12 +2,15 @@
 
 ## İletişim
 
+Kullanıcı istemedikçe sonuç mesajlarına ekran görüntüsü ekleme; görsel kontrol gerekiyorsa araçla incele.
+
 Kısa ve açık Türkçe yaz. Teknik adlar İngilizce kalabilir. Tercih ve kapsam sorularını kısa anketlerle sor; her tur en fazla 5 soru olsun. Gelen cevapları kaydet. Aynı tercihi tekrar tekrar sorma.
 
 ## Çalışma düzeni
 
 - Tek kodlayıcı mevcut Codex session’ıdır. Kullanıcı isterse ayrı session yalnız analiz yapabilir. Kendiliğinden agent veya session başlatma.
 - Kullanıcı işi sohbetten söyler. GitHub issue ve Project takibini asistan yönetir; Markdown görev panosu değildir.
+- Tamamlanmış işte hata bulunursa aynı issue’ya düzeltme kapsamını ekle, issue’yu yeniden açıp In Progress’e al; ardından kodla ve test et. Yeni teslim sonrası Done kararı yine kullanıcıdadır.
 - Aynı konudaki tamamlanmamış işler tek büyük issue’da birleşir. Başlık kategori ve hedef söyler; açıklama birkaç kısa maddeden oluşur.
 - Ertelenen her iş Backlog issue’su olur. Backlog → Todo ve her Done geçişini yalnız kullanıcı yapar. Seçilen işi asistan In Progress yapar; teslim sonrası kullanıcı Done yapana kadar bu durumda kalır.
 - Doğrudan main üzerinde çalış. Branch, worktree, PR, puan, agent etiketi ve bağımsız testçi zorunluluğu yok.

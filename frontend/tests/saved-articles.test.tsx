@@ -6,7 +6,7 @@ import { SiteDataValues, type ContentState } from "../components/data/SiteData";
 import { EngagementProvider } from "../components/engagement/EngagementProvider";
 import { SavedLibraryPage } from "../components/saved/SavedLibraryPage";
 import { ArticleCard } from "../components/ArticleCard";
-import { SavedProvider } from "../components/saved/SavedProvider";
+import { SavedProvider, useSavedLibrary } from "../components/saved/SavedProvider";
 import { SaveArticleButton } from "../components/saved/SaveArticleButton";
 import { createWorkspace } from "../lib/builder/model";
 import { articles as fixtures, type Article } from "../lib/content";
@@ -35,6 +35,29 @@ beforeEach(() => {
   for (const article of articles) backend.state.member.publicArticles.set(article.id!, { slug: article.slug, stats: { views: 0, claps: 0, saves: 0 } });
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+it("keeps the new account library ready when the prior account save finishes late", async () => {
+  function Ready() { const library = useSavedLibrary(); return <output data-testid="ready">{String(library.ready)}</output>; }
+  await render(<><SaveArticleButton slug={articles[0].slug} title={articles[0].title} /><Ready /></>);
+  const original = backend.fetchMock.getMockImplementation()!;
+  let resolveOld!: (response: Response) => void;
+  let response!: Response;
+  const held = new Promise<Response>(resolve => { resolveOld = resolve; });
+  backend.fetchMock.mockImplementation((input, init) => {
+    const result = original(input, init);
+    if (init?.method === "PUT" && String(input).includes("/me/bookmarks/")) {
+      void result.then(value => { response = value; }); return held;
+    }
+    return result;
+  });
+  await click(screen.getByRole("button", { name: `Yazıyı kaydet: ${articles[0].title}` }));
+  backend.switchTo({ id: "member-2", email: "other@example.test" });
+  await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+  expect(screen.getByTestId("ready").textContent).toBe("true");
+  await act(async () => { resolveOld(response); await settle(); });
+  expect(screen.getByTestId("ready").textContent).toBe("true");
+  expect(personalOf(backend.state.member, "member-2").bookmarks).toEqual([]);
+});
 
 describe("member bookmark controls", () => {
   it("saves to Genel without opening the article, moves, creates collections and removes", async () => {

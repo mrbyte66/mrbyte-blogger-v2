@@ -23,3 +23,7 @@ Kategori etiketi yeterlidir; agent/testçi/puan/öncelik etiketi zorunlu değild
 Main yeterlidir; branch/worktree/PR veya bağımsız testçi zorunlu değildir. Asistan uygun otomatik ve davranış testlerini yapar. Başka agent tetikleyen taramalar, CI-monitor rol devirleri ve periyodik AI çalıştırmaları yeni süreçte kullanılmaz. Repo içinde eski script’lerin bulunması yeni kuralı etkinleştirmez; mevcut kurulumlar Mac’te kontrol edilip kaldırılır.
 
 Commit serbest; push açık kullanıcı talimatıyla. CI main push’unda çalışmaya devam eder. Testlerin geçmesi kullanıcının Done yetkisini değiştirmez. Asistan kullanıcının Mac’indeki Docker’ı günceller; önizleme için remote commit veya PR gerekmez.
+
+## Teslim sonrası hata
+
+Done olan işte hata bulunursa aynı issue’nun açıklamasına yeni düzeltme kapsamı eklenir, issue yeniden açılıp In Progress’e alınır; kodlama bundan sonra başlar. İlgili akışlardaki benzer oturum/doğrudan bağlantı sorunları da denetlenir. Düzeltme test edilip yerelden teslim edilir; tekrar Done kararı kullanıcıdadır. Kullanıcı istemedikçe sonuç mesajına ekran görüntüsü eklenmez.

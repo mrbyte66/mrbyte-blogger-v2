@@ -25,7 +25,7 @@ export function SaveArticleButton({ slug, title, preview = false }: { slug: stri
     document.addEventListener("pointerdown", dismiss);
     return () => document.removeEventListener("pointerdown", dismiss);
   }, []);
-  useEffect(() => { if (!member || preview) setOpen(false); }, [member, preview]);
+  useEffect(() => { setOpen(false); setCreating(false); setName(""); setCollectionId(""); }, [auth.session?.profile.id, preview]);
   useEffect(() => { if (creating) nameInput.current?.focus(); }, [creating]);
   const total = stats ? stats.saves : null;
   const countTitle = "Bu yazıyı kitaplığına kaydeden üyelerin sayısı";

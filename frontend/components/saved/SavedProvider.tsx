@@ -39,19 +39,28 @@ export function SavedProvider({ children }: { children: ReactNode }) {
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [error, setError] = useState("");
   const generation = useRef(0);
+  const identity = useRef(userId);
+  identity.current = userId;
+  const requests = useRef<{ userId: string | null; controller: AbortController } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    requests.current = { userId, controller };
+    return () => controller.abort();
+  }, [userId]);
 
   const load = useCallback(async () => {
+    if (identity.current !== userId) return;
     const current = ++generation.current;
     if (!userId) { setLibrary(empty); setLoadedFor(null); return; }
     try {
       const [collections, bookmarks] = await Promise.all([
         api<Output<"listCollections">>("GET", "/me/collections"), allPages<BookmarkDto>("/me/bookmarks?sort=saved_asc"),
       ]);
-      if (current !== generation.current) return;
+      if (current !== generation.current || identity.current !== userId) return;
       setLibrary({ collections: collections.data.items, entries: bookmarks.map(({ article, ...entry }) => ({ ...entry, ...(article ? { slug: article.slug } : {}) })) });
       setLoadedFor(userId);
     } catch (cause) {
-      if (current === generation.current) { setLibrary(empty); setLoadedFor(userId); setError(describe(cause)); }
+      if (current === generation.current && identity.current === userId) { setLibrary(empty); setLoadedFor(userId); setError(describe(cause)); }
     }
   }, [userId]);
   useEffect(() => { setError(""); void load(); }, [load]);
@@ -68,11 +77,12 @@ export function SavedProvider({ children }: { children: ReactNode }) {
   const defaultId = visible.collections.find((c) => c.isDefault)?.id ?? "";
   const idOf = (slug: string) => articles.find((article) => article.slug === slug)?.id ?? visible.entries.find((entry) => entry.slug === slug)?.articleId;
 
-  async function run(task: () => Promise<unknown>, articleId?: string): Promise<boolean> {
-    if (!member || !ready) return false;
-    try { await task(); setError(""); return true; }
-    catch (cause) { setError(describe(cause)); return false; }
-    finally { await load(); if (articleId) refreshStats(articleId); }
+  async function run(task: (signal: AbortSignal) => Promise<unknown>, articleId?: string): Promise<boolean> {
+    const scope = requests.current;
+    if (!member || !ready || identity.current !== userId || scope?.userId !== userId) return false;
+    try { await task(scope.controller.signal); if (scope.controller.signal.aborted || identity.current !== userId) return false; setError(""); return true; }
+    catch (cause) { if (!scope.controller.signal.aborted && identity.current === userId) setError(describe(cause)); return false; }
+    finally { if (!scope.controller.signal.aborted && identity.current === userId) { await load(); if (articleId) refreshStats(articleId); } }
   }
   const value: MemberLibrary = {
     library: visible, defaultId, ready, member, error,
@@ -80,19 +90,19 @@ export function SavedProvider({ children }: { children: ReactNode }) {
     save: (slug, collectionId) => {
       const id = idOf(slug);
       if (!id) return Promise.resolve(false);
-      return run(() => api("PUT", `/me/bookmarks/${id}`, { body: (collectionId ? { collectionId } : {} satisfies Input<"saveBookmark">) }), id);
+      return run(signal => api("PUT", `/me/bookmarks/${id}`, { signal, body: (collectionId ? { collectionId } : {} satisfies Input<"saveBookmark">) }), id);
     },
     remove: (key) => {
       const id = idOf(key) ?? key;
-      return run(() => api("DELETE", `/me/bookmarks/${id}`), id);
+      return run(signal => api("DELETE", `/me/bookmarks/${id}`, { signal }), id);
     },
-    create: (name, slug) => run(async () => {
-      const { data } = await api<SavedCollection>("POST", "/me/collections", { body: ({ name: name.trim() } satisfies Input<"createCollection">), idempotent: true });
+    create: (name, slug) => run(async signal => {
+      const { data } = await api<SavedCollection>("POST", "/me/collections", { signal, body: ({ name: name.trim() } satisfies Input<"createCollection">), idempotent: true });
       const id = slug ? idOf(slug) : undefined;
-      if (id) { await api("PUT", `/me/bookmarks/${id}`, { body: ({ collectionId: data.id } satisfies Input<"saveBookmark">) }); refreshStats(id); }
+      if (id) { await api("PUT", `/me/bookmarks/${id}`, { signal, body: ({ collectionId: data.id } satisfies Input<"saveBookmark">) }); refreshStats(id); }
     }),
-    rename: (id, name) => run(() => api("PATCH", `/me/collections/${id}`, { body: ({ name: name.trim() } satisfies Input<"renameCollection">), ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
-    deleteCategory: (id) => run(() => api("DELETE", `/me/collections/${id}`, { ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
+    rename: (id, name) => run(signal => api("PATCH", `/me/collections/${id}`, { signal, body: ({ name: name.trim() } satisfies Input<"renameCollection">), ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
+    deleteCategory: (id) => run(signal => api("DELETE", `/me/collections/${id}`, { signal, ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

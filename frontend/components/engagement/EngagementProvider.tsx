@@ -28,54 +28,75 @@ export const useEngagement = () => useContext(Context);
 
 export function EngagementProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { session } = useAuth();
-  const userId = session?.profile.id ?? null;
+  const { session, ready: authReady } = useAuth();
+  const actor = authReady ? session?.profile.id ?? "anonymous" : null;
+  const identity = useRef({ actor, generation: 0 });
+  if (identity.current.actor !== actor) identity.current = { actor, generation: identity.current.generation + 1 };
+  const generation = identity.current.generation;
   const [overrides, setOverrides] = useState<Record<string, Partial<ArticleStats>>>({});
-  const [claps, setClaps] = useState<Record<string, ClapEntry>>({});
+  const [stored, setStored] = useState<{ generation: number; entries: Record<string, ClapEntry> }>({ generation, entries: {} });
+  // Hide the prior actor immediately; each identity change makes loadClap a new callback.
+  const claps = stored.generation === generation ? stored.entries : {};
   // A new route is a new page view: the same card seen again on another page counts again.
   const pageViewId = useMemo(() => crypto.randomUUID(), [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   const sent = useRef(new Set<string>());
   const queues = useRef(new Map<string, Promise<unknown>>());
+  const requests = useRef<{ generation: number; controller: AbortController } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    requests.current = { generation, controller };
+    return () => controller.abort();
+  }, [generation]);
   const latest = useRef(claps);
   latest.current = claps;
 
-  // Private state belongs to one account: clear it when the signed-in account changes.
-  useEffect(() => { setClaps({}); queues.current.clear(); }, [userId]);
 
   const merge = useCallback((articleId: string, patch: Partial<ArticleStats>) => {
     setOverrides((current) => ({ ...current, [articleId]: { ...current[articleId], ...patch } }));
   }, []);
   const setClap = useCallback((articleId: string, patch: Partial<ClapEntry>) => {
-    setClaps((current) => ({ ...current, [articleId]: { ...(current[articleId] ?? { clapped: null, pending: false, error: "" }), ...patch } }));
-  }, []);
-  /** Mutations per article run one after another, so an older response never overwrites a newer choice. */
-  const enqueue = useCallback((articleId: string, task: () => Promise<void>) => {
-    const next = (queues.current.get(articleId) ?? Promise.resolve()).then(task, task);
-    queues.current.set(articleId, next);
-  }, []);
+    if (!actor || identity.current.generation !== generation) return;
+    setStored(current => {
+      if (identity.current.generation !== generation) return current;
+      const entries = current.generation === generation ? current.entries : {};
+      return { generation, entries: { ...entries, [articleId]: { ...(entries[articleId] ?? { clapped: null, pending: false, error: "" }), ...patch } } };
+    });
+  }, [actor, generation]);
+  /** Requests are serialized for one article and actor; stale queued work never starts. */
+  const enqueue = useCallback((articleId: string, task: (signal: AbortSignal) => Promise<void>) => {
+    const key = `${generation}:${articleId}`;
+    const execute = async () => {
+      const scope = requests.current;
+      if (identity.current.generation === generation && scope?.generation === generation) await task(scope.controller.signal);
+    };
+    const next = (queues.current.get(key) ?? Promise.resolve()).then(execute, execute);
+    queues.current.set(key, next);
+    void next.finally(() => { if (queues.current.get(key) === next) queues.current.delete(key); });
+  }, [generation]);
 
   const loadClap = useCallback((articleId: string) => {
-    if (latest.current[articleId]) return;
+    if (!actor || latest.current[articleId]) return;
     setClap(articleId, {});
-    enqueue(articleId, async () => {
-      try { setClap(articleId, { clapped: (await api<Output<"myClap">>("GET", `/articles/${articleId}/my-clap`)).data.clapped }); }
+    enqueue(articleId, async signal => {
+      try { setClap(articleId, { clapped: (await api<Output<"myClap">>("GET", `/articles/${articleId}/my-clap`, { signal })).data.clapped }); }
       catch { setClap(articleId, { clapped: false }); }
     });
-  }, [enqueue, setClap]);
+  }, [actor, enqueue, setClap]);
 
   const toggleClap = useCallback((articleId: string) => {
-    const target = !(latest.current[articleId]?.clapped ?? false);
+    if (!actor || latest.current[articleId]?.clapped == null) return;
+    const target = !latest.current[articleId].clapped;
     setClap(articleId, { clapped: target, pending: true, error: "" });
-    enqueue(articleId, async () => {
+    enqueue(articleId, async signal => {
       try {
-        const { data } = await api<Output<"setClap">>("PUT", `/articles/${articleId}/clap`, { body: ({ clapped: target } satisfies Input<"setClap">) });
+        const { data } = await api<Output<"setClap">>("PUT", `/articles/${articleId}/clap`, { signal, body: ({ clapped: target } satisfies Input<"setClap">) });
         setClap(articleId, { clapped: data.clapped, pending: false });
-        merge(articleId, { claps: data.claps });
+        if (identity.current.generation === generation) merge(articleId, { claps: data.claps });
       } catch (cause) {
         setClap(articleId, { clapped: !target, pending: false, error: describe(cause) });
       }
     });
-  }, [enqueue, merge, setClap]);
+  }, [actor, generation, enqueue, merge, setClap]);
 
   const refreshStats = useCallback((articleId: string) => {
     void api<ArticleStats>("GET", `/articles/${articleId}/stats`).then(({ data }) => merge(articleId, data), noop);

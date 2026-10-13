@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AuthProvider } from "../components/auth/AuthProvider";
 import { ReadingTools } from "../components/reading/ReadingTools";
 import { readReadingDocument, writeReadingDocument } from "../lib/reading/storage";
-import { useMemberVisit } from "../lib/reading/history";
+import { useMemberVisit, useSeriesHistory } from "../lib/reading/history";
 import { articles } from "../lib/content";
 import { fakeBackend, settle } from "./support/fake-backend";
 import { personalOf } from "./support/fake-member-api";
@@ -76,4 +76,31 @@ it("records a permalink visit for verified members only", async () => {
   render(<AuthProvider><Visit /></AuthProvider>);
   await act(settle);
   expect(personalOf(backend.state.member, "pending-1").visits).toEqual([]);
+});
+
+it("replaces series history and records the current article when a verified account changes", async () => {
+  const seriesId = "series-1";
+  personalOf(backend.state.member, "reader-1").seriesHistory.set(seriesId, [{ articleId: ARTICLE, lastVisitedAt: "2026-10-13T10:00:00Z" }]);
+  function History() { useMemberVisit({ ...articles[0], id: ARTICLE, revisionId: "rev-1" }); return <output data-testid="history">{JSON.stringify(useSeriesHistory(seriesId))}</output>; }
+  render(<AuthProvider><History /></AuthProvider>); await act(settle);
+  expect(screen.getByTestId("history").textContent).toContain(ARTICLE);
+  backend.switchTo({ id: "reader-2", email: "other@example.test" });
+  await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+  expect(screen.getByTestId("history").textContent).not.toContain(ARTICLE);
+  expect(personalOf(backend.state.member, "reader-2").visits).toEqual([{ articleId: ARTICLE, revisionId: "rev-1" }]);
+});
+
+it("keeps private notes isolated when the account changes on the same article", async () => {
+  for (const [reader, note] of [["reader-1", "İlk hesabın özel notu"], ["reader-2", "İkinci hesabın özel notu"]]) {
+    personalOf(backend.state.member, reader).marks.push({ id: reader + "-mark", articleId: ARTICLE, kind: "note", revisionId: "rev-1", note, createdAt: "2026-10-13T10:00:00Z", version: 0, fragments: [{ blockId: BLOCK, start: 0, end: 5, quote: "Hello", before: "", after: "" }] });
+  }
+  render(<Page />); await act(settle);
+  fireEvent.click(screen.getByRole("button", { name: /Notlar/ }));
+  expect(screen.getByText("İlk hesabın özel notu")).toBeTruthy();
+  backend.switchTo({ id: "reader-2", email: "other@example.test" });
+  await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+  expect(screen.queryByText("İlk hesabın özel notu")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: /Notlar/ }));
+  expect(screen.getByText("İkinci hesabın özel notu")).toBeTruthy();
+  expect(localStorage.length).toBe(0);
 });

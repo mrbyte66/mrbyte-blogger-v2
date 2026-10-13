@@ -1,3 +1,4 @@
+import { resetCsrf } from "../lib/api/http";
 import userEvent from "@testing-library/user-event";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
@@ -50,6 +51,65 @@ describe("server claps", () => {
     await click(screen.getByRole("button", { name: "Alkışını geri al" }));
     expect(screen.getByLabelText("5 alkış · seri yazılarının toplamı")).toBeTruthy();
     expect(localStorage.length).toBe(0);
+  });
+
+  it("enables claps when an existing member opens a permalink directly", async () => {
+    backend.switchTo({ email: "reader@example.test" });
+    await show(<ArticleEngagement {...props} />);
+    expect((screen.getByRole("button", { name: "Yazıyı alkışla" }) as HTMLButtonElement).disabled).toBe(false);
+    await click(screen.getByRole("button", { name: "Yazıyı alkışla" }));
+    expect(screen.getByRole("button", { name: "Alkışını geri al" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("reloads the visible article's clap after sign-in, sign-out and account changes", async () => {
+    await show(<ArticleEngagement {...props} />);
+    for (const account of [{ email: "reader@example.test" }, { id: "22222222-2222-4222-8222-222222222222", email: "other@example.test" }, null]) {
+      backend.switchTo(account);
+      await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+      expect((screen.getByRole("button", { name: "Yazıyı alkışla" }) as HTMLButtonElement).disabled).toBe(false);
+    }
+    expect(calls("GET", `/articles/${first.id}/my-clap`)).toHaveLength(4);
+  });
+
+  it("ignores a slow clap response belonging to the previous account", async () => {
+    backend.switchTo({ email: "reader@example.test" });
+    const original = backend.fetchMock.getMockImplementation()!;
+    let resolveOld!: (response: Response) => void;
+    const oldResponse = new Promise<Response>(resolve => { resolveOld = resolve; });
+    let held = false;
+    backend.fetchMock.mockImplementation((input, init) => {
+      if (!held && String(input).endsWith(`/articles/${first.id}/my-clap`)) { held = true; return oldResponse; }
+      return original(input, init);
+    });
+    await show(<ArticleEngagement {...props} />);
+    backend.switchTo({ id: "22222222-2222-4222-8222-222222222222", email: "other@example.test" });
+    await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+    expect((screen.getByRole("button", { name: "Yazıyı alkışla" }) as HTMLButtonElement).disabled).toBe(false);
+    await act(async () => { resolveOld(new Response(JSON.stringify({ clapped: true }), { status: 200 })); await settle(); });
+    expect(screen.getByRole("button", { name: "Yazıyı alkışla" }).getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("cancels a clap waiting for CSRF when its account changes", async () => {
+    backend.switchTo({ email: "reader@example.test" });
+    await show(<ArticleEngagement {...props} />);
+    resetCsrf();
+    const original = backend.fetchMock.getMockImplementation()!;
+    let resolveCsrf!: (response: Response) => void;
+    const csrfResponse = new Promise<Response>(resolve => { resolveCsrf = resolve; });
+    backend.fetchMock.mockImplementation((input, init) => {
+      if (String(input).endsWith("/auth/csrf")) return csrfResponse;
+      if (init?.signal?.aborted) return Promise.reject(new DOMException("Aborted", "AbortError"));
+      return original(input, init);
+    });
+    await click(screen.getByRole("button", { name: "Yazıyı alkışla" }));
+    backend.switchTo({ id: "22222222-2222-4222-8222-222222222222", email: "other@example.test" });
+    await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
+    await act(async () => { resolveCsrf(new Response(JSON.stringify({ headerName: "X-CSRF-TOKEN", token: "csrf-token" }), { status: 200 })); await settle(); });
+    expect(calls("PUT", `/articles/${first.id}/clap`)).toHaveLength(0);
+    expect((screen.getByRole("button", { name: "Yazıyı alkışla" }) as HTMLButtonElement).disabled).toBe(false);
+    await click(screen.getByRole("button", { name: "Yazıyı alkışla" }));
+    expect(calls("PUT", `/articles/${first.id}/clap`)).toHaveLength(1);
+    resetCsrf();
   });
 
   it("restores the previous state and explains a failed clap", async () => {

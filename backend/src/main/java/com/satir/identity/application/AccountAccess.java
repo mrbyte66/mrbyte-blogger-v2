@@ -17,6 +17,9 @@ import com.satir.identity.infrastructure.UserAccountRepository;
 public class AccountAccess {
 
     public record Grant(UUID userId, Role role, List<GrantedAuthority> authorities) {
+        public boolean verified() {
+            return authorities.stream().anyMatch(authority -> Authorities.VERIFIED.equals(authority.getAuthority()));
+        }
     }
 
     private final UserAccountRepository users;

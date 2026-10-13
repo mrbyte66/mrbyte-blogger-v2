@@ -39,6 +39,7 @@ export function fakeBackend(options: { signedIn?: Partial<Profile> | null; passw
       case "POST /auth/login": {
         const found = state.accounts.get(String(body?.identifier).toLowerCase());
         if (!found || body?.password !== state.password) return problem(401, "INVALID_CREDENTIALS", "E-posta, kullanıcı adı veya parola hatalı");
+        if (!found.verified) return problem(403, "EMAIL_VERIFICATION_REQUIRED", "Giriş yapmadan önce e-posta adresini doğrula");
         state.profile = found; return json(200, found);
       }
       case "POST /auth/logout": state.profile = null; return json(204);
@@ -51,7 +52,9 @@ export function fakeBackend(options: { signedIn?: Partial<Profile> | null; passw
         for (const a of state.accounts.values()) a.verified = true;
         return json(204);
       }
+      case "POST /auth/verification/resend": return json(202, { message: "E-postanı kontrol et" });
       case "POST /auth/password/forgot": return json(202, { message: "E-postanı kontrol et" });
+      case "POST /auth/password/reset": return body?.token === "valid-token" ? json(204) : problem(422, "INVALID_TOKEN", "Bağlantı geçersiz veya süresi dolmuş");
       case "PATCH /me/preferences": {
         if (!state.profile) return problem(401, "UNAUTHENTICATED", "Giriş yapman gerekiyor");
         state.profile = { ...state.profile, preferences: { ...state.profile.preferences, ...body }, version: state.profile.version + 1 };

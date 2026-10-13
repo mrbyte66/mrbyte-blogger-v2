@@ -50,18 +50,16 @@ class AccessControlIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void unverifiedMemberCanOnlyReadSessionState() {
+    void unverifiedMemberCannotSignIn() {
         createMember("yeni@example.test", "yeni-parolasi-123", false);
         ApiClient api = client();
-        api.login("yeni@example.test", "yeni-parolasi-123");
+        assertThat(api.login("yeni@example.test", "yeni-parolasi-123").code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
 
         ApiClient.Response me = api.get("/api/v1/me");
-        assertThat(me.status()).isEqualTo(403);
-        assertThat(me.code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
-        assertThat(api.get(STUDIO).status()).isEqualTo(403);
+        assertThat(me.status()).isEqualTo(401);
+        assertThat(api.get(STUDIO).status()).isEqualTo(401);
         ApiClient.Response session = api.get("/api/v1/auth/session");
-        assertThat(session.json().get("authenticated").asBoolean()).isTrue();
-        assertThat(session.json().get("profile").get("verified").asBoolean()).isFalse();
+        assertThat(session.json().get("authenticated").asBoolean()).isFalse();
     }
 
     @Test

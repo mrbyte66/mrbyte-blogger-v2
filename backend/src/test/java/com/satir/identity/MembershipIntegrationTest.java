@@ -37,7 +37,7 @@ class MembershipIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void registrationNeedsEmailVerificationBeforePrivateFeatures() {
+    void registrationNeedsEmailVerificationBeforeLogin() {
         ApiClient api = client();
         Response registered = register(api, EMAIL, PASSWORD);
         assertThat(registered.status()).isEqualTo(202);
@@ -45,16 +45,65 @@ class MembershipIntegrationTest extends IntegrationTest {
         assertThat(jdbc.sql("SELECT count(*) FROM action_token WHERE token_hash = :t").param("t", token).query(Long.class).single())
                 .as("plain token is never stored").isZero();
 
-        api.login(EMAIL, PASSWORD);
-        api.refreshCsrf();
-        assertThat(api.get("/api/v1/me").code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(api.login(EMAIL, "yanlis-parola-123").code()).isEqualTo("INVALID_CREDENTIALS");
+        assertThat(api.login(EMAIL, PASSWORD).code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(api.get("/api/v1/auth/session").json().get("authenticated").asBoolean()).isFalse();
+        assertThat(api.get("/api/v1/me").status()).isEqualTo(401);
 
         assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", token)).status()).isEqualTo(204);
         assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", token)).code()).as("single use").isEqualTo("INVALID_TOKEN");
+        assertThat(api.get("/api/v1/auth/session").json().get("authenticated").asBoolean()).isFalse();
+        assertThat(api.login(EMAIL, PASSWORD).status()).isEqualTo(200);
         Response me = api.get("/api/v1/me");
         assertThat(me.status()).isEqualTo(200);
         assertThat(me.text("role")).isEqualTo("member");
         assertThat(api.get("/api/v1/studio/articles").status()).as("membership grants no Studio").isEqualTo(403);
+    }
+
+    @Test
+    void pendingMemberCanResendWithoutLoginAndTheOldVerificationLinkStopsWorking() {
+        ApiClient api = client();
+        register(api, EMAIL, PASSWORD);
+        String old = mail.lastToken(EMAIL).orElseThrow();
+        Response resend = api.post("/api/v1/auth/verification/resend", Map.of("email", EMAIL));
+        Response unknown = api.post("/api/v1/auth/verification/resend", Map.of("email", "unknown@example.test"));
+        assertThat(resend.status()).isEqualTo(202).isEqualTo(unknown.status());
+        assertThat(resend.json()).isEqualTo(unknown.json());
+        String fresh = mail.lastToken(EMAIL).orElseThrow();
+        assertThat(fresh).isNotEqualTo(old);
+        assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", old)).code()).isEqualTo("INVALID_TOKEN");
+        assertThat(api.login(EMAIL, PASSWORD).code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", fresh)).status()).isEqualTo(204);
+        assertThat(api.login(EMAIL, PASSWORD).status()).isEqualTo(200);
+    }
+
+    @Test
+    void expiredVerificationLinkDoesNotActivateTheAccountAndResendRecoversIt() {
+        ApiClient api = client();
+        register(api, EMAIL, PASSWORD);
+        String old = mail.lastToken(EMAIL).orElseThrow();
+        clock.advance(Duration.ofHours(25));
+        api.refreshCsrf();
+        assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", old)).code()).isEqualTo("INVALID_TOKEN");
+        assertThat(api.login(EMAIL, PASSWORD).code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(api.post("/api/v1/auth/verification/resend", Map.of("email", EMAIL)).status()).isEqualTo(202);
+        assertThat(api.post("/api/v1/auth/verification/confirm", Map.of("token", mail.lastToken(EMAIL).orElseThrow())).status()).isEqualTo(204);
+        assertThat(api.login(EMAIL, PASSWORD).status()).isEqualTo(200);
+    }
+
+    @Test
+    void emailDeliveredPasswordResetAlsoProvesControlOfAPendingAccountsAddress() {
+        ApiClient api = client();
+        register(api, EMAIL, PASSWORD);
+        assertThat(api.login(EMAIL, PASSWORD).code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(api.post("/api/v1/auth/password/forgot", Map.of("email", EMAIL)).status()).isEqualTo(202);
+        String reset = mail.lastToken(EMAIL).orElseThrow();
+        assertThat(api.post("/api/v1/auth/password/reset", Map.of("token", reset,
+                "password", "yeni-parola-1234", "passwordConfirmation", "yeni-parola-1234")).status()).isEqualTo(204);
+        api.refreshCsrf();
+        assertThat(api.get("/api/v1/auth/session").json().get("authenticated").asBoolean()).isFalse();
+        assertThat(api.login(EMAIL, "yeni-parola-1234").status()).isEqualTo(200);
+        assertThat(api.get("/api/v1/me").json().get("verified").asBoolean()).isTrue();
     }
 
     @Test

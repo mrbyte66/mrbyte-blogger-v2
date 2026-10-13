@@ -52,6 +52,11 @@ public class LoginService {
                     UsernamePasswordAuthenticationToken.unauthenticated(identifierKey, password));
             SatirUserDetails account = (SatirUserDetails) authentication.getPrincipal();
             AccountAccess.Grant grant = accountAccess.current(account.userId()).orElseThrow(LoginService::invalidCredentials);
+            if (!grant.verified()) {
+                audit.record(grant.userId(), "LOGIN", "USER", grant.userId(), AuditLog.Outcome.DENIED);
+                throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_VERIFICATION_REQUIRED",
+                        "Giriş yapmadan önce e-posta adresini doğrula");
+            }
             audit.record(grant.userId(), "LOGIN", "USER", grant.userId(), AuditLog.Outcome.SUCCESS);
             return grant;
         } catch (AuthenticationException failure) {

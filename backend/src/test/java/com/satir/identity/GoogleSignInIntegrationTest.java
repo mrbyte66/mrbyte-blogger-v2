@@ -152,6 +152,19 @@ class GoogleSignInIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void aLinkedButPendingAccountCannotSignInThroughGoogle() {
+        ApiClient api = client(); api.refreshCsrf();
+        assertThat(signIn(api, "/api/v1/auth/google/start", Map.of("returnTo", "/"),
+                "pending-linked", "pending-google@example.test", true).header("Location")).isEqualTo("/?google=signed_in");
+        jdbc.sql("UPDATE app_user SET status = 'PENDING', verified_at = NULL WHERE email = 'pending-google@example.test'").update();
+        ApiClient again = client(); again.refreshCsrf();
+        assertThat(signIn(again, "/api/v1/auth/google/start", Map.of("returnTo", "/"),
+                "pending-linked", "pending-google@example.test", true).header("Location"))
+                .isEqualTo("/?google_error=google_verification_required");
+        assertThat(again.get("/api/v1/auth/session").json().get("authenticated").asBoolean()).isFalse();
+    }
+
+    @Test
     void ownerLinksGoogleOnlyAfterReauthAndRoleStillComesFromTheServer() {
         createOwner();
         ApiClient owner = ownerClient();

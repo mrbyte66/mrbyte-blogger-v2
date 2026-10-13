@@ -28,7 +28,9 @@ export interface paths {
         put?: never;
         /**
          * Password login with e-mail or the owner username
-         * @description Rotates the session ID and CSRF token. Failures are generic (no account enumeration).
+         * @description Only verified active accounts can sign in. Rotates the session ID and CSRF token on success.
+         *     Incorrect credentials are generic (no account enumeration). After a valid password,
+         *     an unverified account receives 403 EMAIL_VERIFICATION_REQUIRED without an authenticated session.
          *     Limits: 5 failures / 15 min per identifier and 30 / 15 min per client address.
          */
         post: operations["login"];
@@ -45,7 +47,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Current session state; the frontend takes the role from here */
+        /** Current verified session state; stale unverified sessions are invalidated */
         get: operations["getSession"];
         put?: never;
         post?: never;

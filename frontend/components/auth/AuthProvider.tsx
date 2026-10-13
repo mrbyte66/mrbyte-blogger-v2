@@ -16,7 +16,7 @@ export type AccountSession = { profile: AccountProfile; expiresAt: number };
 type ProfileDto = Schema<"Profile">;
 
 type AuthContext = {
-  session: AccountSession | null; ready: boolean; error: string; loginRejected: boolean;
+  session: AccountSession | null; ready: boolean; error: string; loginRejected: boolean; verificationRequired: boolean;
   openAuth: (screen?: AuthScreen) => void; closeAuth: () => void; notify: (message: string) => void; setError: (message: string) => void;
   refresh: () => Promise<void>;
   login: (identifier: string, password: string) => Promise<boolean>;
@@ -26,7 +26,7 @@ type AuthContext = {
   signOut: () => Promise<void>;
 };
 const noop = async () => false;
-const fallback: AuthContext = { session: null, ready: false, error: "", loginRejected: false, openAuth: () => {}, closeAuth: () => {}, notify: () => {}, setError: () => {}, refresh: async () => {}, login: noop, register: noop, startGoogle: async () => {}, updateProfile: noop, signOut: async () => {} };
+const fallback: AuthContext = { session: null, ready: false, error: "", loginRejected: false, verificationRequired: false, openAuth: () => {}, closeAuth: () => {}, notify: () => {}, setError: () => {}, refresh: async () => {}, login: noop, register: noop, startGoogle: async () => {}, updateProfile: noop, signOut: async () => {} };
 const Context = createContext<AuthContext>(fallback);
 export function useAuth() { return useContext(Context); }
 
@@ -37,7 +37,7 @@ const googleMessages: Record<string, string> = {
 const googleErrors: Record<string, string> = {
   account_exists: "Bu e-posta ile zaten bir hesap var. O hesapla giriş yapıp Google’ı Hesap → Bağlı Hesaplar’dan bağlayabilirsin.",
   google_cancelled: "Google ile giriş iptal edildi.", google_state: "Google oturumu doğrulanamadı; tekrar dene.",
-  google_failed: "Google ile giriş tamamlanamadı.", google_email_unverified: "Google hesabının e-postası doğrulanmamış.",
+  google_failed: "Google ile giriş tamamlanamadı.", google_email_unverified: "Google hesabının e-postası doğrulanmamış.", google_verification_required: "Giriş için önce site hesabının e-posta adresini doğrula.",
   google_identity_in_use: "Bu Google hesabı başka bir hesaba bağlı.",
   google_already_linked: "Google hesabın zaten bağlı.", google_link_session: "Bağlama sırasında oturum değişti; tekrar dene.",
   google_reauth_mismatch: "Doğrulama için bu hesaba bağlı Google hesabını kullan.",
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState("");
   const [loginRejected, setLoginRejected] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
   const [screen, setScreen] = useState<AuthScreen | null>(null);
   const [toast, setToast] = useState("");
   const [signal, setSignal] = useState<{ kind: "in" | "out"; id: number } | null>(null);
@@ -61,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api<Schema<"Session">>("GET", "/auth/session");
       if (generation !== refreshGeneration.current) return;
-      if (!data.authenticated || !data.profile) {
+      if (!data.authenticated || !data.profile || !data.profile.verified) {
         userId.current = null; setSession(null);
       } else {
         let googleConnected = false;
@@ -107,11 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [signal, ready]);
 
   async function login(identifier: string, password: string) {
-    setLoginRejected(false); setError("");
+    setLoginRejected(false); setVerificationRequired(false); setError("");
     try {
       await api("POST", "/auth/login", { body: ({ identifier: identifier.trim(), password } satisfies Input<"login">) });
       resetCsrf(); await refresh(); announce(); if (!screen) setSignal({ kind: "in", id: Date.now() }); return true;
-    } catch (cause) { setLoginRejected(cause instanceof ApiError && cause.code === "INVALID_CREDENTIALS"); setError(describe(cause)); return false; }
+    } catch (cause) { setVerificationRequired(cause instanceof ApiError && cause.code === "EMAIL_VERIFICATION_REQUIRED"); setLoginRejected(cause instanceof ApiError && cause.code === "INVALID_CREDENTIALS"); setError(describe(cause)); return false; }
   }
   async function register(name: string, email: string, password: string, confirmation: string) {
     setError("");
@@ -152,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetCsrf(); setSession(null); userId.current = null; setScreen(null); setError(""); setSignal({ kind: "out", id: Date.now() }); announce();
     signingOut.current = false;
   }
-  return <Context.Provider value={{ session, ready, error, loginRejected, setError: message => { setError(message); if (!message) setLoginRejected(false); }, openAuth: (next = "login") => { setError(""); setLoginRejected(false); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
+  return <Context.Provider value={{ session, ready, error, loginRejected, verificationRequired, setError: message => { setError(message); if (!message) { setLoginRejected(false); setVerificationRequired(false); } }, openAuth: (next = "login") => { setError(""); setLoginRejected(false); setVerificationRequired(false); setScreen(next); }, closeAuth: () => setScreen(null), notify: setToast, refresh, login, register, startGoogle, updateProfile, signOut }}>
     {children}<AuthDialog screen={screen} />
     {signal && (signal.kind === "out" || session) && <AuthSignal key={signal.id} kind={signal.kind} floating />}
     <div className={`auth-toast ${toast ? "is-visible" : ""}`} role="status" aria-live="polite">{toast}</div>

@@ -130,6 +130,16 @@ class AuthSessionIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void anExistingSessionIsInvalidatedIfTheAccountIsNotVerified() {
+        UUID id = createMember("legacy@example.test", "okur-parolasi-123", true);
+        ApiClient api = client();
+        assertThat(api.login("legacy@example.test", "okur-parolasi-123").status()).isEqualTo(200);
+        jdbc.sql("UPDATE app_user SET status = 'PENDING', verified_at = NULL WHERE id = :id").param("id", id).update();
+        assertThat(api.get("/api/v1/auth/session").json().get("authenticated").asBoolean()).isFalse();
+        assertThat(api.get("/api/v1/me").status()).isEqualTo(401);
+    }
+
+    @Test
     void deletingAnAccountEndsItsExistingSessions() {
         UUID memberId = createMember("okur@example.test", "okur-parolasi-123", true);
         ApiClient api = client();

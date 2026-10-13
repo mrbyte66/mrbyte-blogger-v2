@@ -127,8 +127,12 @@ public class GoogleSignIn {
             if (account == null || account.deleted()) {
                 return new Result.Failed("google_failed");
             }
+            var grant = accountAccess.current(account.id()).filter(AccountAccess.Grant::verified);
+            if (grant.isEmpty()) {
+                return new Result.Failed("google_verification_required");
+            }
             audit.record(account.id(), "LOGIN_GOOGLE", "USER", account.id(), AuditLog.Outcome.SUCCESS);
-            return accountAccess.current(account.id()).<Result>map(Result.SignedIn::new).orElse(new Result.Failed("google_failed"));
+            return new Result.SignedIn(grant.get());
         }
         EmailAddress email = EmailAddress.parse("email", identity.email());
         if (members.byEmail(email.normalized()).isPresent()) {

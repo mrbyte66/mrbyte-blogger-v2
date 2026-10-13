@@ -11,6 +11,7 @@ Kısa ve açık Türkçe yaz. Teknik adlar İngilizce kalabilir. Tercih ve kapsa
 - Aynı konudaki tamamlanmamış işler tek büyük issue’da birleşir. Başlık kategori ve hedef söyler; açıklama birkaç kısa maddeden oluşur.
 - Ertelenen her iş Backlog issue’su olur. Backlog → Todo ve her Done geçişini yalnız kullanıcı yapar. Seçilen işi asistan In Progress yapar; teslim sonrası kullanıcı Done yapana kadar bu durumda kalır.
 - Doğrudan main üzerinde çalış. Branch, worktree, PR, puan, agent etiketi ve bağımsız testçi zorunluluğu yok.
+- Seçilen işte ilgili akışları ve hata durumlarını proaktif denetle; sorun keşfini kullanıcıya bırakma. Bulduğun kapsam içi eksikleri düzelt, kapsam dışı fikirleri uygun Backlog issue’suna kaydet.
 - Gerekli testleri ve davranış kontrollerini kendin yap. Kullanıcı gerek duyduğunda ayrıca inceler. Kendi testlerinin geçmesi Done yetkisi vermez.
 - Commit yapabilirsin. Push yalnız kullanıcının açık talimatıyla; yerel sonucu görüp “olmuş/tamam, gönder” demesi yeterlidir. Yerel önizleme için push gerekmez.
 - Bütün çalışma kullanıcının Mac’indeki yerel Codex oturumunda yapılır: kod, belgeler, test, Docker, issue ve Project takibi. Bulut devam eden çalışma ortamı değildir. Bu bulutta hazırlanmış belgeler tek seferlik devir paketiyle aktarılır.

@@ -42,6 +42,8 @@ describe("server-backed membership", () => {
     expect((screen.getByLabelText("Şifre", { exact: true }) as HTMLInputElement).type).toBe("text");
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Hesap oluştur" })); await settle(); });
     expect(await screen.findByRole("heading", { name: "E-postanı kontrol et" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Girişe dön" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })).toBeTruthy();
     const call = backend.state.calls.find((c) => c.path === "/auth/register")!;
     expect(call.headers["X-CSRF-TOKEN"]).toBe("csrf-token");
     expect(call.body).toMatchObject({ name: "Alice", email: "alice@example.com", passwordConfirmation: "never-store-this-42" });
@@ -73,6 +75,22 @@ describe("server-backed membership", () => {
     expect(complete).toHaveBeenCalledOnce();
     expect(screen.getByTestId("identity").textContent).toBe("alice@example.com");
   });
+  it("blocks a pending member and offers resend without creating a session", async () => {
+    const backend = fakeBackend(); backend.addAccount({ email: "pending@example.test", verified: false });
+    const complete = vi.fn();
+    render(<AuthProvider><AuthCard initial="login" onComplete={complete} /><Inspector /></AuthProvider>); await act(settle);
+    fireEvent.change(screen.getByLabelText("E-posta veya kullanıcı adı"), { target: { value: "pending@example.test" } });
+    fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "dogru-parola-123" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Giriş yap" })); await settle(); });
+    expect(complete).not.toHaveBeenCalled();
+    expect(screen.getByTestId("identity").textContent).toBe("guest");
+    expect(screen.getByRole("alert").textContent).toContain("e-posta adresini doğrula");
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Doğrulama postasını yeniden gönder" })); await settle(); });
+    expect(backend.state.calls.find(c => c.path === "/auth/verification/resend")?.body).toEqual({ email: "pending@example.test" });
+    expect(screen.getByTestId("identity").textContent).toBe("guest");
+    expect(screen.getByRole("heading", { name: "E-postanı kontrol et" })).toBeTruthy();
+  });
+
   it("confirms an e-mail link only after an explicit button press", async () => {
     const backend = fakeBackend();
     window.history.replaceState(null, "", "/eposta-dogrula?token=valid-token");
@@ -81,8 +99,37 @@ describe("server-backed membership", () => {
     expect(backend.state.calls.some((c) => c.path === "/auth/verification/confirm")).toBe(false);
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "E-postamı doğrula" })); await settle(); });
     expect(await screen.findByRole("heading", { name: "E-postan doğrulandı" })).toBeTruthy();
+    expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
     window.history.replaceState(null, "", "/");
   });
+  it("recovers an invalid verification link without requiring login", async () => {
+    const backend = fakeBackend(); window.history.replaceState(null, "", "/eposta-dogrula?token=expired-token");
+    render(<AuthProvider><AuthCard initial="verify" /></AuthProvider>); await act(settle);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "E-postamı doğrula" })); await settle(); });
+    fireEvent.click(screen.getByRole("button", { name: "Yeni doğrulama bağlantısı iste" }));
+    expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
+    fireEvent.change(screen.getByLabelText("E-posta", { exact: true }), { target: { value: "pending@example.test" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Doğrulama bağlantısını yeniden gönder" })); await settle(); });
+    expect(backend.state.calls.find(c => c.path === "/auth/verification/resend")?.body).toEqual({ email: "pending@example.test" });
+    expect(backend.state.profile).toBeNull();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("recovers an expired password reset link through a fresh e-mail request", async () => {
+    const backend = fakeBackend(); window.history.replaceState(null, "", "/sifre-sifirla?token=expired-token");
+    render(<AuthProvider><AuthCard initial="reset" /></AuthProvider>); await act(settle);
+    fireEvent.change(screen.getByLabelText("Yeni şifre", { exact: true }), { target: { value: "yeni-parola-1234" } });
+    fireEvent.change(screen.getByLabelText("Şifre tekrarı"), { target: { value: "yeni-parola-1234" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Şifreyi güncelle" })); await settle(); });
+    fireEvent.click(screen.getByRole("button", { name: "Yeni şifre sıfırlama bağlantısı iste" }));
+    expect(new URLSearchParams(window.location.search).has("token")).toBe(false);
+    fireEvent.change(screen.getByLabelText("E-posta", { exact: true }), { target: { value: "alice@example.test" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Sıfırlama bağlantısı gönder" })); await settle(); });
+    expect(backend.state.calls.find(c => c.path === "/auth/password/forgot")?.body).toEqual({ email: "alice@example.test" });
+    expect(backend.state.profile).toBeNull();
+    window.history.replaceState(null, "", "/");
+  });
+
   it("re-reads the session when another tab changes identity and hides the prior library", async () => {
     const backend = fakeBackend({ signedIn: { email: "alice@example.com" } });
     backend.state.member.publicArticles.set(savedArticle.id, { slug: savedArticle.slug, stats: { views: 0, claps: 0, saves: 0 } });
@@ -148,11 +195,11 @@ describe("server-backed membership", () => {
     expect(backend.state.calls.filter((c) => c.path === "/me/password")).toHaveLength(2);
     expect(backend.state.calls.some((c) => c.path === "/auth/reauthenticate")).toBe(true);
   });
-  it("keeps unverified accounts to verification and sign-out", async () => {
+  it("does not keep an unverified legacy profile signed in", async () => {
     fakeBackend({ signedIn: { email: "new@example.com", verified: false } });
     render(<AuthProvider><AccountPage /></AuthProvider>);
     await act(settle);
-    expect(screen.getByRole("heading", { name: "E-posta adresini doğrula." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Hesabına giriş yap." })).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Hesap bölümleri" })).toBeNull();
   });
 });

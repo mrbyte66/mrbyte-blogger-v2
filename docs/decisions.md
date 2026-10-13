@@ -46,3 +46,9 @@ Gece/gündüz geçişinde parlama/ışık patlaması istenmiyor; kesintisiz pale
 Üyelik formunda ilk parola ve tekrar parola alanında kopyalama/yapıştırma ve sürükleyerek aktarım engellenir. Bu karar mevcut hesapla giriş alanındaki yapıştırma davranışını değiştirmez.
 
 Form tasarımında hatalı alanlar kırmızı çerçeve ve kısa açıklamayla belirtilir; kullanıcı devre dışı butonun nedenini anlayabilmelidir. Hata düzeltildiğinde işaret kalkar. Açık/koyu tema, erişilebilirlik ve parlamasız görünüm korunur.
+
+## Üyelik doğrulaması ve çalışma beklentisi — 2026-10-13
+
+E-posta adresi doğrulanmadan giriş yapılamaz. Google’ın doğruladığı adres ve e-postaya gönderilen şifre sıfırlama bağlantısıyla açık onay da adres sahipliğinin kanıtıdır. Bir günlük deneme erişimi şimdi uygulanmaz; talep oluşursa tanıtım/üyelik işinde (#22) değerlendirilecek.
+
+Asistan seçilen işi hata durumlarıyla birlikte proaktif denetler; kullanıcıya sorun bulma görevi yüklenmez. Kapsam dışı işler uygun Backlog issue’sunda tutulur.

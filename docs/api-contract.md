@@ -31,3 +31,7 @@ Ayrı draft/published revision; yazı/seri ilk-yayın slug kilidi; bağımsız Y
 ## Okuyucu yayın aboneliği (#2)
 
 `Profile.preferences.publicationSubscription` ve `PATCH /me/preferences` aynı boolean alanını kullanır. Varsayılan true; `publicationEmail` yazarın kendi yayın bildirimi olarak korunur. Abone okuyucu yalnız doğrulanmış aktif hesap ve açık tercih ile ilk yayın e-postası alır. Yeniden yayın/güncelleme okuyucu mail işi oluşturmaz. Kişi başına iş retry'si, tamamlanan alıcıları yeniden kuyruğa koymaz; SMTP kabulü ile iş kaydı arasındaki çökme için exactly-once garanti verilmez. Yeni abonelik geçmiş yayınları göndermez.
+
+## Giriş için adres doğrulaması (#2)
+
+Geçerli şifre + doğrulanmamış hesap `403 EMAIL_VERIFICATION_REQUIRED` döner; authenticated session oluşturulmaz. Yanlış kimlik bilgileri genel `401 INVALID_CREDENTIALS` olarak kalır. Eski PENDING oturumları her istekte geçersizleştirilir. Anonim verification/resend, hesap varlığını açıklamayan 202 yanıtını korur. E-postaya teslim edilen tek kullanımlık sıfırlama bağlantısının onayı, mevcut sözleşmede adresi de doğrular; GET linki tüketmez ve sıfırlama otomatik giriş yapmaz.

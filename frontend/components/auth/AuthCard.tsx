@@ -2,7 +2,7 @@
 import type { Input } from "../../lib/api/contract";
 import { useEffect, useId, useRef, useState } from "react";
 import { passwordStrength, validEmail, type AuthScreen } from "../../lib/auth/model";
-import { api, describe } from "../../lib/api/http";
+import { api, ApiError, describe } from "../../lib/api/http";
 import { useWorkspace } from "../../lib/builder/use-workspace";
 import { AuthIcon, GoogleLogo } from "./AuthIcon";
 import { useAuth } from "./AuthProvider";
@@ -28,10 +28,11 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const { workspace } = useWorkspace();
   const [screen, setScreen] = useState(initial);
   const [tabMotion, setTabMotion] = useState(false);
+  const [linkInvalid, setLinkInvalid] = useState(false);
   const [email, setEmail] = useState(""); const [name, setName] = useState(""); const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState(""); const [confirmationVisible, setConfirmationVisible] = useState(false);
   const [visible, setVisible] = useState(false); const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ title: string; text: string; next?: AuthScreen } | null>(null);
+  const [result, setResult] = useState<{ title: string; text: string; next?: AuthScreen; resend?: boolean } | null>(null);
   const [link, setLink] = useState({ token: "", emailChange: false });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const heading = useRef<HTMLHeadingElement>(null);
@@ -49,11 +50,29 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const needsEmail = screen !== "reset" && !(screen === "verify" && link.token);
   const valid = (!newPassword || !confirmationError) && (!register || !nameError) && (!needsEmail || !emailError) && (!hasPassword || !passwordError) && (screen !== "reset" || !!link.token);
   const strength = passwordStrength(password);
-  function change(next: AuthScreen) { if (next === screen && !result) return; setTabMotion((screen === "login" || screen === "register") && (next === "login" || next === "register")); setScreen(next); setPassword(""); setConfirmation(""); setConfirmationVisible(false); setVisible(false); setTouched({}); setResult(null); auth.setError(""); heading.current?.focus(); }
+  function change(next: AuthScreen) { if (next === screen && !result) return; setLinkInvalid(false); setTabMotion((screen === "login" || screen === "register") && (next === "login" || next === "register")); setScreen(next); setPassword(""); setConfirmation(""); setConfirmationVisible(false); setVisible(false); setTouched({}); setResult(null); auth.setError(""); heading.current?.focus(); }
   async function run(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true); auth.setError("");
-    try { await action(); } catch (cause) { auth.setError(describe(cause)); } finally { setBusy(false); }
+    try { await action(); } catch (cause) { if (cause instanceof ApiError && cause.code === "INVALID_TOKEN") setLinkInvalid(true); auth.setError(describe(cause)); } finally { setBusy(false); }
+  }
+  function forgetLinkToken() {
+    const params = new URLSearchParams(window.location.search);
+    params.delete("token"); params.delete("degisiklik");
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+  }
+  function recoverLink() {
+    forgetLinkToken(); setLink({ token: "", emailChange: false }); setLinkInvalid(false);
+    setPassword(""); setConfirmation(""); setTouched({}); setResult(null); auth.setError("");
+    setScreen(screen === "reset" ? "forgot" : "verify");
+  }
+  async function resendVerification() {
+    if (!result) setResult({ title: "E-posta doğrulaması gerekli", text: "Giriş yapmadan önce e-posta adresini doğrula. Yeni bağlantı için yeniden gönder düğmesini kullanabilirsin.", resend: true });
+    await run(async () => {
+      await api("POST", "/auth/verification/resend", { body: ({ email: email.trim() } satisfies Input<"resendVerification">) });
+      setResult({ title: "E-postanı kontrol et", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik. Bağlantıdaki onay düğmesine basıp daha sonra giriş yap.", resend: true });
+    });
   }
   async function submit() {
     setTouched({ name: true, email: true, password: true, confirmation: true });
@@ -64,22 +83,22 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
       } else if (register) {
         if (await auth.register(name, email, password, confirmation)) {
           setPassword(""); setConfirmation("");
-          setResult({ title: "E-postanı kontrol et", text: `Doğrulama bağlantısını ${email.trim()} adresine gönderdik. Bağlantıyı açıp doğruladıktan sonra giriş yapabilirsin.`, next: "login" });
+          setResult({ title: "E-postanı kontrol et", text: `Doğrulama bağlantısını ${email.trim()} adresine gönderdik. E-postanı doğrulamadan giriş yapamazsın.`, resend: true });
         }
       } else if (screen === "forgot") {
         await api("POST", "/auth/password/forgot", { body: ({ email: email.trim() } satisfies Input<"forgotPassword">) });
         setResult({ title: "Sıradaki adım hazır", text: "Bu adrese kayıtlı bir hesap varsa şifre sıfırlama bağlantısı gönderdik. Bağlantı 30 dakika geçerli.", next: "login" });
       } else if (screen === "reset") {
         await api("POST", "/auth/password/reset", { body: ({ token: link.token, password, passwordConfirmation: confirmation } satisfies Input<"resetPassword">) });
-        setPassword(""); setConfirmation(""); await auth.refresh();
+        forgetLinkToken(); setPassword(""); setConfirmation(""); await auth.refresh();
         setResult({ title: "Şifren güncellendi", text: "Güvenliğin için bütün oturumların kapatıldı. Yeni şifrenle giriş yapabilirsin.", next: "login" });
       } else if (screen === "verify") {
         if (link.token) {
           await api("POST", link.emailChange ? "/auth/email-change/confirm" : "/auth/verification/confirm", { body: ({ token: link.token } satisfies Input<"confirmVerification"> & Input<"confirmEmailChange">) });
-          await auth.refresh();
+          forgetLinkToken(); await auth.refresh();
           setResult(link.emailChange
             ? { title: "E-posta adresin değişti", text: "Güvenliğin için bütün oturumların kapatıldı. Yeni adresinle giriş yapabilirsin.", next: "login" }
-            : { title: "E-postan doğrulandı", text: "Hesabın etkin. Artık kitaplığını ve hesap ayarlarını kullanabilirsin.", next: auth.session ? undefined : "login" });
+            : { title: "E-postan doğrulandı", text: "Hesabın etkin. Giriş yaparak kitaplığını ve hesap ayarlarını kullanabilirsin.", next: auth.session ? undefined : "login" });
         } else {
           await api("POST", "/auth/verification/resend", { body: ({ email: email.trim() } satisfies Input<"resendVerification">) });
           setResult({ title: "Bağlantı gönderildi", text: "Doğrulanmamış bir hesap varsa bu adrese yeni bir doğrulama bağlantısı gönderdik." });
@@ -94,7 +113,8 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
     <p className="auth-subtitle">{result?.text ?? (screen === "reset" && !link.token ? "Bu ekran, e-postana gelen sıfırlama bağlantısıyla açılır." : headings[screen][1])}</p>
     {result ? <div className="auth-message-actions">
       {result.next && <button type="button" className="auth-primary" onClick={() => change(result.next!)}>{result.next === "login" ? "Girişe dön" : "Devam et"}</button>}
-      {!result.next && onComplete && <button type="button" className="auth-primary" onClick={onComplete}>Tamam</button>}
+      {result.resend && <button className="auth-primary" type="button" disabled={busy} onClick={() => void resendVerification()}>{busy ? "Gönderiliyor…" : "Doğrulama postasını yeniden gönder"}</button>}
+      {!result.next && !result.resend && onComplete && <button type="button" className="auth-primary" onClick={onComplete}>Tamam</button>}
     </div> : <>
       {(login || register) && <>
         <div className="auth-tabs" role="tablist" aria-label="Hesap erişimi" onKeyDown={event => {
@@ -119,6 +139,8 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
       </form>
       {(screen === "forgot" || screen === "reset" || screen === "verify") && <button type="button" className="auth-text-button auth-back" onClick={() => change("login")} disabled={busy}>← Girişe dön</button>}
     </>}
+    {linkInvalid && (screen === "reset" || (screen === "verify" && !link.emailChange)) && <button className="auth-text-button" type="button" onClick={recoverLink}>{screen === "reset" ? "Yeni şifre sıfırlama bağlantısı iste" : "Yeni doğrulama bağlantısı iste"}</button>}
+    {login && auth.verificationRequired && <button className="auth-text-button auth-verification-resend" type="button" disabled={busy} onClick={() => validEmail(email.trim()) ? void resendVerification() : change("verify")}>Doğrulama postasını yeniden gönder</button>}
     {auth.error && <p id={`${id}-server-error`} className="auth-field-error" role="alert">{auth.error}</p>}
     {(login || register) && !result && <p className="auth-benefit">Üyelik okur hesabıdır; yazı yazma veya yönetim yetkisi vermez.</p>}
   </section>;

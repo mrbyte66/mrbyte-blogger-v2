@@ -195,9 +195,9 @@ class LibraryIntegrationTest extends IntegrationTest {
     void unverifiedAccountsAndVisitorsHaveNoLibrary() {
         createMember("bekleyen@example.test", "uye-parolasi-123", false);
         ApiClient pending = client();
-        pending.login("bekleyen@example.test", "uye-parolasi-123");
+        assertThat(pending.login("bekleyen@example.test", "uye-parolasi-123").code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
         pending.refreshCsrf();
-        assertThat(pending.get("/api/v1/me/collections").code()).isEqualTo("EMAIL_VERIFICATION_REQUIRED");
+        assertThat(pending.get("/api/v1/me/collections").status()).isEqualTo(401);
         ApiClient visitor = client();
         visitor.refreshCsrf();
         assertThat(visitor.put("/api/v1/me/bookmarks/" + UUID.randomUUID(), null, Map.of()).status()).isEqualTo(401);

@@ -52,6 +52,10 @@ class SessionSupport {
 
     /** Rotates the session ID and CSRF token, then stores only the account ID in the session. */
     void establish(AccountAccess.Grant grant, HttpServletRequest request, HttpServletResponse response) {
+        if (!grant.verified()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "EMAIL_VERIFICATION_REQUIRED",
+                    "Giriş yapmadan önce e-posta adresini doğrula");
+        }
         Authentication authentication = UsernamePasswordAuthenticationToken.authenticated(
                 new SatirPrincipal(grant.userId()), null, grant.authorities());
         request.getSession(true);

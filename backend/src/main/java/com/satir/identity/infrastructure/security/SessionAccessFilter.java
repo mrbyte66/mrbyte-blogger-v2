@@ -47,7 +47,7 @@ class SessionAccessFilter extends OncePerRequestFilter {
         if (authentication != null && authentication.getPrincipal() instanceof SatirPrincipal principal) {
             HttpSession session = request.getSession(false);
             Optional<AccountAccess.Grant> grant = withinAbsoluteLifetime(session)
-                    ? accountAccess.current(principal.userId())
+                    ? accountAccess.current(principal.userId()).filter(AccountAccess.Grant::verified)
                     : Optional.empty();
             if (grant.isPresent()) {
                 SecurityContext refreshed = holder.createEmptyContext();

@@ -32,3 +32,7 @@ Takip: [#12](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/12), [#1](http
 ## Devir alındı
 
 2026-10-12: boş Masaüstü hedefi klonlandı; temiz main üzerinde `git apply --check` sonrası belge patch'i bir kez uygulandı. Yerel belge commit'i `09fe835`; bulut commit'i `886dc09` paket referansıdır, yerel commit kimliği değildir. Yerel Project erişimi çalışıyor; eski bulut erişim hataları yerel durum değildir. [Pano doğrulaması](github-project.md). Uygulama hedef farkları ilgili mevcut issue'lara kaydedilir; kullanıcı seçmeden geliştirme önceliği atanmaz.
+
+## Graphify devri
+
+Kod tabanını haritalayarak çalışma verimini artırma hedefi korunur. Önceki “mrbyte-blogger kurulumunu yap” bulut sohbetinde Graphify 0.9.86 kurulup 336 kod dosyası için code-only harita ve örnek sorgu doğrulanmıştı; araç `/workspace/.tools/bin`, harita `/workspace/.graphify/mrbyte-blogger-v2` altında hazırlanmıştı. Bunlar bu Mac’teki checkout’a aktarılmadı; yerel oturumda Graphify henüz kullanılmıyor. Yerel kullanım kurulumu #12 kapsamında izlenir. Tarama/sorgu sayıları kullanım ölçüsüdür; zaman/token tasarrufu ayrıca karşılaştırma olmadan iddia edilmez.

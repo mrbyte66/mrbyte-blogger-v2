@@ -40,3 +40,5 @@ Bu kararlar hedef davranıştır. Klonla gelen uygulama bunların tümünü hen�
 ## Görsel hareket tercihi — 2026-10-13
 
 Kullanıcı üyelikteki CRT açılış/karşılama/kapanış dilini beğendi. Hareketler belirgin, yumuşak ve mevcut sahneyle bütünleşmeli; gece/gündüz ışığı aniden değişmemeli. Sadece fark edilmeyen solma veya bütün ekranı kapatan ilişkisiz efekt tercih edilmiyor. Reduced-motion ve hareket kapatma seçeneği korunur.
+
+Gece/gündüz geçişinde parlama/ışık patlaması istenmiyor; kesintisiz palet geçişi korunacak.

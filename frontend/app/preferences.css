@@ -56,9 +56,8 @@ html[data-theme=dark] .studio :is(.studio-add,.studio-palette button>span:first-
 
 /* Lighting changes dissolve the complete palette, including gradient backgrounds. */
 html[data-theme-transition=on]::view-transition-group(root) { animation-duration:720ms; }
-html[data-theme-transition=on]::view-transition-old(root) { z-index:1; animation:theme-light-away 720ms cubic-bezier(.4,0,.2,1) both; }
+html[data-theme-transition=on]::view-transition-old(root) { z-index:1; animation:none; opacity:1; }
 html[data-theme-transition=on]::view-transition-new(root) { z-index:2; animation:theme-light-arrive 720ms cubic-bezier(.4,0,.2,1) both; }
-@keyframes theme-light-away { from { opacity:1; } to { opacity:0; } }
 @keyframes theme-light-arrive { from { opacity:0; } to { opacity:1; } }
 .site-theme-toggle>span:first-child,.scene-controls .sun-icon { transition:transform 720ms cubic-bezier(.22,1,.36,1); }
 html[data-theme=light] :is(.site-theme-toggle>span:first-child,.scene-controls .sun-icon) { transform:rotate(90deg); }

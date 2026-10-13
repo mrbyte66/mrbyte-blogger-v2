@@ -36,3 +36,5 @@ Takip: [#12](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/12), [#1](http
 ## Graphify devri
 
 Kod tabanını haritalayarak çalışma verimini artırma hedefi korunur. Önceki “mrbyte-blogger kurulumunu yap” bulut sohbetinde Graphify 0.9.86 kurulup 336 kod dosyası için code-only harita ve örnek sorgu doğrulanmıştı; araç `/workspace/.tools/bin`, harita `/workspace/.graphify/mrbyte-blogger-v2` altında hazırlanmıştı. Bunlar bu Mac’teki checkout’a aktarılmadı; yerel oturumda Graphify henüz kullanılmıyor. Yerel kullanım kurulumu #12 kapsamında izlenir. Tarama/sorgu sayıları kullanım ölçüsüdür; zaman/token tasarrufu ayrıca karşılaştırma olmadan iddia edilmez.
+
+2026-10-13: Graphify 0.9.88 Mac’te proje içinde ayrı Python ortamına kuruldu. `scripts/graphify-local` tarama/sorgu ve kullanım sayacını yönetir; kök AGENTS bunu çalışma akışına bağlar. [Yerel rehber](graphify.md). İlk kod taraması ve üç üyelik sorgusu doğrulandı; dış LLM/API, yeni agent veya Git hook kurulmadı.

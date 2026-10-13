@@ -13,6 +13,7 @@ Kısa ve açık Türkçe yaz. Teknik adlar İngilizce kalabilir. Tercih ve kapsa
 - Doğrudan main üzerinde çalış. Branch, worktree, PR, puan, agent etiketi ve bağımsız testçi zorunluluğu yok.
 - Seçilen işte ilgili akışları ve hata durumlarını proaktif denetle; sorun keşfini kullanıcıya bırakma. Bulduğun kapsam içi eksikleri düzelt, kapsam dışı fikirleri uygun Backlog issue’suna kaydet.
 - Gerekli testleri ve davranış kontrollerini kendin yap. Kullanıcı gerek duyduğunda ayrıca inceler. Kendi testlerinin geçmesi Done yetkisi vermez.
+- Kod ilişkisi ve değişiklik etkisi için yerel Graphify haritasını kullan: `scripts/graphify-local query 'Sembol'`. Kaynak/testlerle doğrula; anlamlı kod değişikliği sonrası `scripts/graphify-local refresh` çalıştır. Kullanım sayacı tasarruf yüzdesi değildir; [rehber](docs/graphify.md).
 - Commit yapabilirsin. Push yalnız kullanıcının açık talimatıyla; yerel sonucu görüp “olmuş/tamam, gönder” demesi yeterlidir. Yerel önizleme için push gerekmez.
 - Bütün çalışma kullanıcının Mac’indeki yerel Codex oturumunda yapılır: kod, belgeler, test, Docker, issue ve Project takibi. Bulut devam eden çalışma ortamı değildir. Bu bulutta hazırlanmış belgeler tek seferlik devir paketiyle aktarılır.
 - Project takibinde erişilebilen yerel tarayıcı araçlarını kullan; tarayıcı kontrolü yoksa yetkili yerel GitHub CLI/API kullan. Makine, tarayıcı ve Project erişimini gerçekten kontrol etmeden erişim sözü verme.
@@ -27,6 +28,7 @@ Kısa ve açık Türkçe yaz. Teknik adlar İngilizce kalabilir. Tercih ve kapsa
 | Kategorili issue bağlantıları | [docs/roadmap.md](docs/roadmap.md) |
 | Frontend / backend | [frontend/AGENTS.md](frontend/AGENTS.md), [backend/AGENTS.md](backend/AGENTS.md) |
 | Yerel teslim | [docs/local-handoff.md](docs/local-handoff.md) |
+| Kod haritası / Graphify | [docs/graphify.md](docs/graphify.md) |
 
 Mevcut kodu geliştirip sadeleştir. Next.js/React/TypeScript, Java 25/Spring Boot ve PostgreSQL korunur. Tasarım ve CRT karakteri korunur. Yeni hedefleri mevcut kodun davranışı sanma: kod, OpenAPI ve ürün hedefi farklıysa ilgili issue’da farkı belirt. Kullanıcının değişikliklerinin üzerine yazma; sırları kayda veya commit’e koyma. Uygulanmış Flyway migration’ını değiştirme.
 

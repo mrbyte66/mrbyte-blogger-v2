@@ -1,0 +1,13 @@
+# Only project source; dependencies, generated files and local data are excluded.
+work/
+graphify-out/
+.git/
+frontend/node_modules/
+frontend/.next/
+backend/target/
+backend/data/
+**/.env*
+**/*.local.txt
+**/*.local.env
+deploy/seed/demo.json
+**/package-lock.json

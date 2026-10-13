@@ -103,7 +103,7 @@ describe("server-backed membership", () => {
     fireEvent.click(screen.getByRole("button", { name: "Giriş yap ve yazıyı kaydet: Yazı" }));
     expect(screen.getByRole("dialog", { name: "Hesap erişimi" }).hasAttribute("open")).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Giriş penceresini kapat" }));
-    expect(screen.queryByRole("dialog", { name: "Hesap erişimi" })).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Hesap erişimi" })).toBeNull());
   });
   it("does not expose Studio to a member", async () => {
     fakeBackend({ signedIn: { email: "alice@example.com", name: "Alice" } });

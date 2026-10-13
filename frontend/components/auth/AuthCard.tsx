@@ -27,6 +27,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const auth = useAuth();
   const { workspace } = useWorkspace();
   const [screen, setScreen] = useState(initial);
+  const [tabMotion, setTabMotion] = useState(false);
   const [email, setEmail] = useState(""); const [name, setName] = useState(""); const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState(""); const [confirmationVisible, setConfirmationVisible] = useState(false);
   const [visible, setVisible] = useState(false); const [busy, setBusy] = useState(false);
@@ -48,7 +49,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   const needsEmail = screen !== "reset" && !(screen === "verify" && link.token);
   const valid = (!newPassword || !confirmationError) && (!register || !nameError) && (!needsEmail || !emailError) && (!hasPassword || !passwordError) && (screen !== "reset" || !!link.token);
   const strength = passwordStrength(password);
-  function change(next: AuthScreen) { setScreen(next); setPassword(""); setConfirmation(""); setConfirmationVisible(false); setVisible(false); setTouched({}); setResult(null); auth.setError(""); heading.current?.focus(); }
+  function change(next: AuthScreen) { if (next === screen && !result) return; setTabMotion((screen === "login" || screen === "register") && (next === "login" || next === "register")); setScreen(next); setPassword(""); setConfirmation(""); setConfirmationVisible(false); setVisible(false); setTouched({}); setResult(null); auth.setError(""); heading.current?.focus(); }
   async function run(action: () => Promise<void>) {
     if (busy) return;
     setBusy(true); auth.setError("");
@@ -87,7 +88,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
     });
   }
   const submitLabel = login ? "Giriş yap" : register ? "Hesap oluştur" : screen === "forgot" ? "Sıfırlama bağlantısı gönder" : screen === "reset" ? "Şifreyi güncelle" : link.token ? (link.emailChange ? "Yeni adresimi onayla" : "E-postamı doğrula") : "Doğrulama bağlantısını yeniden gönder";
-  return <section className="auth-card" data-screen={screen} aria-labelledby={`${id}-title`} aria-busy={busy}>
+  return <section className="auth-card" data-screen={screen} data-tab-motion={tabMotion} aria-labelledby={`${id}-title`} aria-busy={busy}>
     <span className="auth-wordmark">{workspace.applied.siteName}<span>.</span></span>
     <h1 id={`${id}-title`} tabIndex={-1} ref={heading}>{result?.title ?? headings[screen][0]}</h1>
     <p className="auth-subtitle">{result?.text ?? (screen === "reset" && !link.token ? "Bu ekran, e-postana gelen sıfırlama bağlantısıyla açılır." : headings[screen][1])}</p>
@@ -105,7 +106,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
         <button className="auth-google" type="button" disabled={busy} onClick={() => void run(() => auth.startGoogle("login"))}><GoogleLogo />Google ile devam et</button>
         <div className="auth-divider"><span>veya</span></div>
       </>}
-      <form id={`${id}-form`} role={login || register ? "tabpanel" : undefined} aria-labelledby={login || register ? `${id}-${register ? "register" : "login"}` : undefined} noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+      <form key={screen} id={`${id}-form`} role={login || register ? "tabpanel" : undefined} aria-labelledby={login || register ? `${id}-${register ? "register" : "login"}` : undefined} noValidate onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <div className="auth-form-fields">{register && <label className="auth-field" htmlFor={`${id}-name`}>Adın<input autoComplete="name" id={`${id}-name`} maxLength={80} value={name} disabled={busy} onBlur={() => setTouched(v => ({ ...v, name: true }))} onChange={e => setName(e.target.value)} aria-invalid={!!(touched.name && nameError)} aria-describedby={touched.name && nameError ? `${id}-name-error` : undefined} />{touched.name && nameError && <span id={`${id}-name-error`} className="auth-field-error">{nameError}</span>}</label>}
         {needsEmail && <label className="auth-field" htmlFor={`${id}-email`}>{login ? "E-posta veya kullanıcı adı" : "E-posta"}<input autoComplete={login ? "username" : "email"} inputMode={login ? "text" : "email"} type={login ? "text" : "email"} id={`${id}-email`} maxLength={254} value={email} disabled={busy} onBlur={() => setTouched(v => ({ ...v, email: true }))} onChange={e => setEmail(e.target.value)} aria-invalid={!!(touched.email && emailError)} aria-describedby={touched.email && emailError ? `${id}-email-error` : undefined} />{touched.email && emailError && <span id={`${id}-email-error`} className="auth-field-error">{emailError}</span>}</label>}
         {hasPassword && <div className="auth-field"><label htmlFor={`${id}-password`}>{screen === "reset" ? "Yeni şifre" : "Şifre"}</label><div className="auth-password"><input id={`${id}-password`} type={visible ? "text" : "password"} autoComplete={newPassword ? "new-password" : "current-password"} maxLength={128} value={password} disabled={busy} onPaste={e => { if (register) e.preventDefault(); }} onDrop={e => { if (register) e.preventDefault(); }} onCopy={e => { if (register) e.preventDefault(); }} onCut={e => { if (register) e.preventDefault(); }} onDragStart={e => { if (register) e.preventDefault(); }} onChange={e => setPassword(e.target.value)} onBlur={() => setTouched(v => ({ ...v, password: true }))} aria-invalid={!!(touched.password && passwordError)} aria-describedby={`${id}-password-hint`} /><button type="button" disabled={busy} aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"} aria-pressed={visible} onClick={() => setVisible(!visible)}><AuthIcon kind={visible ? "hidden" : "eye"} /></button></div>

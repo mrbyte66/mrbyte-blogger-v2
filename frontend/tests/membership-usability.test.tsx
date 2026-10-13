@@ -34,6 +34,19 @@ describe("membership usability", () => {
     expect(fireEvent.paste(screen.getByLabelText("Şifre", { exact: true }))).toBe(true);
   });
 
+  it("keeps the identifier when switching access tabs and clears the password only on an actual switch", async () => {
+    fakeBackend(); render(<AuthProvider><AuthCard initial="login" /></AuthProvider>); await act(settle);
+    fireEvent.change(screen.getByLabelText("E-posta veya kullanıcı adı"), { target: { value: "okur@example.test" } });
+    fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "typed-password" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Giriş yap" }));
+    expect((screen.getByLabelText("Şifre", { exact: true }) as HTMLInputElement).value).toBe("typed-password");
+    fireEvent.click(screen.getByRole("tab", { name: "Üye ol" }));
+    expect((screen.getByLabelText("E-posta", { exact: true }) as HTMLInputElement).value).toBe("okur@example.test");
+    expect((screen.getByLabelText("Şifre", { exact: true }) as HTMLInputElement).value).toBe("");
+    fireEvent.click(screen.getByRole("tab", { name: "Giriş yap" }));
+    expect((screen.getByLabelText("E-posta veya kullanıcı adı") as HTMLInputElement).value).toBe("okur@example.test");
+  });
+
   it("keeps account deletion inside security details instead of every account section", async () => {
     fakeBackend({ signedIn: { email: "okur@example.test" } }); render(<AuthProvider><AccountPage /></AuthProvider>); await act(settle);
     expect(screen.queryByRole("button", { name: "Hesabı sil" })).toBeNull();
@@ -54,6 +67,37 @@ describe("membership usability", () => {
     expect(backend.state.profile?.preferences.publicationSubscription).toBe(false);
     expect(backend.state.profile?.preferences.publicationEmail).toBe(true);
     expect(backend.state.calls.find(c => c.path === "/me/preferences")?.body).toMatchObject({ publicationSubscription: false });
+  });
+
+  it.each(["button", "backdrop", "escape"])("animates manual dismissal through %s without implying a successful login", async method => {
+    fakeBackend(); render(<AuthProvider><Logout /></AuthProvider>); await act(settle);
+    fireEvent.click(screen.getByRole("button", { name: "Pencereyi aç" }));
+    const dialog = screen.getByRole("dialog");
+    if (method === "button") fireEvent.click(screen.getByRole("button", { name: "Giriş penceresini kapat" }));
+    else if (method === "backdrop") fireEvent.click(dialog);
+    else fireEvent(dialog, new Event("cancel", { cancelable: true }));
+    expect(dialog.className).toContain("is-dismissing");
+    expect(screen.queryByText("Hoş geldin.")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Misafir")).toBeTruthy();
+  });
+
+  it("does not show a login success when an already signed-in member manually closes the dialog", async () => {
+    fakeBackend({ signedIn: { email: "okur@example.test" } }); render(<AuthProvider><Logout /></AuthProvider>); await act(settle);
+    fireEvent.click(screen.getByRole("button", { name: "Pencereyi aç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Giriş penceresini kapat" }));
+    expect(screen.getByRole("dialog").className).toContain("is-dismissing");
+    expect(screen.queryByText("Hoş geldin.")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Üye")).toBeTruthy();
+  });
+
+  it("closes immediately when reduced motion is requested", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+    fakeBackend(); render(<AuthProvider><Logout /></AuthProvider>); await act(settle);
+    fireEvent.click(screen.getByRole("button", { name: "Pencereyi aç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Giriş penceresini kapat" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("dismisses the successful login dialog with the closing animation", async () => {

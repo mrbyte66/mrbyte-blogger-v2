@@ -249,3 +249,20 @@ html[data-theme=light] .surface-night .account-danger { color:#944c5b; border-co
 .account-history { list-style:none; padding:0; margin:16px 0; display:grid; gap:10px; }
 .account-history li { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; padding:12px 0; border-bottom:1px solid var(--line); }
 .account-history small { color:var(--muted, inherit); opacity:.75; }
+
+/* Access tabs move the selection line; surfaces keep their existing palette. */
+.auth-tabs { position:relative; }
+.auth-tabs::after { content:""; position:absolute; bottom:-1px; left:0; width:50%; height:2px; background:var(--ink); transform:translateX(0); transition:transform 260ms var(--motion-ease); pointer-events:none; }
+.auth-card[data-screen=register] .auth-tabs::after { transform:translateX(100%); }
+.auth-tabs button { transition:color 180ms var(--motion-ease); }
+.auth-tabs button[aria-selected=true] { border-bottom-color:transparent; }
+.auth-card[data-tab-motion=true] :is(form) { animation:auth-tab-enter 180ms var(--motion-ease) both; }
+@keyframes auth-tab-enter { from { opacity:.82; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .auth-card[data-tab-motion=true] form { animation:none; } .auth-tabs::after { transition:none; } }
+html[data-motion=off] .auth-card[data-tab-motion=true] form { animation:none; }
+html[data-motion=off] .auth-tabs::after { transition:none; }
+
+.auth-dialog.is-dismissing { pointer-events:none; animation:auth-window-off 340ms cubic-bezier(.65,0,.35,1) forwards; }
+.auth-dialog.is-dismissing::backdrop { animation:auth-backdrop-dismiss 340ms ease forwards; }
+@media(prefers-reduced-motion:reduce) { .auth-dialog.is-dismissing,.auth-dialog.is-dismissing::backdrop { animation:none; } }
+html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dialog.is-dismissing::backdrop { animation:none; }

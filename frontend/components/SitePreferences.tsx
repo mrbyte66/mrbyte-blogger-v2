@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+
+import { flushSync } from "react-dom";
 
 type ColorMode = "light" | "dark";
 type Preferences = { colorMode: ColorMode | null; motionEnabled: boolean; setColorMode: (mode: ColorMode) => void; setMotionEnabled: (enabled: boolean) => void };
@@ -9,6 +11,7 @@ const Context = createContext<Preferences>({ colorMode: null, motionEnabled: tru
 export function SitePreferences({ children }: { children: ReactNode }) {
   const [colorMode, setColor] = useState<ColorMode | null>(null);
   const [motionEnabled, setMotion] = useState(true);
+  const themeTransition = useRef<ViewTransition | null>(null);
   function updateColor(mode: ColorMode | null) {
     setColor(mode);
     if (mode) document.documentElement.dataset.theme = mode;
@@ -33,9 +36,23 @@ export function SitePreferences({ children }: { children: ReactNode }) {
     media.addEventListener?.("change", sync);
     return () => { window.removeEventListener("storage", storage); media.removeEventListener?.("change", sync); };
   }, []);
+  useEffect(() => () => { themeTransition.current?.skipTransition(); delete document.documentElement.dataset.themeTransition; }, []);
   const value: Preferences = {
     colorMode, motionEnabled,
-    setColorMode(mode) { updateColor(mode); try { localStorage.setItem("satir:theme", mode); } catch { /* Preference still works for this session. */ } },
+    setColorMode(mode) {
+      const root = document.documentElement;
+      const animate = motionEnabled && !matchMedia("(prefers-reduced-motion: reduce)").matches && typeof document.startViewTransition === "function" && !root.dataset.routeDirection;
+      const apply = () => { updateColor(mode); try { localStorage.setItem("satir:theme", mode); } catch { /* Preference still works for this session. */ } };
+      themeTransition.current?.skipTransition();
+      if (!animate) { apply(); return; }
+      root.dataset.themeTransition = "on";
+      const transition = document.startViewTransition(() => flushSync(apply));
+      themeTransition.current = transition;
+      void transition.finished.catch(() => {}).finally(() => {
+        if (themeTransition.current !== transition) return;
+        themeTransition.current = null; delete root.dataset.themeTransition;
+      });
+    },
     setMotionEnabled(enabled) { updateMotion(enabled); try { localStorage.setItem("satir:motion", enabled ? "on" : "off"); } catch { /* Preference still works for this session. */ } },
   };
   return <Context.Provider value={value}>{children}</Context.Provider>;

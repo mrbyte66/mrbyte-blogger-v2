@@ -53,3 +53,17 @@ html[data-theme=dark] .studio .block-symbol { color:#d2edb7; }
 html[data-theme=dark] .studio .block-order button:hover:not(:disabled) { background:#41513b; color:#efffe4; }
 html[data-theme=dark] .studio button:disabled { opacity:.6; }
 html[data-theme=dark] .studio :is(.studio-add,.studio-palette button>span:first-child) { color:#d2edb7; }
+
+/* Lighting changes dissolve the complete palette, including gradient backgrounds. */
+html[data-theme-transition=on]::view-transition-group(root) { animation-duration:720ms; }
+html[data-theme-transition=on]::view-transition-old(root) { z-index:1; animation:theme-light-away 720ms cubic-bezier(.4,0,.2,1) both; }
+html[data-theme-transition=on]::view-transition-new(root) { z-index:2; animation:theme-light-arrive 720ms cubic-bezier(.4,0,.2,1) both; }
+@keyframes theme-light-away { from { opacity:1; } to { opacity:0; } }
+@keyframes theme-light-arrive { from { opacity:0; } to { opacity:1; } }
+.site-theme-toggle>span:first-child,.scene-controls .sun-icon { transition:transform 720ms cubic-bezier(.22,1,.36,1); }
+html[data-theme=light] :is(.site-theme-toggle>span:first-child,.scene-controls .sun-icon) { transform:rotate(90deg); }
+@supports not (view-transition-name:root) {
+  :is(html,.theme-site,.experience,.studio,.content-dialog,.auth-dialog,.account-dropdown) { transition:color 720ms ease,background-color 720ms ease,border-color 720ms ease; }
+}
+@media(prefers-reduced-motion:reduce) { html[data-theme-transition=on]::view-transition-old(root),html[data-theme-transition=on]::view-transition-new(root) { animation:none !important; } }
+html[data-motion=off][data-theme-transition=on]::view-transition-old(root),html[data-motion=off][data-theme-transition=on]::view-transition-new(root) { animation:none !important; }

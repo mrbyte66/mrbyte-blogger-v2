@@ -36,3 +36,7 @@ Main üzerinde çalış; PR/rol/puan/agent etiketi yok. Asistan test ve commit y
 ## Teknik karar ile çalışan kod ayrımı
 
 Bu kararlar hedef davranıştır. Klonla gelen uygulama bunların tümünü henüz karşılamaz. Özellikle taslak/yayın ayrımı, URL kilidi, seri katalog ayrımı, okuyucu bildirimleri, indeksleme kontrolü ve kaldırılacak özellikler Mac’te uygulanacak. Bu MD değişikliğinde hiçbir uygulama dosyası veya migration değiştirilmez.
+
+## Görsel hareket tercihi — 2026-10-13
+
+Kullanıcı üyelikteki CRT açılış/karşılama/kapanış dilini beğendi. Hareketler belirgin, yumuşak ve mevcut sahneyle bütünleşmeli; gece/gündüz ışığı aniden değişmemeli. Sadece fark edilmeyen solma veya bütün ekranı kapatan ilişkisiz efekt tercih edilmiyor. Reduced-motion ve hareket kapatma seçeneği korunur.

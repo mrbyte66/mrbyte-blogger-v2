@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { SitePreferences, ThemeToggle } from "../components/SitePreferences";
 
@@ -8,7 +8,7 @@ beforeEach(() => {
   delete document.documentElement.dataset.motion;
   vi.stubGlobal("matchMedia", () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); delete document.documentElement.dataset.themeTransition; });
 
 describe("shared site appearance", () => {
   it("keeps a chosen theme when navigating to a fresh page", () => {
@@ -34,4 +34,35 @@ describe("shared site appearance", () => {
     render(<SitePreferences><ThemeToggle /></SitePreferences>);
     expect(document.documentElement.dataset.motion).toBe("off");
   });
+  it("retains the latest choice during repeated lighting changes and cleans up after the last transition", async () => {
+    const finishes: (() => void)[] = [];
+    const skips: ReturnType<typeof vi.fn>[] = [];
+    Object.defineProperty(document, "startViewTransition", { configurable: true, value: vi.fn((apply: () => void) => {
+      apply();
+      const finished = new Promise<void>(resolve => finishes.push(resolve));
+      const skipTransition = vi.fn(); skips.push(skipTransition);
+      return { finished, skipTransition };
+    }) });
+    const view = render(<SitePreferences><ThemeToggle /></SitePreferences>);
+    fireEvent.click(screen.getByRole("button", { name: "Koyu temaya geç" }));
+    fireEvent.click(screen.getByRole("button", { name: "Açık temaya geç" }));
+    expect(skips[0]).toHaveBeenCalledOnce();
+    expect(localStorage.getItem("satir:theme")).toBe("light");
+    await act(async () => { finishes[0](); });
+    expect(document.documentElement.dataset.themeTransition).toBe("on");
+    await act(async () => { finishes[1](); });
+    expect(document.documentElement.dataset.themeTransition).toBeUndefined();
+    view.unmount(); Reflect.deleteProperty(document, "startViewTransition");
+  });
+  it("changes the theme immediately without starting a snapshot when motion is disabled", () => {
+    localStorage.setItem("satir:motion", "off");
+    const start = vi.fn();
+    Object.defineProperty(document, "startViewTransition", { configurable: true, value: start });
+    render(<SitePreferences><ThemeToggle /></SitePreferences>);
+    fireEvent.click(screen.getByRole("button", { name: "Koyu temaya geç" }));
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(start).not.toHaveBeenCalled();
+    Reflect.deleteProperty(document, "startViewTransition");
+  });
+
 });

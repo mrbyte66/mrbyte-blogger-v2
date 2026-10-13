@@ -42,3 +42,5 @@ Bu kararlar hedef davranıştır. Klonla gelen uygulama bunların tümünü hen�
 Kullanıcı üyelikteki CRT açılış/karşılama/kapanış dilini beğendi. Hareketler belirgin, yumuşak ve mevcut sahneyle bütünleşmeli; gece/gündüz ışığı aniden değişmemeli. Sadece fark edilmeyen solma veya bütün ekranı kapatan ilişkisiz efekt tercih edilmiyor. Reduced-motion ve hareket kapatma seçeneği korunur.
 
 Gece/gündüz geçişinde parlama/ışık patlaması istenmiyor; kesintisiz palet geçişi korunacak.
+
+Üyelik formunda ilk parola ve tekrar parola alanında kopyalama/yapıştırma ve sürükleyerek aktarım engellenir. Bu karar mevcut hesapla giriş alanındaki yapıştırma davranışını değiştirmez.

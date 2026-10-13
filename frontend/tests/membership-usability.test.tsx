@@ -13,14 +13,25 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); routing.replace.m
 function Logout() { const auth = useAuth(); return <><button onClick={() => void auth.signOut()}>Çıkış</button><button onClick={() => auth.openAuth()}>Pencereyi aç</button><span>{auth.session ? "Üye" : "Misafir"}</span></>; }
 
 describe("membership usability", () => {
-  it("blocks paste and drop only in password confirmation, while retaining typed input", async () => {
+  it("blocks clipboard transfer in both registration password fields while retaining typed input", async () => {
     fakeBackend(); render(<AuthProvider><AuthCard initial="register" /></AuthProvider>); await act(settle);
     const confirmation = screen.getByLabelText("Şifre tekrarı", { exact: true });
     expect(fireEvent.paste(confirmation, { clipboardData: { getData: () => "pasted-password" } })).toBe(false);
     expect(fireEvent.drop(confirmation)).toBe(false);
+    const password = screen.getByLabelText("Şifre", { exact: true });
+    for (const field of [password, confirmation]) {
+      expect(fireEvent.paste(field)).toBe(false);
+      expect(fireEvent.drop(field)).toBe(false);
+      expect(fireEvent.copy(field)).toBe(false);
+      expect(fireEvent.cut(field)).toBe(false);
+      fireEvent.change(field, { target: { value: "typed-password" } });
+      expect((field as HTMLInputElement).value).toBe("typed-password");
+    }
+  });
+
+  it("allows paste in the sign-in password field", async () => {
+    fakeBackend(); render(<AuthProvider><AuthCard initial="login" /></AuthProvider>); await act(settle);
     expect(fireEvent.paste(screen.getByLabelText("Şifre", { exact: true }))).toBe(true);
-    fireEvent.change(confirmation, { target: { value: "typed-password" } });
-    expect((confirmation as HTMLInputElement).value).toBe("typed-password");
   });
 
   it("keeps account deletion inside security details instead of every account section", async () => {

@@ -44,3 +44,5 @@ Kullanıcı üyelikteki CRT açılış/karşılama/kapanış dilini beğendi. Ha
 Gece/gündüz geçişinde parlama/ışık patlaması istenmiyor; kesintisiz palet geçişi korunacak.
 
 Üyelik formunda ilk parola ve tekrar parola alanında kopyalama/yapıştırma ve sürükleyerek aktarım engellenir. Bu karar mevcut hesapla giriş alanındaki yapıştırma davranışını değiştirmez.
+
+Form tasarımında hatalı alanlar kırmızı çerçeve ve kısa açıklamayla belirtilir; kullanıcı devre dışı butonun nedenini anlayabilmelidir. Hata düzeltildiğinde işaret kalkar. Açık/koyu tema, erişilebilirlik ve parlamasız görünüm korunur.

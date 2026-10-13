@@ -64,8 +64,11 @@ describe("server-backed membership", () => {
     fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "yanlis-parola-123" } });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Giriş yap" })); await settle(); });
     expect(screen.getByRole("alert").textContent).toContain("hatalı");
+    expect(screen.getByLabelText("E-posta veya kullanıcı adı").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("Şifre", { exact: true }).getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByTestId("identity").textContent).toBe("guest");
     fireEvent.change(screen.getByLabelText("Şifre", { exact: true }), { target: { value: "dogru-parola-123" } });
+    expect(screen.getByLabelText("Şifre", { exact: true }).getAttribute("aria-invalid")).toBe("false");
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Giriş yap" })); await settle(); });
     expect(complete).toHaveBeenCalledOnce();
     expect(screen.getByTestId("identity").textContent).toBe("alice@example.com");

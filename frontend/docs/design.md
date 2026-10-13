@@ -7,3 +7,5 @@ Okunur metin/kod, mevcut palette/typography/radius/spacing, açık-koyu tema ve 
 Panel/sayfa geri dönüşü filtre/scroll/focus bağlamını korur. Yazı/seri kartları ortak dilde; istatistik sunumu yeni kararla şimdilik kaldırılacak. Sahne featured kartları owner seçimiyle kalır. Audio opt-in ve durdurma kontrolü erişilebilir.
 
 Studio yapı/canvas/inspector masaüstünde birlikte görünür, mobilde okunur paneller. Site adı seçilmedi; eski ürün adını yeni tasarım gereksinimi diye koruma. [Ürün](../../docs/product.md), [Studio](builder.md).
+
+Formlarda hatalı alan kırmızı çerçeve ve alanın altındaki kısa açıklamayla belirtilir; yalnız renge dayanılmaz. Açık/koyu tema ve ekran okuyucu için aria-invalid/aria-describedby kullanılır. Kullanıcı yazmaya başladığında hatası görünür; düzeltince çerçeve ve uyarı kalkar. Parlama kullanılmaz.

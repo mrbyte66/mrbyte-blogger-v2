@@ -24,7 +24,7 @@
 .auth-password input { padding-right:54px; }
 .auth-password button { position:absolute; right:4px; top:3px; width:44px; height:44px; display:grid; place-items:center; color:var(--muted); border-radius:8px; }
 .auth-field-hint,.auth-field-error { display:block; font-size:12px; line-height:1.6; font-weight:400; color:var(--muted); }
-.auth-field-error { color:color-mix(in srgb,var(--ink) 78%,#ac586d); }
+.auth-field-error { color:var(--form-error,#a63d4e); }
 .auth-strength { height:3px; background:var(--line); border-radius:4px; overflow:hidden; }
 .auth-strength span { display:block; height:100%; background:var(--muted); transition:width 180ms ease; }
 .auth-primary { width:100%; min-height:50px; padding:12px 20px; border-radius:12px; background:var(--accent); color:var(--accent-ink,#17251c); font-size:15px; font-weight:550; display:flex; align-items:center; justify-content:center; gap:10px; transition:opacity 180ms ease; }
@@ -266,3 +266,5 @@ html[data-motion=off] .auth-tabs::after { transition:none; }
 .auth-dialog.is-dismissing::backdrop { animation:auth-backdrop-dismiss 340ms ease forwards; }
 @media(prefers-reduced-motion:reduce) { .auth-dialog.is-dismissing,.auth-dialog.is-dismissing::backdrop { animation:none; } }
 html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dialog.is-dismissing::backdrop { animation:none; }
+
+.auth-submit-hint { margin:10px 0 0; font-size:12px; line-height:1.5; color:var(--muted); }

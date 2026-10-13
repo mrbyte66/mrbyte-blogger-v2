@@ -17,3 +17,5 @@ Logout başarısızsa yerel kimlik düşürülmez; hata gösterilir. Başarılı
 Owner Google bağlantısı yalnız mevcut oturum ve yeniden kimlik doğrulamasıyla kurulur; Google ile e-posta benzerliğinden otomatik hesap birleştirme veya owner yetkisi verilmez. Rol daima sunucudan gelir.
 
 Giriş/Üye ol sekmelerinde seçim çizgisi 260 ms kayar, form 180 ms hafifçe yerleşir; parlama kullanılmaz. Seçili sekmeye yeniden tıklama parola girişini silmez. Manuel kapanış başarılı girişten ayrı ele alınır.
+
+Üyelik, sıfırlama ve hesap ayarlarında alan hataları yazarken görünür; kırmızı çerçeve, kısa açıklama ve aria-invalid/aria-describedby birlikte kullanılır. Üyelikte devre dışı butonun nedeni açıklanır. Girişte yanlış kimlik bilgileri iki alanı birlikte işaretler; hangi bilginin yanlış olduğu açıklanmaz. Düzenleme hatayı temizler; ağ hatası alan hatası sayılmaz.

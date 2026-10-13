@@ -66,3 +66,10 @@ html[data-theme=light] :is(.site-theme-toggle>span:first-child,.scene-controls .
 }
 @media(prefers-reduced-motion:reduce) { html[data-theme-transition=on]::view-transition-old(root),html[data-theme-transition=on]::view-transition-new(root) { animation:none !important; } }
 html[data-motion=off][data-theme-transition=on]::view-transition-old(root),html[data-motion=off][data-theme-transition=on]::view-transition-new(root) { animation:none !important; }
+
+/* Shared validation language: a border plus readable text, never color alone. */
+:root { --form-error:#a63d4e; }
+:is(.surface-night,.theme-dark),html[data-theme=dark] { --form-error:#eda1ad; }
+html[data-theme=light] :is(.surface-night,.theme-dark) { --form-error:#a63d4e; }
+:is(input,textarea,select)[aria-invalid=true],.auth-field :is(input,textarea,select)[aria-invalid=true] { border-color:var(--form-error); }
+.auth-field input[aria-invalid=true]:focus { outline-color:color-mix(in srgb,var(--form-error) 65%,transparent); border-color:var(--form-error); }

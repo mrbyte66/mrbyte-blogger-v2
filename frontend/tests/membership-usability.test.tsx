@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "../components/auth/AuthProvider";
 import { AuthNavigation } from "../components/auth/AuthNavigation";
@@ -47,6 +47,54 @@ describe("membership usability", () => {
     expect((screen.getByLabelText("E-posta veya kullanıcı adı") as HTMLInputElement).value).toBe("okur@example.test");
   });
 
+  it("explains invalid registration fields while typing and clears the errors after correction", async () => {
+    const backend = fakeBackend(); render(<AuthProvider><AuthCard initial="register" /></AuthProvider>); await act(settle);
+    const name = screen.getByLabelText("Adın", { exact: true });
+    const email = screen.getByLabelText("E-posta", { exact: true });
+    const password = screen.getByLabelText("Şifre", { exact: true });
+    const repeat = screen.getByLabelText("Şifre tekrarı", { exact: true });
+    expect(email.getAttribute("aria-invalid")).toBe("false");
+    fireEvent.change(name, { target: { value: "Okur" } });
+    fireEvent.change(email, { target: { value: "okur" } });
+    fireEvent.change(password, { target: { value: "short" } });
+    fireEvent.change(repeat, { target: { value: "other" } });
+    for (const field of [email, password, repeat]) {
+      expect(field.getAttribute("aria-invalid")).toBe("true");
+      expect(document.getElementById(field.getAttribute("aria-describedby")!)?.textContent).toBeTruthy();
+    }
+    expect(screen.getByText("E-postanı ad@ornek.com biçiminde yaz.")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Hesap oluştur" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(backend.state.calls.some(c => c.path === "/auth/register")).toBe(false);
+    fireEvent.change(email, { target: { value: "okur@example.test" } });
+    fireEvent.change(password, { target: { value: "typed-password" } });
+    fireEvent.change(repeat, { target: { value: "typed-password" } });
+    for (const field of [email, password, repeat]) expect(field.getAttribute("aria-invalid")).toBe("false");
+    expect(screen.queryByText("E-postanı ad@ornek.com biçiminde yaz.")).toBeNull();
+    expect((screen.getByRole("button", { name: "Hesap oluştur" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("validates account e-mail and password changes with the same field feedback", async () => {
+    fakeBackend({ signedIn: { email: "okur@example.test" } }); render(<AuthProvider><AccountPage /></AuthProvider>); await act(settle);
+    const email = screen.getByLabelText("Yeni e-posta adresi", { exact: true });
+    fireEvent.change(email, { target: { value: "okur" } });
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    expect((screen.getByRole("button", { name: "E-postayı değiştir" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(email, { target: { value: "yeni@example.test" } });
+    expect(email.getAttribute("aria-invalid")).toBe("false");
+    expect((screen.getByRole("button", { name: "E-postayı değiştir" }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Güvenlik" }));
+    const password = screen.getByLabelText("Yeni şifre", { exact: true });
+    const repeat = screen.getByLabelText("Yeni şifre tekrarı", { exact: true });
+    fireEvent.change(password, { target: { value: "short" } });
+    fireEvent.change(repeat, { target: { value: "different" } });
+    expect(password.getAttribute("aria-invalid")).toBe("true");
+    expect(repeat.getAttribute("aria-invalid")).toBe("true");
+    fireEvent.change(password, { target: { value: "typed-password" } });
+    fireEvent.change(repeat, { target: { value: "typed-password" } });
+    expect(password.getAttribute("aria-invalid")).toBe("false");
+    expect(repeat.getAttribute("aria-invalid")).toBe("false");
+  });
+
   it("keeps account deletion inside security details instead of every account section", async () => {
     fakeBackend({ signedIn: { email: "okur@example.test" } }); render(<AuthProvider><AccountPage /></AuthProvider>); await act(settle);
     expect(screen.queryByRole("button", { name: "Hesabı sil" })).toBeNull();
@@ -56,6 +104,14 @@ describe("membership usability", () => {
 
     fireEvent.click(screen.getByText("Diğer hesap işlemleri"));
     expect(screen.getByRole("button", { name: "Hesabı sil" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Hesabı sil" }));
+    const dialog = screen.getByRole("dialog", { name: "Hesabını silmek istiyor musun?" });
+    const email = within(dialog).getByLabelText("E-posta adresin", { exact: true });
+    fireEvent.change(email, { target: { value: "other@example.test" } });
+    expect(email.getAttribute("aria-invalid")).toBe("true");
+    expect((within(dialog).getByRole("button", { name: "Hesabı sil" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(email, { target: { value: "okur@example.test" } });
+    expect(email.getAttribute("aria-invalid")).toBe("false");
   });
 
   it("saves the reader subscription without changing the author notification preference", async () => {

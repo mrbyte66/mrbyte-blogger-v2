@@ -32,6 +32,14 @@ Ayrı draft/published revision; yazı/seri ilk-yayın slug kilidi; bağımsız Y
 
 `Profile.preferences.publicationSubscription` ve `PATCH /me/preferences` aynı boolean alanını kullanır. Varsayılan true; `publicationEmail` yazarın kendi yayın bildirimi olarak korunur. Abone okuyucu yalnız doğrulanmış aktif hesap ve açık tercih ile ilk yayın e-postası alır. Yeniden yayın/güncelleme okuyucu mail işi oluşturmaz. Kişi başına iş retry'si, tamamlanan alıcıları yeniden kuyruğa koymaz; SMTP kabulü ile iş kaydı arasındaki çökme için exactly-once garanti verilmez. Yeni abonelik geçmiş yayınları göndermez.
 
+## Hesapla gelen görünüm (#5)
+
+`Profile.appearance` her zaman gelir: `{colorMode: light|dark|reading|null, motion: boolean|null, studioView: marjinalya|odak|kontakt|sahne|null}`; null seçilmedi demektir. `PUT /me/appearance` bütün kümeyi değiştirir, profil sürümüne (ETag) dokunmaz, bilinmeyen değerde 422 döner. Ayrıntı: [görünüm tercihleri](features/appearance.md).
+
+## Tema görünüm seçenekleri (#5)
+
+`ThemeDocument` isteğe bağlı `corners` (sharp|soft|round), `textSize` (small|medium|large), `texture` (plain|dots|lines) ve `cards` (outlined|raised|flat) alanlarını kabul eder. Alan yoksa özgün görünüm geçerlidir (soft, medium, plain, outlined); eski temalar aynen okunur.
+
 ## Giriş için adres doğrulaması (#2)
 
 Geçerli şifre + doğrulanmamış hesap `403 EMAIL_VERIFICATION_REQUIRED` döner; authenticated session oluşturulmaz. Yanlış kimlik bilgileri genel `401 INVALID_CREDENTIALS` olarak kalır. Eski PENDING oturumları her istekte geçersizleştirilir. Anonim verification/resend, hesap varlığını açıklamayan 202 yanıtını korur. E-postaya teslim edilen tek kullanımlık sıfırlama bağlantısının onayı, mevcut sözleşmede adresi de doğrular; GET linki tüketmez ve sıfırlama otomatik giriş yapmaz.

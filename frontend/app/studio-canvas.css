@@ -30,3 +30,13 @@ html[data-studio-view] .inline-edit-toolbar { padding:4px 6px; border-radius:999
 html[data-studio-view] .inline-edit-toolbar button { width:34px; height:34px; border-radius:999px; }
 html[data-studio-view] .inline-edit-toolbar select { border-radius:999px; padding-inline:10px; }
 html[data-studio-view] .inline-edit-toolbar .inline-link-editor { border-radius:22px; }
+
+/* Narrower frames make room for the gutter by giving the page a wider left margin; phones go without it. */
+@media (max-width:879px) and (min-width:480px) {
+  html[data-studio-view="marjinalya"] .document-editing .reading-content { padding-left:88px; }
+  html[data-studio-view="marjinalya"] .document-editing .article-view :is([data-edit-field])::after { left:-62px; width:36px; }
+}
+@media (max-width:479px) {
+  html[data-studio-view="marjinalya"] .document-editing .article-view { border-left:0; padding-left:0; margin-left:0; }
+  html[data-studio-view="marjinalya"] .document-editing .article-view :is([data-edit-field])::after { display:none; }
+}

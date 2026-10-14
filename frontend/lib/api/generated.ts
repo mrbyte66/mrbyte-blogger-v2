@@ -1717,7 +1717,7 @@ export interface components {
         /** @description Inline formatting over the block's plain text. Offsets are UTF-16 code units, so reader annotations keep their anchors; marks of one type never overlap */
         Mark: {
             /** @enum {string} */
-            type: "bold" | "italic" | "code" | "link";
+            type: "bold" | "italic" | "strike" | "highlight" | "code" | "link";
             start: number;
             end: number;
             /** @description Only for `link`: an https address, a mailto address or a site-relative path */

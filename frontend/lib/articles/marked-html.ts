@@ -14,6 +14,8 @@ export function markedHtml(text: string, marks: readonly TextMark[] = []): strin
     let html = escapeHtml(run.text).replace(/\n/g, "<br>");
     const has = (type: TextMark["type"]) => run.marks.find((mark) => mark.type === type);
     if (has("code")) html = `<code>${html}</code>`;
+    if (has("strike")) html = `<s>${html}</s>`;
+    if (has("highlight")) html = `<mark>${html}</mark>`;
     if (has("italic")) html = `<em>${html}</em>`;
     if (has("bold")) html = `<strong>${html}</strong>`;
     const link = has("link");

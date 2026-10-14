@@ -18,6 +18,8 @@ export function readMarked(root: HTMLElement): { text: string; marks: TextMark[]
     const tag = node.tagName;
     if (tag === "STRONG" || tag === "B") marks.push({ type: "bold", start, end });
     else if (tag === "EM" || tag === "I") marks.push({ type: "italic", start, end });
+    else if (tag === "S" || tag === "DEL" || tag === "STRIKE") marks.push({ type: "strike", start, end });
+    else if (tag === "MARK") marks.push({ type: "highlight", start, end });
     else if (tag === "CODE") marks.push({ type: "code", start, end });
     else if (tag === "A") {
       const href = node.getAttribute("href");

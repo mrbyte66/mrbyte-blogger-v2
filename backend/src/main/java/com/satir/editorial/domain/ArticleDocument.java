@@ -17,7 +17,7 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
             "bash", "sql", "json", "yaml", "html", "css", "kotlin", "go", "rust", "csharp", "cpp");
     private static final Pattern STATIC_PATH = Pattern.compile("/assets/[a-zA-Z0-9._/-]{1,200}");
     private static final Pattern SENTENCE = Pattern.compile("[^.!?…]+(?:[.!?…]+(?=\\s|$)|$)");
-    private static final Set<String> MARK_TYPES = Set.of("bold", "italic", "code", "link");
+    private static final Set<String> MARK_TYPES = Set.of("bold", "italic", "strike", "highlight", "code", "link");
     private static final int MAX_MARKS = 200;
     /** Links: https, mailto or a site-relative path. No scripts, data URLs or protocol-relative addresses. */
     private static final Pattern LINK_HREF = Pattern.compile("https://[^\\s]{1,480}|mailto:[^\\s@]{1,100}@[^\\s]{1,100}|/(?!/)[^\\s]{0,480}");

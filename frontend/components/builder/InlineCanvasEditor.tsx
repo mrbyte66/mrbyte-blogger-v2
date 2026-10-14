@@ -13,7 +13,33 @@ import { EditorIcon } from "./EditorIcon";
 type Active = { original: string; originalMarks: TextMark[]; allowEmpty: boolean; edit: InlineEdit; max: number; node: HTMLElement; label: string; rich: boolean };
 type Snapshot = { text: string; marks: TextMark[] };
 type Formats = Record<MarkType, boolean>;
-const noFormats: Formats = { bold: false, italic: false, code: false, link: false };
+const noFormats: Formats = { bold: false, italic: false, strike: false, highlight: false, code: false, link: false };
+/** The marks the toolbar toggles (links have their own editor). */
+const toggles: { type: Exclude<MarkType, "link">; label: string; keys: string; icon: string }[] = [
+  { type: "bold", label: "Kalın", keys: "⌘B", icon: "bold" },
+  { type: "italic", label: "İtalik", keys: "⌘I", icon: "italic" },
+  { type: "strike", label: "Üstü çizili", keys: "⇧⌘X", icon: "strike" },
+  { type: "highlight", label: "Vurgula", keys: "⇧⌘H", icon: "highlight" },
+  { type: "code", label: "Satır içi kod", keys: "⌘E", icon: "code" },
+];
+const blockTypes: { action: "paragraph" | "heading2" | "heading3" | "quote"; label: string; glyph: string }[] = [
+  { action: "paragraph", label: "Metin", glyph: "¶" },
+  { action: "heading2", label: "Başlık", glyph: "H2" },
+  { action: "heading3", label: "Alt başlık", glyph: "H3" },
+  { action: "quote", label: "Alıntı", glyph: "“" },
+];
+
+/** The selection, or with only a caret the word under it; null when there is nothing to format. */
+function wordAt(text: string, at: { start: number; end: number } | null) {
+  if (!at) return null;
+  if (at.start === at.end) {
+    const before = text.slice(0, at.start).search(/\S+$/u);
+    const after = text.slice(at.start).search(/\s|$/u);
+    if (before < 0 && after <= 0) return null;
+    at = { start: before < 0 ? at.start : before, end: at.start + after };
+  }
+  return at.end > at.start ? at : null;
+}
 
 /**
  * In-place writing inside the preview frame. Plain fields use a plaintext-only editable; paragraphs are
@@ -90,7 +116,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if (!at) return noFormats;
     const text = marks.current;
     const pressed = (type: MarkType) => at.start === at.end ? !!markAt(text, type, at.start, at.end) : covers(text, type, at.start, at.end);
-    return { bold: pressed("bold"), italic: pressed("italic"), code: pressed("code"), link: !!markAt(text, "link", at.start, at.end) };
+    return { bold: pressed("bold"), italic: pressed("italic"), strike: pressed("strike"), highlight: pressed("highlight"), code: pressed("code"), link: !!markAt(text, "link", at.start, at.end) };
   }
   function reposition() {
     const item = live.current;
@@ -101,8 +127,10 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const range = selectedRange && typeof selectedRange.getBoundingClientRect === "function" ? selectedRange.getBoundingClientRect() : null;
     const rect = range?.width ? range : item.node.getBoundingClientRect();
     const width = toolbar.current?.offsetWidth ?? 260;
+    const height = toolbar.current?.offsetHeight ?? 48;
     const css = getComputedStyle(item.node);
-    setPosition({ left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)), top: rect.top > 58 ? rect.top - 48 : Math.max(8, Math.min(rect.bottom + 8, window.innerHeight - 52)), "--inline-paper": css.getPropertyValue("--panel") || "#fff", "--inline-ink": css.color } as CSSProperties);
+    // Above the text when there is room, otherwise just below it; never over the line being written.
+    setPosition({ left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)), top: rect.top > height + 18 ? rect.top - height - 10 : Math.max(8, Math.min(rect.bottom + 10, window.innerHeight - height - 8)), "--inline-paper": css.getPropertyValue("--panel") || "#fff", "--inline-ink": css.color } as CSSProperties);
     setSelectionText(selected);
     setFormats(readFormats(item));
     reportCaret(item);
@@ -290,20 +318,25 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     range.deleteContents(); const node = document.createTextNode(upper ? piece.toLocaleUpperCase("tr") : piece.toLocaleLowerCase("tr")); range.insertNode(node); range.selectNodeContents(node); selection.removeAllRanges(); selection.addRange(range);
     item.node.dispatchEvent(new Event("input", { bubbles: true }));
   }
-  /** Bold / italic / code over the selection; with only a caret the word under it is used. */
+  /** Removes every mark (links too) from the selection; with only a caret, from the word under it. */
+  function clearFormatting() {
+    const item = live.current;
+    if (!item?.rich) return;
+    const text = readMarked(item.node).text;
+    const at = wordAt(text, selectionOffsets(item.node) ?? saved.current);
+    if (!at) return;
+    let next = marks.current;
+    for (const type of ["bold", "italic", "strike", "highlight", "code", "link"] as MarkType[]) next = clearMark(next, type, at.start, at.end, text.length);
+    apply(item, text, next, at);
+    saved.current = at;
+  }
+  /** Bold / italic / strike / highlight / code over the selection; with only a caret the word under it is used. */
   function format(type: Exclude<MarkType, "link">) {
     const item = live.current;
     if (!item?.rich) return;
     const text = readMarked(item.node).text;
-    let at = selectionOffsets(item.node) ?? saved.current;
+    const at = wordAt(text, selectionOffsets(item.node) ?? saved.current);
     if (!at) return;
-    if (at.start === at.end) {
-      const before = text.slice(0, at.start).search(/\S+$/u);
-      const after = text.slice(at.start).search(/\s|$/u);
-      if (before < 0 && after <= 0) return;
-      at = { start: before < 0 ? at.start : before, end: at.start + after };
-    }
-    if (at.end <= at.start) return;
     apply(item, text, toggleMark(marks.current, type, at.start, at.end, text.length), at);
     saved.current = at;
   }
@@ -340,6 +373,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   }
 
   const index = active?.edit.field.startsWith("paragraph-") ? Number(active.edit.field.slice(10)) : -1;
+  const kind = draft?.kind === "article" && index >= 0 ? (draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph") : null;
   return <div ref={root} className="inline-canvas-root" onKeyDownCapture={(event) => {
     if (!enabled) return;
     if (active && (active.node.contains(event.target as Node) || toolbar.current?.contains(event.target as Node))) {
@@ -358,9 +392,11 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); finish(true); return; }
       const key = event.key.toLowerCase();
       if (key === "z" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); travel(event.shiftKey ? 1 : -1); return; }
+      if (active.rich && insideNode && (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && (key === "x" || key === "h")) { event.preventDefault(); format(key === "x" ? "strike" : "highlight"); return; }
       if (active.rich && insideNode && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
         if (key === "b") { event.preventDefault(); format("bold"); return; }
         if (key === "i") { event.preventDefault(); format("italic"); return; }
+        if (key === "e") { event.preventDefault(); format("code"); return; }
         if (key === "k") { event.preventDefault(); openLink(); return; }
       }
       return;
@@ -379,18 +415,13 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if (target && !toolbar.current?.contains(target) && !active.node.contains(target)) finish(true);
   }}>
     {active ? frozen.current : children}
-    {active && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
-      <button aria-label="Metni geri al" title="Geri al · ⌘Z" disabled={cursor.current === 0} onClick={() => travel(-1)}><EditorIcon name="undo" size={16} /></button>
-      <button aria-label="Metni yinele" title="Yinele · ⇧⌘Z" disabled={cursor.current >= history.current.length - 1} onClick={() => travel(1)}><EditorIcon name="redo" size={16} /></button>
-      {active.rich && <><i />
-        <button aria-label="Kalın" title="Kalın · ⌘B" aria-pressed={formats.bold} onClick={() => format("bold")}><EditorIcon name="bold" size={16} /></button>
-        <button aria-label="İtalik" title="İtalik · ⌘I" aria-pressed={formats.italic} onClick={() => format("italic")}><EditorIcon name="italic" size={16} /></button>
-        <button aria-label="Satır içi kod" title="Satır içi kod" aria-pressed={formats.code} onClick={() => format("code")}><EditorIcon name="code" size={16} /></button>
-        <button aria-label="Bağlantı" title="Bağlantı · ⌘K" aria-pressed={formats.link} onClick={openLink}><EditorIcon name="link" size={16} /></button>
-      </>}
-      {selectionText && <><i /><button aria-label="Seçimi büyük harfe çevir" title="Büyük harf" onClick={() => changeCase(true)}>AA</button><button aria-label="Seçimi küçük harfe çevir" title="Küçük harf" onClick={() => changeCase(false)}>aa</button></>}
-      {index >= 0 && draft?.kind === "article" && <><i /><select aria-label="Metin biçimi" value={draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph"} onMouseDown={(event) => event.stopPropagation()} onChange={(event) => finish(true, event.target.value as InlineEdit["action"])}><option value="paragraph">Metin</option><option value="heading2" disabled={value.length > 300}>Başlık</option><option value="heading3" disabled={value.length > 300}>Alt başlık</option><option value="quote" disabled={value.length > 4000}>Alıntı</option></select><i /><button title="Paragrafı yukarı taşı" aria-label="Paragrafı yukarı taşı" disabled={index === 0} onClick={() => finish(true, "move-up")}><EditorIcon name="up" size={16} /></button><button title="Paragrafı aşağı taşı" aria-label="Paragrafı aşağı taşı" disabled={index === draft.article.paragraphs.length - 1} onClick={() => finish(true, "move-down")}><EditorIcon name="down" size={16} /></button><button title="Altına paragraf ekle" aria-label="Altına paragraf ekle" onClick={() => finish(true, "insert-after")}><EditorIcon name="plus" size={16} /></button></>}
-      <i /><button title="Vazgeç · Esc" aria-label="Vazgeç" onClick={() => finish(false)}><EditorIcon name="close" size={16} /></button><button className="inline-done" title="Tamam · ⌘/Ctrl Enter" aria-label="Tamam" disabled={!value.trim() && !active.allowEmpty} onClick={() => finish(true)}><EditorIcon name="check" size={16} /></button>
+    {active && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" data-rich={active.rich ? "" : undefined} style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
+      {index >= 0 && draft?.kind === "article" && <><div className="inline-group inline-kinds" role="group" aria-label="Blok türü">{blockTypes.map((item) => <button key={item.action} type="button" className="inline-kind" aria-label={item.label} title={item.label} aria-pressed={kind === item.action} disabled={kind !== item.action && ((item.action !== "paragraph" && !value.trim()) || (item.action.startsWith("heading") && value.length > 300) || (item.action === "quote" && value.length > 4000))} onClick={() => { if (kind !== item.action) finish(true, item.action); }}>{item.glyph}</button>)}</div><i /></>}
+      {active.rich && <><div className="inline-group" role="group" aria-label="Biçim">{toggles.map((item) => <button key={item.type} type="button" aria-label={item.label} title={`${item.label} · ${item.keys}`} aria-pressed={formats[item.type]} disabled={kind?.startsWith("heading")} onClick={() => format(item.type)}><EditorIcon name={item.icon} size={17} /></button>)}<button type="button" aria-label="Bağlantı" title="Bağlantı · ⌘K" aria-pressed={formats.link} disabled={kind?.startsWith("heading")} onClick={openLink}><EditorIcon name="link" size={17} /></button><button type="button" aria-label="Biçimi temizle" title="Biçimi temizle" disabled={!Object.values(formats).some(Boolean)} onClick={clearFormatting}><EditorIcon name="clear" size={17} /></button></div><i /></>}
+      {selectionText && <><div className="inline-group" role="group" aria-label="Harf"><button type="button" className="inline-text" aria-label="Seçimi büyük harfe çevir" title="Büyük harf" onClick={() => changeCase(true)}>AB</button><button type="button" className="inline-text" aria-label="Seçimi küçük harfe çevir" title="Küçük harf" onClick={() => changeCase(false)}>ab</button></div><i /></>}
+      {index >= 0 && draft?.kind === "article" && <><div className="inline-group" role="group" aria-label="Blok"><button type="button" title="Yukarı taşı" aria-label="Paragrafı yukarı taşı" disabled={index === 0} onClick={() => finish(true, "move-up")}><EditorIcon name="up" size={17} /></button><button type="button" title="Aşağı taşı" aria-label="Paragrafı aşağı taşı" disabled={index === draft.article.paragraphs.length - 1} onClick={() => finish(true, "move-down")}><EditorIcon name="down" size={17} /></button><button type="button" title="Altına paragraf ekle · ↵" aria-label="Altına paragraf ekle" onClick={() => finish(true, "insert-after")}><EditorIcon name="plus" size={17} /></button><button type="button" className="inline-danger" title="Bloğu sil" aria-label="Bloğu sil" onClick={() => finish(true, "remove")}><EditorIcon name="trash" size={17} /></button></div><i /></>}
+      <div className="inline-group" role="group" aria-label="Geçmiş"><button type="button" aria-label="Metni geri al" title="Geri al · ⌘Z" disabled={cursor.current === 0} onClick={() => travel(-1)}><EditorIcon name="undo" size={17} /></button><button type="button" aria-label="Metni yinele" title="Yinele · ⇧⌘Z" disabled={cursor.current >= history.current.length - 1} onClick={() => travel(1)}><EditorIcon name="redo" size={17} /></button></div>
+      <i /><button type="button" title="Vazgeç · Esc" aria-label="Vazgeç" onClick={() => finish(false)}><EditorIcon name="close" size={17} /></button><button type="button" className="inline-done" title="Tamam · ⌘↵" aria-label="Tamam" disabled={!value.trim() && !active.allowEmpty} onClick={() => finish(true)}><EditorIcon name="check" size={17} /></button>
       {linkEditor && <form className="inline-link-editor" onSubmit={(event) => { event.preventDefault(); applyLink(linkEditor.href); }} onMouseDown={(event) => event.stopPropagation()}>
         <label><span>Bağlantı adresi</span><input autoFocus aria-label="Bağlantı adresi" aria-invalid={!!linkEditor.error} aria-describedby="inline-link-error" placeholder="https://…" value={linkEditor.href} onChange={(event) => setLinkEditor({ href: event.target.value, error: "" })} /></label>
         <button type="submit" className="inline-done">Uygula</button>

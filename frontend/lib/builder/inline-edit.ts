@@ -2,7 +2,7 @@ import type { PageBlock } from "./model";
 import type { DocumentDraft } from "./document-protocol";
 import { adjustMarks, safeMarks, splitMarks, validMarks, type TextMark } from "../articles/marks";
 export const inlineEditEvent = "mrbyte:inline-edit";
-export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; offset?: number; marks?: TextMark[]; action?: "split" | "move-up" | "move-down" | "insert-after" | "paragraph" | "heading2" | "heading3" | "quote" };
+export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; offset?: number; marks?: TextMark[]; action?: "split" | "move-up" | "move-down" | "insert-after" | "remove" | "paragraph" | "heading2" | "heading3" | "quote" };
 const themeFields: Partial<Record<PageBlock["kind"], Record<string, number>>> = {
   scene: { title: 160, emphasis: 160, description: 2000 }, intro: { title: 160, eyebrow: 120, description: 2000 },
   articles: { title: 160 }, series: { title: 160 }, projects: { title: 160 },
@@ -30,7 +30,7 @@ export function documentText(draft: DocumentDraft, field: string): { value: stri
 export function parseInlineEdit(value: unknown): InlineEdit | null {
   if (!value || typeof value !== "object") return null;
   const e = value as InlineEdit;
-  return (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || ["split", "move-up", "move-down", "insert-after", "paragraph", "heading2", "heading3", "quote"].includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
+  return (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || ["split", "move-up", "move-down", "insert-after", "remove", "paragraph", "heading2", "heading3", "quote"].includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
 }
 export function editThemeText(block: PageBlock, edit: InlineEdit): PageBlock | null {
   const text = themeText(block, edit.field);
@@ -61,6 +61,11 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
       paragraphMarks[index]=safeMarks(paragraphs[index],left); paragraphMarks.splice(index+1,0,safeMarks(paragraphs[index+1],right));
       paragraphFormats.splice(index+1,0,{kind:"paragraph"}); blockIds?.paragraphs.splice(index+1,0,crypto.randomUUID());
       if(!paragraphs[index].trim()) paragraphFormats[index]={kind:"paragraph"};
+    }
+    if (edit.action === "remove") {
+      // The last block stays as an empty paragraph, so the article always has somewhere to write.
+      if (paragraphs.length === 1) { paragraphs[0] = ""; paragraphFormats[0] = { kind: "paragraph" }; paragraphMarks[0] = []; }
+      else { paragraphs.splice(index, 1); paragraphFormats.splice(index, 1); paragraphMarks.splice(index, 1); blockIds?.paragraphs.splice(index, 1); }
     }
     if (edit.action === "move-up" || edit.action === "move-down") {
       const target=index+(edit.action === "move-up" ? -1 : 1);

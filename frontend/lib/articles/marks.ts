@@ -3,10 +3,10 @@
  * UTF-16 code units of the text, so reader annotations keep anchoring to the same characters.
  * Mirrors the backend rules (ArticleDocument): kinds, ranges and links.
  */
-export type MarkType = "bold" | "italic" | "code" | "link";
+export type MarkType = "bold" | "italic" | "strike" | "highlight" | "code" | "link";
 export type TextMark = { type: MarkType; start: number; end: number; href?: string };
 
-export const markTypes: readonly MarkType[] = ["bold", "italic", "code", "link"];
+export const markTypes: readonly MarkType[] = ["bold", "italic", "strike", "highlight", "code", "link"];
 export const maxMarksPerBlock = 200;
 /** Links: https, mailto or a site-relative path. Never scripts, data URLs or protocol-relative addresses. */
 const linkPattern = /^(?:https:\/\/[^\s]{1,480}|mailto:[^\s@]{1,100}@[^\s]{1,100}|\/(?!\/)[^\s]{0,480})$/;

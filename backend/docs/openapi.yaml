@@ -2289,7 +2289,7 @@ components:
       required: [type, start, end]
       description: Inline formatting over the block's plain text. Offsets are UTF-16 code units, so reader annotations keep their anchors; marks of one type never overlap
       properties:
-        type: {type: string, enum: [bold, italic, code, link]}
+        type: {type: string, enum: [bold, italic, strike, highlight, code, link]}
         start: {type: integer, minimum: 0}
         end: {type: integer, minimum: 1}
         href: {type: string, maxLength: 500, description: 'Only for `link`: an https address, a mailto address or a site-relative path'}

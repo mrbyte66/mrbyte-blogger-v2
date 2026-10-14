@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWorkspace } from "../lib/builder/model";
 import { articles } from "../lib/content";
-import { inlineEditEvent, type InlineEdit } from "../lib/builder/inline-edit";
+import { editDocumentText, inlineEditEvent, type InlineEdit } from "../lib/builder/inline-edit";
 import { InlineCanvasEditor } from "../components/builder/InlineCanvasEditor";
 import { selectOffsets } from "../lib/builder/rich-text";
 
@@ -100,5 +100,54 @@ describe("formatting in the canvas", () => {
     select(node, 3, 3);
     fireEvent.keyDown(node, { key: "Enter" });
     expect(lastEdit(post)).toMatchObject({ action: "split", offset: 3 });
+  });
+
+  it("strikes through and highlights from the toolbar and the keyboard", () => {
+    const post = mount();
+    const node = open();
+    select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Üstü çizili" }));
+    expect(node.innerHTML).toBe("<s>Merhaba</s> dünya");
+    select(node, 8, 13);
+    fireEvent.keyDown(node, { key: "h", metaKey: true, shiftKey: true });
+    expect(node.innerHTML).toBe("<s>Merhaba</s> <mark>dünya</mark>");
+    expect(lastEdit(post).marks).toEqual([{ type: "strike", start: 0, end: 7 }, { type: "highlight", start: 8, end: 13 }]);
+  });
+
+  it("clears every format from the selection at once", () => {
+    const post = mount({ ...base, paragraphMarks: [[{ type: "bold", start: 0, end: 7 }, { type: "highlight", start: 0, end: 13 }], []] });
+    const node = open();
+    select(node, 0, 13);
+    fireEvent.click(screen.getByRole("button", { name: "Biçimi temizle" }));
+    expect(node.innerHTML).toBe("Merhaba dünya");
+    expect(lastEdit(post).marks).toEqual([]);
+  });
+
+  it("turns the block into a heading or removes it with one press", () => {
+    const post = mount();
+    open();
+    expect(screen.getByRole("button", { name: "Metin" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Başlık" }));
+    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "heading2" });
+    open();
+    fireEvent.click(screen.getByRole("button", { name: "Bloğu sil" }));
+    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "remove" });
+  });
+});
+
+describe("removing a block", () => {
+  const draft = { kind: "article" as const, article: base };
+  const edit = (field: string, value: string): InlineEdit => ({ scope: "document", id: base.slug, field, value, previous: value, action: "remove" });
+  it("drops the paragraph with its format and block ID", () => {
+    const next = editDocumentText(draft, edit("paragraph-0", "Merhaba dünya"));
+    expect(next?.kind === "article" && next.article.paragraphs).toEqual(["Başlık satırı"]);
+    expect(next?.kind === "article" && next.article.paragraphFormats).toEqual([{ kind: "heading", level: 2 }]);
+    expect(next?.kind === "article" && next.article.blockIds?.paragraphs).toEqual(["b"]);
+  });
+  it("leaves an empty paragraph when the last block is removed", () => {
+    const single = { kind: "article" as const, article: { ...base, paragraphs: ["Tek"], paragraphFormats: [{ kind: "quote" as const }], blockIds: { paragraphs: ["a"] } } };
+    const next = editDocumentText(single, { scope: "document", id: base.slug, field: "paragraph-0", value: "Tek", previous: "Tek", action: "remove" });
+    expect(next?.kind === "article" && next.article.paragraphs).toEqual([""]);
+    expect(next?.kind === "article" && next.article.paragraphFormats).toEqual([{ kind: "paragraph" }]);
   });
 });

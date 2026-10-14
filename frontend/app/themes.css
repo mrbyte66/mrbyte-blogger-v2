@@ -171,7 +171,10 @@
 .inline-edit-toolbar { max-width:calc(100vw - 16px); overflow-x:auto; scrollbar-width:none; }
 .inline-edit-toolbar button,.inline-edit-toolbar i { flex-shrink:0; }
 
-/* Inline marks inside article text (bold, italic, code, link). */
+/* Inline marks inside article text (bold, italic, strike, highlight, code, link). */
+.article-view :is(p,blockquote) s { text-decoration-thickness:.08em; text-decoration-color:color-mix(in srgb,currentColor 70%,transparent); }
+/* The author's highlight is a marker stroke in the theme accent, apart from a reader's own yellow highlights. */
+.article-view :is(p,blockquote) mark { color:inherit; padding:0 .08em; border-radius:.2em; background:linear-gradient(to top,color-mix(in srgb,var(--accent,#c8efbc) 90%,transparent) 0 58%,transparent 58%); -webkit-box-decoration-break:clone; box-decoration-break:clone; }
 .article-view :is(p,blockquote) strong { font-weight:650; }
 .article-view :is(p,blockquote) a { color:inherit; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:.22em; text-decoration-color:color-mix(in srgb,currentColor 45%,transparent); }
 .article-view :is(p,blockquote) code { font-family:var(--mono,'IBM Plex Mono',monospace); font-size:.88em; padding:.08em .36em; border-radius:6px; background:color-mix(in srgb,var(--accent,#c8efbc) 38%,transparent); }

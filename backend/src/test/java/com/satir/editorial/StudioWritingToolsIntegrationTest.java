@@ -83,10 +83,10 @@ class StudioWritingToolsIntegrationTest extends IntegrationTest {
         signIn();
         Map<String, Object> body = withBlocks(article("Biçimli", "bicimli", "x"),
                 paragraph("Merhaba güzel dünya", List.of(mark("bold", 0, 7, null), mark("link", 8, 13, "https://example.org/a"),
-                        mark("italic", 4, 13, null))),
+                        mark("italic", 4, 13, null), mark("strike", 0, 3, null), mark("highlight", 8, 19, null))),
                 paragraph("Düz paragraf", null));
         Response created = create(body);
-        JsonNodeAssert.marksOf(created, 0).hasSize(3);
+        JsonNodeAssert.marksOf(created, 0).hasSize(5);
 
         Response published = Fixtures.publish(owner, withBlocks(article("Açık", "acik", "x"),
                 paragraph("Kalın kısım", List.of(mark("bold", 0, 5, null)))));

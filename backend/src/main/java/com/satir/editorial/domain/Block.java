@@ -41,7 +41,7 @@ public sealed interface Block {
     }
 
     /**
-     * Inline formatting over a block's plain text ({@code bold}, {@code italic}, {@code code}, {@code link}).
+     * Inline formatting over a block's plain text ({@code bold}, {@code italic}, {@code strike}, {@code highlight}, {@code code}, {@code link}).
      * Offsets are UTF-16 code units of {@code text}, so reader annotations keep anchoring to the same text.
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)

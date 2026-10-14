@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { flushSync } from "react-dom";
 import { announceAppearanceChange, colorModes, parseColorMode, type ColorMode } from "../lib/appearance";
@@ -83,9 +83,12 @@ function ModeIcon({ mode }: { mode: ColorMode }) {
  */
 export function ThemeToggle({ defaultDark = false }: { defaultDark?: boolean }) {
   const { colorMode, setColorMode } = useSitePreferences();
+  const [touched, setTouched] = useState(false);
   const current: ColorMode = colorMode ?? (defaultDark ? "dark" : "light");
-  return <div className="color-mode-switch" role="group" aria-label="Renk modu" data-mode={current} style={{ "--mode-index": colorModes.indexOf(current) } as CSSProperties}>
+  // The thumb's place comes from <html data-theme / data-tone>, which the early head script sets before the
+  // first paint, so it never slides on page load; `data-default` covers a site that has no stored choice.
+  return <div className="color-mode-switch" role="group" aria-label="Renk modu" data-mode={current} data-default={defaultDark ? "dark" : "light"} data-touched={touched ? "" : undefined}>
     <span className="color-mode-thumb" aria-hidden="true" />
-    {colorModes.map((mode) => <button key={mode} type="button" aria-label={`${modeLabels[mode].name} modu`} title={`${modeLabels[mode].name} · ${modeLabels[mode].hint}`} aria-pressed={current === mode} onClick={() => { if (current !== mode) setColorMode(mode); }}><ModeIcon mode={mode} /></button>)}
+    {colorModes.map((mode) => <button key={mode} type="button" aria-label={`${modeLabels[mode].name} modu`} title={`${modeLabels[mode].name} · ${modeLabels[mode].hint}`} aria-pressed={current === mode} onClick={() => { setTouched(true); if (current !== mode) setColorMode(mode); }}><ModeIcon mode={mode} /></button>)}
   </div>;
 }

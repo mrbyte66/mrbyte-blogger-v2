@@ -24,6 +24,15 @@ describe("appearance that follows the account", () => {
     expect(screen.getByRole("button", { name: "Okuma modu" }).getAttribute("aria-pressed")).toBe("true");
   });
 
+  it("keeps the newest choice on the account's own browser and brings the account up to date", async () => {
+    localStorage.setItem("satir:theme", "dark");
+    localStorage.setItem("satir:appearance-account", "11111111-1111-4111-8111-111111111111");
+    const backend = fakeBackend({ signedIn: { appearance: { colorMode: "light", motion: null, studioView: null } } });
+    app(); await act(settle);
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    expect(backend.state.profile?.appearance.colorMode).toBe("dark");
+  });
+
   it("keeps this browser's choices for an account that has none and sends later changes to it", async () => {
     localStorage.setItem("satir:theme", "dark");
     const backend = fakeBackend({ signedIn: {} });
@@ -33,11 +42,20 @@ describe("appearance that follows the account", () => {
     vi.useFakeTimers();
     fireEvent.click(screen.getByRole("button", { name: "Okuma modu" }));
     fireEvent.click(screen.getByRole("button", { name: "Gündüz modu" }));
-    await act(async () => { vi.advanceTimersByTime(600); });
+    await act(async () => { vi.advanceTimersByTime(500); });
     vi.useRealTimers(); await act(settle);
     const sent = backend.state.calls.filter((call) => call.method === "PUT" && call.path === "/me/appearance");
     expect(sent.at(-1)?.body).toMatchObject({ colorMode: "light" });
     expect(sent.length).toBe(2);
+  });
+
+  it("sends a pending change when the page is left", async () => {
+    const backend = fakeBackend({ signedIn: {} });
+    app(); await act(settle);
+    fireEvent.click(screen.getByRole("button", { name: "Gece modu" }));
+    act(() => { window.dispatchEvent(new Event("pagehide")); });
+    await act(settle);
+    expect(backend.state.profile?.appearance.colorMode).toBe("dark");
   });
 
   it("does not talk to the server for a visitor", async () => {

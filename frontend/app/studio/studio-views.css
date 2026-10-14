@@ -961,3 +961,40 @@ html .studio[data-view] .choice-preview:has(> i + i) { display:flex; flex-direct
 html .studio[data-view] .choice-preview:has(> i + i)>i { width:100%; height:4px; border:0; border-radius:999px; background:color-mix(in srgb,var(--sv-ink) 30%,transparent); }
 html .studio[data-view] .preview-reading:has(> i + i)>i { width:56%; align-self:center; } html .studio[data-view] .preview-wide:has(> i + i)>i { width:100%; }
 html .studio[data-view] .preview-airy:has(> i + i) { gap:8px; } html .studio[data-view] .preview-compact:has(> i + i) { gap:3px; }
+
+/*
+ * ───────── motion ─────────
+ * One springy character everywhere: presses sink, hovers lift, surfaces unfold from where they were asked
+ * for and fold away again. Only transform and opacity move, so the frame stays smooth on fast displays.
+ */
+html .studio[data-view] :is(.document-field-list button,.studio-dock>button,.dock-block>button,.studio-nav-item,.canvas-settings,.canvas-focus-toggle,.device-switch button,.inspector-switch button,.studio-add,.block-bar button,.studio-starters button,.studio-pills .studio-nav-item,.inspector-heading button,.studio-page-trigger,.library-card,.studio-block-list .block-select) {
+  transition:transform var(--sv-fast) var(--sv-spring),background-color var(--sv-fast) var(--sv-ease),color var(--sv-fast) var(--sv-ease),box-shadow var(--sv-base) var(--sv-ease),border-color var(--sv-fast) var(--sv-ease);
+}
+html .studio[data-view] :is(.document-field-list button,.studio-dock>button,.dock-block>button,.canvas-settings,.canvas-focus-toggle,.studio-add,.block-bar button,.studio-starters button,.inspector-heading button):hover:not(:disabled) { transform:translateY(-1px); }
+html .studio[data-view] :is(.document-field-list button,.studio-dock>button,.dock-block>button,.studio-nav-item,.canvas-settings,.canvas-focus-toggle,.device-switch button,.inspector-switch button,.studio-add,.block-bar button,.studio-starters button,.inspector-heading button,.studio-page-trigger,.studio-block-list .block-select):active:not(:disabled) { transform:scale(.94); transition-duration:90ms; }
+
+/* settings panel: unfolds when it opens, folds away when it closes */
+html .studio[data-view] .studio-inspector { animation:none; transform-origin:top right; transition:opacity 220ms var(--sv-ease),transform 340ms var(--sv-spring),display 340ms allow-discrete; }
+html .studio[data-view] .studio-inspector[hidden] { display:none; opacity:0; transform:translateY(-8px) scale(.97); transition:opacity 150ms var(--sv-ease),transform 180ms var(--sv-ease),display 180ms allow-discrete; }
+@starting-style { html .studio[data-view] .studio-inspector:not([hidden]) { opacity:0; transform:translateY(-8px) scale(.97); } }
+@media (max-width:699px) {
+  html .studio[data-view] .studio-inspector { transform-origin:bottom center; }
+  html .studio[data-view] .studio-inspector[hidden] { transform:translateY(24px); }
+  @starting-style { html .studio[data-view] .studio-inspector:not([hidden]) { transform:translateY(24px); } }
+}
+/* the settings arrive one after another, not all at once */
+html .studio[data-view] .studio-inspector:not([hidden]) .inspector-fields>* { animation:sv-rise 360ms var(--sv-spring) both; }
+html .studio[data-view] .studio-inspector:not([hidden]) .inspector-fields>:nth-child(2) { animation-delay:30ms; }
+html .studio[data-view] .studio-inspector:not([hidden]) .inspector-fields>:nth-child(3) { animation-delay:60ms; }
+html .studio[data-view] .studio-inspector:not([hidden]) .inspector-fields>:nth-child(n+4) { animation-delay:90ms; }
+@keyframes sv-rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* popovers spring out of their trigger */
+html .studio[data-view] :is(.studio-palette,.dock-block-menu,.document-actions>div,.account-dropdown) { animation:sv-unfold 300ms var(--sv-spring) both; }
+html .studio[data-view="sahne"] .studio-palette { transform-origin:30px 100%; }
+html .studio[data-view="odak"] .dock-block-menu { transform-origin:50% 100%; }
+html .studio[data-view] :is(.document-actions>div,.account-dropdown) { transform-origin:top right; }
+
+/* a page arriving in the canvas rises into place */
+html .studio[data-view] .canvas-device { animation:sv-rise 420ms var(--sv-spring) both; }
+html .studio[data-view] .rail-recent-item { animation:sv-unfold 320ms var(--sv-spring) both; }

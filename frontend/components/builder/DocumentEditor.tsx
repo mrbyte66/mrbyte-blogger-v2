@@ -98,6 +98,8 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   // A settings panel opened from the canvas or the dock comes in front of every other panel.
   useLayer(panelOpen, inspectorRef);
   function select(id: string, fromCanvas = false) {
+    // A canvas press on something this page has no settings for (a series page's header) changes nothing.
+    if (!id.startsWith("paragraph-") && !fields.some(([known]) => known === id)) return;
     if (id === "title" || id === "excerpt" || id === "body" || id.startsWith("paragraph-")) setAnchorField(id);
     setField(id); setEditing(true); setRequest((n) => n + 1);
     setPanelOpen(!["title","excerpt","summary","body"].includes(id) && !id.startsWith("paragraph-"));

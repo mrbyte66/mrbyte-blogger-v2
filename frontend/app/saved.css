@@ -62,9 +62,6 @@
 .saved-empty p { line-height:1.7; font-size:15px; }
 .saved-empty :is(a,button) { display:inline-flex; align-items:center; min-height:44px; margin-top:16px; border:1px solid var(--line); border-radius:22px; padding:10px 16px; text-decoration:none; color:var(--ink); }
 .saved-error { color:var(--ink); font-size:14px; }
-.series-chapters-rows .article-card { flex-direction:column; }
-.series-chapters-rows .article-card-open { flex-direction:row; gap:14px; }
-@container(max-width:540px) { .series-chapters-rows .article-card-open { flex-direction:column; gap:0; } }
 @media(max-width:600px) { .saved-header { padding:22px 24px; }.saved-header>div { gap:10px; }.saved-layout { padding:32px 24px 60px; }.saved-page-heading { flex-wrap:wrap; gap:12px; }.saved-articles { grid-template-columns:1fr; }.save-popover { right:-12px; } }
 @media(max-width:380px) { .engagement-views { padding:8px 2px; }.clap-button,.article-share summary { padding:8px 5px; gap:5px; } }
 

@@ -68,16 +68,14 @@ describe("series authoring beside the canvas", () => {
     expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"article"}>).article.title).toBe("Korunan yazım");
     fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
   });
-  it("uploads a cover image and saves presentation in the shared page editor", async () => {
+  it("uploads a cover image in the shared page editor; series pages have no layout knobs", async () => {
     const site = studio(); openFirst(); section("Kapak görseli");
     const file = new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], "kapak.png", { type: "image/png" });
     await act(async () => { fireEvent.change(screen.getByLabelText("Kapak görseli yükle"), { target: { files: [file] } }); });
     expect(site.calls).toContain("upload kapak.png");
-    section("Sayfa düzeni");
-    fireEvent.change(screen.getByLabelText("Bölüm görünümü"), { target: { value: "rows" } });
+    expect(screen.queryByRole("button", { name: "Sayfa düzeni" })).toBeNull();
     await save();
     expect(site.series[0].coverImage).toMatch(/^\/api\/v1\/media\/[0-9a-f-]{36}$/);
-    expect(site.series[0].presentation).toEqual({ chapterStyle: "rows", heading: "left" });
   });
 });
 

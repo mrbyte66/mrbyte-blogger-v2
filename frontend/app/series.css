@@ -27,11 +27,6 @@
 .series-chapters>li { min-width:0; display:flex; }
 .series-chapters .article-card { height:100%; }
 .series-chapters .article-excerpt { display:block; -webkit-line-clamp:unset; }
-.series-chapters-rows .series-chapters { grid-template-columns:1fr; }
-.series-chapters-rows .article-card { flex-direction:row; gap:14px; }
-.series-chapters-rows .article-card-visual { width:32%; flex-shrink:0; align-self:flex-start; }
-.series-chapters-rows .article-card-main { padding:6px; }
-@container(max-width:540px) { .series-chapters-rows .article-card { flex-direction:column; gap:0; }.series-chapters-rows .article-card-visual { width:100%; }.series-chapters-rows .article-card-main { padding:18px 10px 8px; } }
 .series-empty { padding:25px 0; font-size:16px; line-height:1.75; color:var(--muted); }
 .series-article-nav { border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin:0 0 24px; background:var(--panel); color:var(--ink); }
 .series-article-heading { display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; font-size:14px; }

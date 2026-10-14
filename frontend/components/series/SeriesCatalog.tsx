@@ -40,7 +40,7 @@ export function SeriesCatalog({ series, selectedSeriesSlug, onOpenSeries, onOpen
   }
   if (selectedSeriesSlug && !selected) return <div className="series-empty"><h2 id={onOpenSeries ? "panel-title" : undefined} tabIndex={-1}>Seri henüz yayında değil</h2><p>Bu bağlantının serisi kaldırılmış veya taslak olabilir.</p></div>;
   if (selected) {
-    return <section className={`series-detail series-heading-${selected.presentation?.heading ?? "left"} series-chapters-${selected.presentation?.chapterStyle ?? "cards"}`} aria-label={selected.title}>
+    return <section className="series-detail" aria-label={selected.title}>
       <div data-edit-field="meta" className="series-meta"><span>{selected.articleSlugs.length} bölüm</span><span>{selected.ongoing ? "Yeni bölümler gelecek" : "Tamamlanmış seri"}</span></div>
       {onOpenSeries ? <h2 id="panel-title" tabIndex={-1}>{selected.title}</h2> : <h1 data-edit-field="title">{selected.title}</h1>}<p data-edit-field="summary" className="series-summary">{selected.summary}</p>
       <div data-edit-field="cover" className="series-detail-cover"><CatalogCover src={selected.coverImage} fallback={seriesDraftCover(selected)} /></div>

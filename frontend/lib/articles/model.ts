@@ -1,6 +1,7 @@
 import { articles as fixtures, type Article } from "../content";
 import { isArticleDate, legacyArticleDate, localCalendarDate } from "./metadata";
 import { isValidSeriesCoverImage } from "../series/model";
+import { validMarks, type TextMark } from "./marks";
 
 export function validateArticle(value: unknown): Article | null {
   if (!value || typeof value !== "object") return null;
@@ -19,6 +20,7 @@ export function validateArticle(value: unknown): Article | null {
   if (a.status !== undefined && !["draft", "scheduled", "published", "archived", "trashed"].includes(a.status)) return null;
   if (a.scheduledAt !== undefined && (typeof a.scheduledAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(a.scheduledAt) || !Number.isFinite(Date.parse(a.scheduledAt)) || new Date(a.scheduledAt).toISOString() !== a.scheduledAt)) return null;
   if (a.paragraphFormats !== undefined && (!Array.isArray(a.paragraphFormats) || a.paragraphFormats.length !== a.paragraphs.length || a.paragraphFormats.some((format, i) => !format || !["paragraph","heading","quote"].includes(format.kind) || (format.kind === "heading" && (![2,3].includes(format.level ?? 2) || !a.paragraphs[i].trim() || a.paragraphs[i].length>300)) || (format.kind === "quote" && (!a.paragraphs[i].trim() || a.paragraphs[i].length>4000 || (format.attribution !== undefined && !text(format.attribution,200))))))) return null;
+  if (a.paragraphMarks !== undefined && (!Array.isArray(a.paragraphMarks) || a.paragraphMarks.length !== a.paragraphs.length || a.paragraphMarks.some((marks, i) => !validMarks(a.paragraphs[i], marks) || (marks.length > 0 && a.paragraphFormats?.[i]?.kind === "heading")))) return null;
   if (a.status === "scheduled" && !a.scheduledAt) return null;
   if (a.authored !== undefined && typeof a.authored !== "boolean") return null;
   if (a.code !== undefined && !text(a.code, 50000)) return null;
@@ -33,6 +35,7 @@ export function validateArticle(value: unknown): Article | null {
     ...(a.id ? { id: a.id } : {}), ...(a.version !== undefined ? { version: a.version } : {}),
     ...(a.visibility ? { visibility: a.visibility } : {}), ...(a.coverUrl ? { coverUrl: a.coverUrl } : {}),
     ...(a.seriesId !== undefined ? { seriesId: a.seriesId } : {}),
+    ...(a.paragraphMarks?.some((marks) => marks.length) ? { paragraphMarks: a.paragraphMarks.map((marks) => marks.map((mark: TextMark) => ({ ...mark }))) } : {}),
     ...(a.blockIds && Array.isArray(a.blockIds.paragraphs) ? { blockIds: { ...a.blockIds, paragraphs: [...a.blockIds.paragraphs] } } : {}),
   };
   return { ...server, slug: a.slug, ...(a.status ? { status: a.status } : {}), ...(a.authored ? { authored: true } : {}), title: a.title, category: categories[0], categories: [...new Set(categories)], ...(a.categoryIds ? { categoryIds: [...a.categoryIds] } : {}), createdAt, publishedAt, ...(a.scheduledAt ? { scheduledAt: a.scheduledAt } : {}), eyebrow: a.eyebrow, excerpt: a.excerpt, minutes: a.minutes, paragraphs: [...a.paragraphs], ...(a.paragraphFormats ? {paragraphFormats:a.paragraphFormats.map(format=>({...format}))} : {}), ...(a.code !== undefined ? { code: a.code } : {}), ...(a.figure ? { figure: { ...a.figure } } : {}), ...(a.table ? { table: { caption: a.table.caption, columns: [...a.table.columns], rows: a.table.rows.map((r) => [...r]) } } : {}), ...(a.presentation ? { presentation: { ...a.presentation } } : {}) };

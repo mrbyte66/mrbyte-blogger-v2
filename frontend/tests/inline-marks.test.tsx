@@ -1,0 +1,102 @@
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createWorkspace } from "../lib/builder/model";
+import { articles } from "../lib/content";
+import { inlineEditEvent, type InlineEdit } from "../lib/builder/inline-edit";
+import { InlineCanvasEditor } from "../components/builder/InlineCanvasEditor";
+import { selectOffsets } from "../lib/builder/rich-text";
+
+const workspace = createWorkspace();
+const base = { ...articles[0], paragraphs: ["Merhaba dünya", "Başlık satırı"], paragraphFormats: [{ kind: "paragraph" as const }, { kind: "heading" as const, level: 2 as const }], blockIds: { paragraphs: ["a", "b"] } };
+beforeEach(() => { vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} }); Element.prototype.scrollIntoView = vi.fn(); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+function mount(article = base) {
+  const post = vi.spyOn(window.parent, "postMessage");
+  render(<InlineCanvasEditor theme={workspace.draft} draft={{ kind: "article", article }} enabled>
+    <p data-edit-field="paragraph-0" dangerouslySetInnerHTML={{ __html: "Merhaba dünya" }} />
+    <h2 data-edit-field="paragraph-1">Başlık satırı</h2>
+  </InlineCanvasEditor>);
+  return post;
+}
+function open(label = "Metin · tuval") {
+  const target = document.querySelector<HTMLElement>('[data-edit-field="paragraph-0"]')!;
+  fireEvent.keyDown(target, { key: "Enter" });
+  return screen.getByLabelText(label);
+}
+function select(node: HTMLElement, start: number, end: number) {
+  selectOffsets(node, start, end);
+  act(() => { document.dispatchEvent(new Event("selectionchange")); });
+}
+const lastEdit = (post: ReturnType<typeof vi.spyOn>) => (post.mock.calls.at(-1)![0] as { type: string; edit: InlineEdit }).edit;
+
+describe("formatting in the canvas", () => {
+  it("makes a paragraph rich-editable and bolds the selection through the toolbar", () => {
+    const post = mount();
+    const node = open();
+    expect(node.getAttribute("contenteditable")).toBe("true");
+    select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Kalın" }));
+    expect(node.innerHTML).toBe("<strong>Merhaba</strong> dünya");
+    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", value: "Merhaba dünya", marks: [{ type: "bold", start: 0, end: 7 }] });
+    expect(post.mock.calls.at(-1)![0]).toMatchObject({ type: inlineEditEvent });
+    expect(screen.getByRole("button", { name: "Kalın" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("clears a mark when the whole selection already has it, and undo restores the previous marks", () => {
+    const post = mount();
+    const node = open();
+    select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Kalın" }));
+    select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Kalın" }));
+    expect(node.innerHTML).toBe("Merhaba dünya");
+    expect(lastEdit(post).marks).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "Metni geri al" }));
+    expect(node.innerHTML).toBe("<strong>Merhaba</strong> dünya");
+    expect(lastEdit(post).marks).toEqual([{ type: "bold", start: 0, end: 7 }]);
+  });
+
+  it("reads typed text and the marks around it back from the DOM", () => {
+    const post = mount();
+    const node = open();
+    node.innerHTML = "<strong>Merhabaa</strong> <em>dünya</em>";
+    fireEvent.input(node);
+    expect(lastEdit(post)).toMatchObject({ value: "Merhabaa dünya", marks: [{ type: "bold", start: 0, end: 8 }, { type: "italic", start: 9, end: 14 }] });
+  });
+
+  it("only accepts safe link addresses and explains the rest", () => {
+    const post = mount();
+    const node = open();
+    select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button", { name: "Bağlantı" }));
+    const field = screen.getByLabelText("Bağlantı adresi");
+    fireEvent.change(field, { target: { value: "javascript:alert(1)" } });
+    fireEvent.click(screen.getByRole("button", { name: "Uygula" }));
+    expect(screen.getByRole("alert").textContent).toMatch(/https:\/\//);
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(node.querySelector("a")).toBeNull();
+    fireEvent.change(field, { target: { value: "https://example.org/yazi" } });
+    fireEvent.click(screen.getByRole("button", { name: "Uygula" }));
+    expect(node.innerHTML).toBe('<a href="https://example.org/yazi" target="_blank" rel="noopener noreferrer">Merhaba</a> dünya');
+    expect(lastEdit(post).marks).toEqual([{ type: "link", start: 0, end: 7, href: "https://example.org/yazi" }]);
+  });
+
+  it("offers no inline formatting inside headings", () => {
+    mount();
+    const heading = document.querySelector<HTMLElement>('[data-edit-field="paragraph-1"]')!;
+    fireEvent.keyDown(heading, { key: "Enter" });
+    expect(heading.getAttribute("contenteditable")).toBe("plaintext-only");
+    expect(screen.queryByRole("button", { name: "Kalın" })).toBeNull();
+  });
+
+  it("keeps marks on the right half when a paragraph is split", () => {
+    const post = mount({ ...base, paragraphMarks: [[{ type: "bold", start: 4, end: 12 }], []] });
+    const node = open();
+    // Re-render rich content from the model so the DOM matches the marks.
+    expect(node.getAttribute("contenteditable")).toBe("true");
+    select(node, 3, 3);
+    fireEvent.keyDown(node, { key: "Enter" });
+    expect(lastEdit(post)).toMatchObject({ action: "split", offset: 3 });
+  });
+});

@@ -2,6 +2,7 @@ import type { Article } from "../content";
 import type { BlogSeries } from "../series/model";
 import type { PageBlock, Theme } from "../builder/model";
 import { categoryIds, categoryNames, type Category } from "./categories";
+import type { TextMark } from "../articles/marks";
 
 import type { Schema, Output } from "./contract";
 export type BlockDto = Schema<"Block">;
@@ -29,20 +30,21 @@ const mediaPattern = /^\/api\/v1\/media\/([0-9a-f-]{36})$/;
 
 
 /** Body blocks → the editor's paragraph/figure/code/table model (render order preserved on save). */
-function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "figure" | "code" | "table" | "blockIds"> {
+function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "paragraphMarks" | "figure" | "code" | "table" | "blockIds"> {
   const paragraphFormats: NonNullable<Article["paragraphFormats"]>[number][] = [];
+  const paragraphMarks: TextMark[][] = [];
   const paragraphs: string[] = []; const ids: string[] = [];
   let figure: Article["figure"]; let code: string | undefined; let table: Article["table"];
   const blockIds: NonNullable<Article["blockIds"]> = { paragraphs: ids };
   for (const block of document.blocks) {
-    if (block.type === "paragraph" || block.type === "heading" || block.type === "quote") { paragraphs.push(block.text); ids.push(block.id); paragraphFormats.push({kind:block.type,...(block.type==="heading" ? {level:block.level} : {}),...(block.type==="quote" && block.attribution ? {attribution:block.attribution} : {})}); }
+    if (block.type === "paragraph" || block.type === "heading" || block.type === "quote") { paragraphs.push(block.text); ids.push(block.id); paragraphMarks.push(block.type === "heading" ? [] : (block.marks ?? []).map((mark) => ({ type: mark.type, start: mark.start, end: mark.end, ...(mark.href ? { href: mark.href } : {}) }))); paragraphFormats.push({kind:block.type,...(block.type==="heading" ? {level:block.level} : {}),...(block.type==="quote" && block.attribution ? {attribution:block.attribution} : {})}); }
     else if (block.type === "image" && !figure) {
       const src = block.assetId ? mediaUrl(block.assetId) : block.staticPath ?? "";
       figure = { src, alt: block.alt ?? "", caption: block.caption ?? "", width: block.width ?? 1200, height: block.height ?? 675 }; blockIds.figure = block.id;
     } else if (block.type === "code" && code === undefined) { code = block.text; blockIds.code = block.id; }
     else if (block.type === "table" && !table) { table = { caption: block.caption ?? "", columns: block.columns, rows: block.rows }; blockIds.table = block.id; }
   }
-  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code } : {}), ...(table ? { table } : {}), blockIds };
+  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(paragraphMarks.some((marks) => marks.length) ? { paragraphMarks } : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code } : {}), ...(table ? { table } : {}), blockIds };
 }
 
 /** Editor model → blocks, in the same order ArticleContent renders them; stable IDs are reused. */
@@ -52,7 +54,9 @@ export function toDocument(article: Article): DocumentDto {
   const anchor = Math.min(2, article.paragraphs.length - 1);
   article.paragraphs.forEach((text, index) => {
     const format=article.paragraphFormats?.[index]; const id=ids?.paragraphs[index] ?? crypto.randomUUID();
-    blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {})} : {id,type:"paragraph",text});
+    const marks = article.paragraphMarks?.[index];
+    const withMarks = marks?.length ? { marks: marks.map((mark) => ({ ...mark })) } : {};
+    blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {}),...withMarks} : {id,type:"paragraph",text,...withMarks});
     if (index === 0 && article.figure) {
       const match = mediaPattern.exec(article.figure.src);
       blocks.push({ id: ids?.figure ?? crypto.randomUUID(), type: "image", ...(match ? { assetId: match[1] } : { staticPath: article.figure.src }), alt: article.figure.alt, caption: article.figure.caption, width: article.figure.width, height: article.figure.height });

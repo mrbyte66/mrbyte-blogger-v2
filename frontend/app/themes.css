@@ -174,3 +174,21 @@
 .canvas-text-target:empty::before { content:attr(data-writing-placeholder); color:var(--muted,#7f887f); opacity:.6; pointer-events:none; }
 .inline-edit-toolbar { max-width:calc(100vw - 16px); overflow-x:auto; scrollbar-width:none; }
 .inline-edit-toolbar button,.inline-edit-toolbar i { flex-shrink:0; }
+
+/* Inline marks inside article text (bold, italic, code, link). */
+.article-view :is(p,blockquote) strong { font-weight:650; }
+.article-view :is(p,blockquote) a { color:inherit; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:.22em; text-decoration-color:color-mix(in srgb,currentColor 45%,transparent); }
+.article-view :is(p,blockquote) code { font-family:var(--mono,'IBM Plex Mono',monospace); font-size:.88em; padding:.08em .36em; border-radius:6px; background:color-mix(in srgb,var(--accent,#c8efbc) 38%,transparent); }
+
+/* Formatting tools and the link editor of the in-canvas toolbar. */
+.inline-edit-toolbar { flex-wrap:wrap; }
+.inline-edit-toolbar button[aria-pressed=true] { background:color-mix(in srgb,currentColor 16%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,currentColor 30%,transparent); }
+.inline-link-editor { flex:1 0 100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:5px; padding:8px 4px 3px; border-top:1px solid color-mix(in srgb,currentColor 14%,transparent); }
+.inline-link-editor label { flex:1 1 220px; display:flex; }
+.inline-link-editor label span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.inline-link-editor input { flex:1; min-width:0; height:34px; padding:0 14px; border:1px solid color-mix(in srgb,currentColor 24%,transparent); border-radius:999px; background:transparent; color:inherit; font:13px/1 sans-serif; }
+.inline-link-editor input[aria-invalid=true] { border-color:#c4584a; }
+.inline-link-editor button { display:inline-flex; width:auto; height:34px; padding:0 14px; gap:6px; align-items:center; border-radius:999px; font-size:12px; }
+.inline-link-editor p { flex-basis:100%; margin:0; font-size:11px; line-height:1.5; color:#a93a2a; }
+.inline-link-editor p:empty { display:none; }
+html[data-theme=dark] .inline-link-editor p { color:#ffb4a8; }

@@ -1,3 +1,4 @@
+import type { TextMark } from "./articles/marks";
 export type Topic = string;
 /** Public totals from the server: visible-card/permalink views, active claps and member saves. */
 import type { Schema } from "./api/contract";
@@ -33,6 +34,8 @@ export type Article = {
   minutes: number;
   presentation?: { width: "comfortable" | "wide"; heading: "left" | "center"; showMeta: boolean };
   paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote"; level?: 2 | 3; attribution?: string }[];
+  /** Inline formatting per paragraph, parallel to `paragraphs` (offsets are UTF-16 units of the plain text). */
+  paragraphMarks?: readonly (readonly TextMark[])[];
   paragraphs: readonly string[];
   code?: string;
   figure?: { src: string; alt: string; caption: string; width: number; height: number };

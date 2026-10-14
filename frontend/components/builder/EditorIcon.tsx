@@ -12,6 +12,9 @@ export function EditorIcon({ name, size = 18 }: { name: string; size?: number })
     settings:"M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6",
     close:"m6 6 12 12M6 18 18 6", back:"m14 6-6 6 6 6", check:"m5 12 4 4L19 6",
     undo:"M8 4 3 9l5 5M3 9h11a6 6 0 0 1 0 12", redo:"m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12",
+    bold:"M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z", italic:"M10 5h8M6 19h8M14 5 10 19",
+    link:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
+    unlink:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1M4 4l16 16",
     up:"m6 14 6-6 6 6", down:"m6 10 6 6 6-6", plus:"M12 4v16M4 12h16", series:"M7 3h14v16H7zM3 7v14h14",
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0} as CSSProperties}><path d={paths[name] ?? paths.settings}/></svg>;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { accentColor, type Theme } from "../../lib/builder/model";
 
 const colors = [
@@ -6,12 +6,31 @@ const colors = [
   { label: "Kehribar", value: "#efd19b" }, { label: "Mercan", value: "#ed9383" },
   { label: "Mavi", value: "#83b9e8" }, { label: "Grafit", value: "#475569" },
 ];
+type Option<T extends string> = { value: T; label: string; preview: ReactNode };
+
+/** One look setting as a row of small pictures: what each choice does is visible before choosing it. */
+function Choice<T extends string>({ label, hint, value, options, onChange }: { label: string; hint?: string; value: T; options: readonly Option<T>[]; onChange: (value: T) => void }) {
+  return <div className="studio-field theme-choice settings-full">
+    <span>{label}</span>
+    {hint && <p className="setting-explanation">{hint}</p>}
+    <div className="choice-row" role="group" aria-label={label} style={{ "--choices": options.length } as React.CSSProperties}>
+      {options.map((option) => <button key={option.value} type="button" aria-label={`${label}: ${option.label}`} aria-pressed={value === option.value} onClick={() => onChange(option.value)}>
+        <span className={`choice-preview preview-${option.value}`} aria-hidden="true">{option.preview}</span>
+        <span className="choice-label">{option.label}</span>
+      </button>)}
+    </div>
+  </div>;
+}
+const lines = (count: number) => Array.from({ length: count }, (_, index) => <i key={index} />);
+
 export function ThemeSettings({ theme, onChange }: { theme: Theme; onChange: (theme: Theme) => void }) {
   const color = accentColor(theme.accent);
   const [hex, setHex] = useState(color);
   useEffect(() => setHex(color), [color]);
   const validHex = /^#[a-fA-F0-9]{6}$/.test(hex);
+  const set = <K extends keyof Theme>(key: K) => (value: Theme[K]) => onChange({ ...theme, [key]: value });
   return <div className="theme-settings">
+    <h3 className="settings-group settings-full">Kimlik</h3>
     <label className="studio-field"><span>Tema adı</span><input maxLength={80} value={theme.name} onChange={(event) => onChange({ ...theme, name: event.target.value })} /></label>
     <label className="studio-field"><span>Site adı</span><input maxLength={40} value={theme.siteName} onChange={(event) => onChange({ ...theme, siteName: event.target.value })} /></label>
     <div className="studio-field settings-full"><span>Vurgu rengi</span><p className="setting-explanation">Giriş işareti, alıntı zemini, yazı kartları ve sahnedeki yazı kısayolu değişir. Karakter görseli ve arkasındaki halka özgün tasarımını korur.</p>
@@ -19,10 +38,38 @@ export function ThemeSettings({ theme, onChange }: { theme: Theme; onChange: (th
       <div className="custom-color"><label><span>Kendi rengin</span><input type="color" aria-label="Özel vurgu rengi" value={color} onChange={(event) => onChange({ ...theme, accent: event.target.value })} /></label><label><span>HEX renk kodu</span><input aria-invalid={!validHex} maxLength={7} value={hex} onChange={(event) => { setHex(event.target.value); if (/^#[a-fA-F0-9]{6}$/.test(event.target.value)) onChange({ ...theme, accent: event.target.value }); }} /></label></div>
       {!validHex && <small role="status">Altı haneli bir renk kodu gir: örneğin #83b9e8. Son geçerli renk korunur.</small>}
     </div>
-    <label className="studio-field"><span>Tipografi</span><select value={theme.typography} onChange={(event) => onChange({ ...theme, typography: event.target.value as Theme["typography"] })}><option value="modern">Modern · temiz ve yalın</option><option value="editorial">Editoryal · kitap / dergi</option><option value="mono">Terminal · teknik defter</option></select></label>
-    <label className="studio-field"><span>Sayfa atmosferi</span><select value={theme.surface} onChange={(event) => onChange({ ...theme, surface: event.target.value as Theme["surface"] })}><option value="paper">Açık · kâğıt</option><option value="warm">Sıcak · arşiv</option><option value="night">Koyu · gece</option></select></label>
-    <label className="studio-field"><span>İçerik genişliği</span><select value={theme.width} onChange={(event) => onChange({ ...theme, width: event.target.value as Theme["width"] })}><option value="reading">Odaklı okuma</option><option value="wide">Geniş vitrin</option></select></label>
-    <label className="studio-field"><span>Bölüm aralıkları</span><select value={theme.spacing} onChange={(event) => onChange({ ...theme, spacing: event.target.value as Theme["spacing"] })}><option value="airy">Ferah</option><option value="compact">Kompakt</option></select></label>
-    <p className="property-note settings-full">Tipografi ve atmosfer sayfanın kimliğini; genişlik ve aralıklar akış bölümlerini değiştirir. Karakter sahnesi ekranı dolduran özel düzenini korur. Bunların hepsi taslaktır; ana sayfa ancak “Temayı uygula” ile değişir.</p>
+
+    <h3 className="settings-group settings-full">Yazı</h3>
+    <Choice label="Tipografi" value={theme.typography} onChange={set("typography")} options={[
+      { value: "modern", label: "Modern", preview: <b className="type-sans">Aa</b> },
+      { value: "editorial", label: "Editoryal", preview: <b className="type-serif">Aa</b> },
+      { value: "mono", label: "Terminal", preview: <b className="type-mono">Aa</b> },
+    ]} />
+    <Choice label="Yazı boyutu" hint="Yazı ve seri sayfalarındaki okuma metni." value={theme.textSize} onChange={set("textSize")} options={[
+      { value: "small", label: "Küçük", preview: <b>A</b> }, { value: "medium", label: "Orta", preview: <b>A</b> }, { value: "large", label: "Büyük", preview: <b>A</b> },
+    ]} />
+
+    <h3 className="settings-group settings-full">Sayfa</h3>
+    <Choice label="Sayfa atmosferi" value={theme.surface} onChange={set("surface")} options={[
+      { value: "paper", label: "Kâğıt", preview: <i /> }, { value: "warm", label: "Sıcak arşiv", preview: <i /> }, { value: "night", label: "Gece", preview: <i /> },
+    ]} />
+    <Choice label="Zemin dokusu" value={theme.texture} onChange={set("texture")} options={[
+      { value: "plain", label: "Düz", preview: <i /> }, { value: "dots", label: "Noktalı", preview: <i /> }, { value: "lines", label: "Çizgili", preview: <i /> },
+    ]} />
+    <Choice label="İçerik genişliği" value={theme.width} onChange={set("width")} options={[
+      { value: "reading", label: "Odaklı okuma", preview: lines(3) }, { value: "wide", label: "Geniş vitrin", preview: lines(3) },
+    ]} />
+    <Choice label="Bölüm aralıkları" value={theme.spacing} onChange={set("spacing")} options={[
+      { value: "airy", label: "Ferah", preview: lines(3) }, { value: "compact", label: "Kompakt", preview: lines(3) },
+    ]} />
+
+    <h3 className="settings-group settings-full">Şekil</h3>
+    <Choice label="Köşeler" hint="Yazı ve seri kartlarıyla kapakların köşeleri." value={theme.corners} onChange={set("corners")} options={[
+      { value: "sharp", label: "Keskin", preview: <i /> }, { value: "soft", label: "Yumuşak", preview: <i /> }, { value: "round", label: "Yuvarlak", preview: <i /> },
+    ]} />
+    <Choice label="Kartlar" value={theme.cards} onChange={set("cards")} options={[
+      { value: "outlined", label: "Çerçeveli", preview: <i /> }, { value: "raised", label: "Gölgeli", preview: <i /> }, { value: "flat", label: "Düz", preview: <i /> },
+    ]} />
+    <p className="property-note settings-full">Hepsi taslaktır; ana sayfa ve okuma sayfaları ancak “Temayı uygula” ile değişir. Karakter sahnesi ekranı dolduran özel düzenini korur.</p>
   </div>;
 }

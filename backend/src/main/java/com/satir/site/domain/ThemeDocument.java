@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.satir.platform.validation.ValidationException;
@@ -16,7 +17,12 @@ import com.satir.platform.validation.ValidationException;
  * Content references are UUIDs, never slugs. No raw HTML/CSS/JS anywhere.
  */
 public record ThemeDocument(Integer schemaVersion, String name, String siteName, String accent, String typography,
-        String surface, String width, String spacing, List<Block> blocks) {
+        String surface, String width, String spacing,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String corners,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String textSize,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String texture,
+        @JsonInclude(JsonInclude.Include.NON_NULL) String cards,
+        List<Block> blocks) {
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
     @JsonSubTypes({
@@ -83,6 +89,11 @@ public record ThemeDocument(Integer schemaVersion, String name, String siteName,
         oneOf("surface", surface, "paper", "night", "warm");
         oneOf("width", width, "reading", "wide");
         oneOf("spacing", spacing, "airy", "compact");
+        // Added later: absent in older themes, which then keep the original look.
+        optionalOneOf("corners", corners, "sharp", "soft", "round");
+        optionalOneOf("textSize", textSize, "small", "medium", "large");
+        optionalOneOf("texture", texture, "plain", "dots", "lines");
+        optionalOneOf("cards", cards, "outlined", "raised", "flat");
         if (blocks == null || blocks.size() > 9) {
             throw new ValidationException("blocks", "LENGTH");
         }
@@ -121,7 +132,8 @@ public record ThemeDocument(Integer schemaVersion, String name, String siteName,
     }
 
     public ThemeDocument withBlocks(List<Block> next) {
-        return new ThemeDocument(schemaVersion, name, siteName, accent, typography, surface, width, spacing, next);
+        return new ThemeDocument(schemaVersion, name, siteName, accent, typography, surface, width, spacing, corners, textSize,
+                texture, cards, next);
     }
 
     /** Header first, a single lead (intro XOR scene) directly after it, footer last. */
@@ -187,6 +199,12 @@ public record ThemeDocument(Integer schemaVersion, String name, String siteName,
         }
         if (value.codePointCount(0, value.length()) > max) {
             throw new ValidationException(field, "LENGTH");
+        }
+    }
+
+    private static void optionalOneOf(String field, String value, String... allowed) {
+        if (value != null) {
+            oneOf(field, value, allowed);
         }
     }
 

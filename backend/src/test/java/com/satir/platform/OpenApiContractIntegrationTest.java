@@ -73,9 +73,12 @@ class OpenApiContractIntegrationTest extends IntegrationTest {
         Response workspace = owner.get("/api/v1/studio/theme");
         Map<String, Object> intro = Map.of("kind", "intro", "id", "giris", "title", "Merhaba", "description", "Açıklama",
                 "eyebrow", "", "layout", "statement");
-        Map<String, Object> theme = Map.of("schemaVersion", 1, "name", "Sade", "siteName", "SATIR", "accent", "#336699",
-                "typography", "editorial", "surface", "night", "width", "wide", "spacing", "compact", "blocks", List.of(intro));
+        Map<String, Object> theme = new java.util.HashMap<>(Map.of("schemaVersion", 1, "name", "Sade", "siteName", "SATIR", "accent", "#336699",
+                "typography", "editorial", "surface", "night", "width", "wide", "spacing", "compact", "blocks", List.of(intro)));
+        theme.putAll(Map.of("corners", "round", "textSize", "large", "texture", "dots", "cards", "raised"));
         Response draft = owner.put("/api/v1/studio/theme/draft", theme, Map.of("If-Match", workspace.etag()));
+        assertThat(draft.json().get("draft").get("corners").asString()).isEqualTo("round");
+        assertThat(draft.json().get("draft").get("cards").asString()).isEqualTo("raised");
         Response applied = owner.post("/api/v1/studio/theme/apply", Map.of("draftRevisionId", draft.text("draftRevisionId")),
                 Map.of("If-Match", draft.etag()));
         assertThat(applied.status()).isEqualTo(200);

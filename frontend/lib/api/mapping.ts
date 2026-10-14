@@ -136,7 +136,7 @@ export function themeFromDto(dto: ThemeDto, slugOfArticle: (id: string) => strin
     }
     return { ...block };
   }) as unknown as PageBlock[];
-  return { name: dto.name, siteName: dto.siteName, accent: dto.accent, typography: dto.typography, surface: dto.surface, width: dto.width, spacing: dto.spacing, blocks };
+  return { name: dto.name, siteName: dto.siteName, accent: dto.accent, typography: dto.typography, surface: dto.surface, width: dto.width, spacing: dto.spacing, corners: dto.corners ?? "soft", textSize: dto.textSize ?? "medium", texture: dto.texture ?? "plain", cards: dto.cards ?? "outlined", blocks };
 }
 
 export function themeToDto(theme: Theme, idOfArticle: (slug: string) => string | undefined, idOfSeries: (slug: string) => string | undefined, registry: readonly Category[] = []): ThemeDto {
@@ -151,5 +151,5 @@ export function themeToDto(theme: Theme, idOfArticle: (slug: string) => string |
     }
     return { ...block };
   }) as ThemeBlockDto[];
-  return { schemaVersion: 1, name: theme.name, siteName: theme.siteName, accent: theme.accent, typography: theme.typography, surface: theme.surface, width: theme.width, spacing: theme.spacing, blocks };
+  return { schemaVersion: 1, name: theme.name, siteName: theme.siteName, accent: theme.accent, typography: theme.typography, surface: theme.surface, width: theme.width, spacing: theme.spacing, corners: theme.corners, textSize: theme.textSize, texture: theme.texture, cards: theme.cards, blocks };
 }

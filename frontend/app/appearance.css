@@ -39,3 +39,27 @@ html[data-tone=reading] .scene-controls .sun-icon { color:#a8642c; }
 
 @media(prefers-reduced-motion:reduce) { .color-mode-thumb,.color-mode-switch button { transition:none; } .color-mode-switch button[aria-pressed=true] svg { animation:none; } }
 html[data-motion=off] .color-mode-thumb { transition:none; }
+
+/*
+ * Theme look options (Studio → Tema tasarımı). "soft", "medium", "plain" and "outlined" are the original
+ * look, so only the other choices restyle anything and older themes stay exactly as they were.
+ */
+html .theme-site.corners-sharp { --card-radius:0px; --card-inner-radius:0px; }
+html .theme-site.corners-round { --card-radius:28px; --card-inner-radius:20px; }
+html .theme-site:is(.corners-sharp,.corners-round) :is(.feed-article,.feed-cards .feed-article,.quote-card,.article-card,.series-card,.series-detail-cover) { border-radius:var(--card-radius); }
+html .theme-site:is(.corners-sharp,.corners-round) :is(.article-card-visual,.series-card-visual) { border-radius:var(--card-inner-radius); }
+
+html .theme-site.text-small .article-view>div>p { font-size:15px; line-height:1.85; }
+html .theme-site.text-small .article-lead { font-size:21px; }
+html .theme-site.text-large .article-view>div>p { font-size:18.5px; line-height:1.85; }
+html .theme-site.text-large .article-lead { font-size:26px; }
+@media(max-width:700px) { html .theme-site.text-large .article-view>div>p { font-size:17.5px; } html .theme-site.text-large .article-lead { font-size:23px; } }
+
+html .theme-site.texture-dots { background-image:radial-gradient(color-mix(in srgb,var(--ink) 15%,transparent) 1px,transparent 1.3px); background-size:22px 22px; background-attachment:fixed; }
+html .theme-site.texture-lines { background-image:linear-gradient(color-mix(in srgb,var(--ink) 7%,transparent) 1px,transparent 1px); background-size:100% 34px; background-attachment:fixed; }
+
+html .theme-site.cards-raised :is(.feed-article,.feed-cards .feed-article,.article-card,.series-card) { border-color:transparent; background:var(--panel); box-shadow:0 1px 2px #0000000d,0 16px 34px -20px #0000004d; transition:transform 260ms var(--spring),box-shadow 260ms var(--press),background-color .18s; }
+html .theme-site.cards-raised :is(.feed-article,.article-card,.series-card):hover { transform:translateY(-3px); box-shadow:0 2px 4px #00000012,0 22px 40px -20px #00000059; }
+html .theme-site.cards-flat :is(.feed-article,.feed-cards .feed-article,.article-card,.series-card) { border-color:transparent; box-shadow:none; background:color-mix(in srgb,var(--surface) 70%,var(--panel)); }
+html[data-theme=dark] .theme-site.cards-raised :is(.feed-article,.feed-cards .feed-article,.article-card,.series-card) { box-shadow:0 1px 2px #0006,0 18px 36px -18px #000c; }
+@media(prefers-reduced-motion:reduce) { html .theme-site.cards-raised :is(.feed-article,.article-card,.series-card):hover { transform:none; } }

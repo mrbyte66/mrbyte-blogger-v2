@@ -15,7 +15,7 @@ export function accentForeground(color: string): string {
 export function themeAppearance(theme: Theme): { className: string; style: CSSProperties } {
   const color = accentColor(theme.accent);
   return {
-    className: `theme-site typography-${theme.typography} surface-${theme.surface} width-${theme.width} spacing-${theme.spacing}`,
+    className: `theme-site typography-${theme.typography} surface-${theme.surface} width-${theme.width} spacing-${theme.spacing} corners-${theme.corners ?? "soft"} text-${theme.textSize ?? "medium"} texture-${theme.texture ?? "plain"} cards-${theme.cards ?? "outlined"}`,
     style: { "--theme-accent": color, "--accent": color, "--accent-ink": accentForeground(color) } as CSSProperties,
   };
 }

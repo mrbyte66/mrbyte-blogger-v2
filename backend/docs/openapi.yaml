@@ -2771,6 +2771,10 @@ components:
         surface: {type: string, enum: [paper, night, warm]}
         width: {type: string, enum: [reading, wide]}
         spacing: {type: string, enum: [airy, compact]}
+        corners: {type: string, enum: [sharp, soft, round], description: Corner shape of cards and buttons; absent = soft}
+        textSize: {type: string, enum: [small, medium, large], description: Reading text size; absent = medium}
+        texture: {type: string, enum: [plain, dots, lines], description: Page background; absent = plain}
+        cards: {type: string, enum: [outlined, raised, flat], description: Card style; absent = outlined}
         blocks: {type: array, items: {$ref: '#/components/schemas/ThemeBlock'}}
 
     ThemeBlock:

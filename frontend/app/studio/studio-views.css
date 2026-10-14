@@ -933,3 +933,31 @@ html .studio[data-view="kontakt"] .studio-preview { grid-column:2; grid-row:1; }
   html .studio[data-view="kontakt"] > .studio-workspace,
   html .studio[data-view="sahne"] > .studio-workspace { display:flex; flex-direction:column; align-items:stretch; }
 }
+
+/* Tema tasarımı: grouped settings, each choice a small picture of what it does */
+html .studio[data-view] .theme-settings .settings-group { margin:18px 0 2px; font:500 11px/1 var(--sv-mono); letter-spacing:.12em; text-transform:uppercase; color:var(--sv-sub); }
+html .studio[data-view] .theme-settings .settings-group:first-child { margin-top:4px; }
+html .studio[data-view] .theme-choice { gap:8px; }
+html .studio[data-view] .choice-row { display:grid; grid-template-columns:repeat(var(--choices,3),minmax(0,1fr)); gap:8px; }
+html .studio[data-view] .choice-row button { display:grid; justify-items:center; gap:6px; min-height:0; padding:8px 6px 10px; border:1px solid var(--sv-line); border-radius:18px; background:var(--sv-card); color:var(--sv-ink); transition:transform var(--sv-fast) var(--sv-spring),border-color var(--sv-fast),background var(--sv-fast),box-shadow var(--sv-fast); }
+html .studio[data-view] .choice-row button:hover { transform:translateY(-2px); box-shadow:var(--sv-shadow); }
+html .studio[data-view] .choice-row button:active { transform:scale(.95); }
+html .studio[data-view] .choice-row button[aria-pressed=true] { border-color:var(--sv-primary); background:var(--sv-accent-soft); box-shadow:inset 0 0 0 1px var(--sv-primary); }
+html .studio[data-view] .choice-label { font-size:12px; font-weight:600; line-height:1.2; text-align:center; }
+html .studio[data-view] .choice-preview { position:relative; display:grid; place-items:center; width:100%; height:44px; border-radius:12px; background:var(--sv-sunk); overflow:hidden; color:var(--sv-ink); }
+html .studio[data-view] .choice-preview b { font-weight:500; line-height:1; }
+html .studio[data-view] .choice-preview .type-sans { font:500 22px/1 'DM Sans',system-ui,sans-serif; }
+html .studio[data-view] .choice-preview .type-serif { font:italic 400 24px/1 Georgia,'Times New Roman',serif; }
+html .studio[data-view] .choice-preview .type-mono { font:500 19px/1 'IBM Plex Mono',monospace; }
+html .studio[data-view] .preview-small b { font-size:14px; } html .studio[data-view] .preview-medium b { font-size:19px; } html .studio[data-view] .preview-large b { font-size:26px; }
+html .studio[data-view] .choice-preview>i { display:block; width:30px; height:22px; border-radius:7px; border:1px solid color-mix(in srgb,var(--sv-ink) 22%,transparent); background:var(--sv-card); }
+html .studio[data-view] .preview-paper>i { background:#f4f4ee; } html .studio[data-view] .preview-warm>i { background:#f2e8d8; } html .studio[data-view] .preview-night>i { background:#171e1b; border-color:#171e1b; }
+html .studio[data-view] .preview-plain>i { width:100%; height:100%; border:0; border-radius:0; background:var(--sv-card); }
+html .studio[data-view] .preview-dots>i { width:100%; height:100%; border:0; border-radius:0; background:var(--sv-card) radial-gradient(color-mix(in srgb,var(--sv-ink) 30%,transparent) 1px,transparent 1.4px) 0 0/9px 9px; }
+html .studio[data-view] .preview-lines>i { width:100%; height:100%; border:0; border-radius:0; background:var(--sv-card) linear-gradient(color-mix(in srgb,var(--sv-ink) 18%,transparent) 1px,transparent 1px) 0 0/100% 9px; }
+html .studio[data-view] .preview-sharp>i { border-radius:0; } html .studio[data-view] .preview-soft>i { border-radius:6px; } html .studio[data-view] .preview-round>i { border-radius:12px; }
+html .studio[data-view] .preview-outlined>i { border-color:var(--sv-sub); } html .studio[data-view] .preview-raised>i { border-color:transparent; box-shadow:0 6px 12px -4px rgba(0,0,0,.28); } html .studio[data-view] .preview-flat>i { border-color:transparent; background:var(--sv-line); }
+html .studio[data-view] .choice-preview:has(> i + i) { display:flex; flex-direction:column; justify-content:center; gap:5px; padding:0 10px; }
+html .studio[data-view] .choice-preview:has(> i + i)>i { width:100%; height:4px; border:0; border-radius:999px; background:color-mix(in srgb,var(--sv-ink) 30%,transparent); }
+html .studio[data-view] .preview-reading:has(> i + i)>i { width:56%; align-self:center; } html .studio[data-view] .preview-wide:has(> i + i)>i { width:100%; }
+html .studio[data-view] .preview-airy:has(> i + i) { gap:8px; } html .studio[data-view] .preview-compact:has(> i + i) { gap:3px; }

@@ -7,6 +7,10 @@ export type Typography = "modern" | "editorial" | "mono";
 export type Surface = "paper" | "night" | "warm";
 export type PageWidth = "reading" | "wide";
 export type Spacing = "airy" | "compact";
+export type Corners = "sharp" | "soft" | "round";
+export type TextSize = "small" | "medium" | "large";
+export type Texture = "plain" | "dots" | "lines";
+export type CardStyle = "outlined" | "raised" | "flat";
 export type IntroLayout = "statement" | "centered" | "split";
 export type QuoteDisplay = "band" | "card";
 export type Starter = "scene" | "feed" | "magazine";
@@ -29,10 +33,14 @@ export type Theme = {
   surface: Surface;
   width: PageWidth;
   spacing: Spacing;
+  corners: Corners;
+  textSize: TextSize;
+  texture: Texture;
+  cards: CardStyle;
   blocks: PageBlock[];
 };
 export type Workspace = { version: 1; draft: Theme; applied: Theme };
-const defaultAppearance = { typography: "modern", surface: "paper", width: "reading", spacing: "airy" } as const;
+const defaultAppearance = { typography: "modern", surface: "paper", width: "reading", spacing: "airy", corners: "soft", textSize: "medium", texture: "plain", cards: "outlined" } as const;
 const legacyAccents: Record<string, string> = { mint: "#c8efbc", violet: "#d9c6f0", amber: "#efd19b" };
 const starterKinds: Record<Starter, BlockKind[]> = {
   scene: ["scene"],
@@ -230,6 +238,7 @@ function parseTheme(value: unknown): Theme | null {
   const choices = {
     typography: ["modern", "editorial", "mono"], surface: ["paper", "night", "warm"],
     width: ["reading", "wide"], spacing: ["airy", "compact"],
+    corners: ["sharp", "soft", "round"], textSize: ["small", "medium", "large"], texture: ["plain", "dots", "lines"], cards: ["outlined", "raised", "flat"],
   };
   for (const [key, allowed] of Object.entries(choices)) {
     if (value[key] !== undefined && (typeof value[key] !== "string" || !allowed.includes(value[key]))) return null;
@@ -239,6 +248,10 @@ function parseTheme(value: unknown): Theme | null {
     surface: (value.surface ?? defaultAppearance.surface) as Surface,
     width: (value.width ?? defaultAppearance.width) as PageWidth,
     spacing: (value.spacing ?? defaultAppearance.spacing) as Spacing,
+    corners: (value.corners ?? defaultAppearance.corners) as Corners,
+    textSize: (value.textSize ?? defaultAppearance.textSize) as TextSize,
+    texture: (value.texture ?? defaultAppearance.texture) as Texture,
+    cards: (value.cards ?? defaultAppearance.cards) as CardStyle,
   };
   // Old versions allowed arbitrary order. Keep all identities and text while restoring page roles.
   const rank = (block: PageBlock) => block.kind === "header" ? 0 : isLead(block.kind) ? 1 : block.kind === "footer" ? 3 : 2;

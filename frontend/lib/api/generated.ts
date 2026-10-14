@@ -2209,6 +2209,26 @@ export interface components {
             width: "reading" | "wide";
             /** @enum {string} */
             spacing: "airy" | "compact";
+            /**
+             * @description Corner shape of cards and buttons; absent = soft
+             * @enum {string}
+             */
+            corners?: "sharp" | "soft" | "round";
+            /**
+             * @description Reading text size; absent = medium
+             * @enum {string}
+             */
+            textSize?: "small" | "medium" | "large";
+            /**
+             * @description Page background; absent = plain
+             * @enum {string}
+             */
+            texture?: "plain" | "dots" | "lines";
+            /**
+             * @description Card style; absent = outlined
+             * @enum {string}
+             */
+            cards?: "outlined" | "raised" | "flat";
             blocks: components["schemas"]["ThemeBlock"][];
         };
         ThemeBlock: components["schemas"]["ThemeHeader"] | components["schemas"]["ThemeIntro"] | components["schemas"]["ThemeScene"] | components["schemas"]["ThemeArticles"] | components["schemas"]["ThemeSeries"] | components["schemas"]["ThemeQuote"] | components["schemas"]["ThemeAbout"] | components["schemas"]["ThemeProjects"] | components["schemas"]["ThemeFooter"];

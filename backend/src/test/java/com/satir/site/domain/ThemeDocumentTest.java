@@ -12,7 +12,7 @@ import com.satir.site.domain.ThemeDocument.Block;
 class ThemeDocumentTest {
 
     static ThemeDocument theme(List<Block> blocks) {
-        return new ThemeDocument(1, "Açık defter", "SATIR", "mint", "modern", "paper", "reading", "airy", blocks);
+        return new ThemeDocument(1, "Açık defter", "SATIR", "mint", "modern", "paper", "reading", "airy", null, null, null, null, blocks);
     }
 
     static final Block HEADER = new ThemeDocument.Header("block-header");
@@ -40,16 +40,30 @@ class ThemeDocumentTest {
     void draftsMayBeEmptyButApplyNeedsContent() {
         theme(List.of()).validated();
         assertThatThrownBy(() -> theme(List.of(HEADER, FOOTER)).validatedForApply()).extracting("code").isEqualTo("CONTENT_REQUIRED");
-        assertThatThrownBy(() -> new ThemeDocument(1, " ", "SATIR", "mint", "modern", "paper", "reading", "airy", List.of(SCENE))
+        assertThatThrownBy(() -> new ThemeDocument(1, " ", "SATIR", "mint", "modern", "paper", "reading", "airy", null, null, null, null, List.of(SCENE))
                 .validatedForApply()).extracting("field").isEqualTo("name");
     }
 
     @Test
     void rejectsUnknownAppearanceValues() {
-        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "red", "modern", "paper", "reading", "airy", List.of()).validated())
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "red", "modern", "paper", "reading", "airy", null, null, null, null, List.of()).validated())
                 .extracting("field").isEqualTo("accent");
-        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "#aabbcc", "comic", "paper", "reading", "airy", List.of()).validated())
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "#aabbcc", "comic", "paper", "reading", "airy", null, null, null, null, List.of()).validated())
                 .extracting("field").isEqualTo("typography");
-        assertThat(new ThemeDocument(1, "a", "b", "#AABBCC", "mono", "night", "wide", "compact", List.of()).validated()).isNotNull();
+        assertThat(new ThemeDocument(1, "a", "b", "#AABBCC", "mono", "night", "wide", "compact", null, null, null, null, List.of()).validated()).isNotNull();
+    }
+
+    @Test
+    void lookOptionsAreOptionalButOnlyKnownValues() {
+        assertThat(new ThemeDocument(1, "a", "b", "mint", "modern", "paper", "reading", "airy", "round", "large", "dots", "raised", List.of())
+                .validated()).isNotNull();
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "mint", "modern", "paper", "reading", "airy", "pill", null, null, null, List.of())
+                .validated()).extracting("field").isEqualTo("corners");
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "mint", "modern", "paper", "reading", "airy", null, "huge", null, null, List.of())
+                .validated()).extracting("field").isEqualTo("textSize");
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "mint", "modern", "paper", "reading", "airy", null, null, "stars", null, List.of())
+                .validated()).extracting("field").isEqualTo("texture");
+        assertThatThrownBy(() -> new ThemeDocument(1, "a", "b", "mint", "modern", "paper", "reading", "airy", null, null, null, "glass", List.of())
+                .validated()).extracting("field").isEqualTo("cards");
     }
 }

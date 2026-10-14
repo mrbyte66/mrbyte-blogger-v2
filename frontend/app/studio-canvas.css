@@ -82,3 +82,9 @@ html[data-studio-view] .inline-block-empty { margin:0; padding:10px; font-size:1
 @media (prefers-reduced-motion:reduce) { html[data-studio-view] :is(.inline-plus,.inline-block-menu) { animation:none; } }
 /* the empty line being written gives its gutter to the ＋ */
 html[data-studio-view] .document-editing .article-view .is-writing:empty::after { opacity:0; }
+
+/* page settings without a block of their own: a quiet row of chips at the top of the canvas */
+.canvas-page-chips { position:sticky; top:10px; z-index:20; display:flex; justify-content:flex-end; gap:6px; height:0; padding:0 18px; overflow:visible; pointer-events:none; }
+.canvas-page-chips button { pointer-events:auto; display:inline-flex; align-items:center; gap:6px; height:30px; padding:0 12px; border:1px solid var(--line,#24302a22); border-radius:999px; background:color-mix(in srgb,var(--panel,#fff) 88%,transparent); color:var(--muted,#5a625c); font:600 12px/1 system-ui,sans-serif; cursor:pointer; opacity:.75; -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); transition:opacity 160ms,transform 200ms cubic-bezier(.34,1.32,.5,1),color 160ms; }
+.canvas-page-chips button:hover,.canvas-page-chips button[aria-pressed=true] { opacity:1; color:var(--ink,#242a27); transform:translateY(-1px); }
+.canvas-page-chips img { width:18px; height:18px; border-radius:50%; object-fit:cover; }

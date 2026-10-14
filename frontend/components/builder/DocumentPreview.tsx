@@ -6,6 +6,9 @@ import { navigateEvent, targetFromLink, type DocumentDraft } from "../../lib/bui
 import { scrollBehavior } from "../../lib/motion";
 import { ArticlePageView } from "./ArticlePage";
 import { SeriesPageView } from "../series/SeriesPage";
+/** Settings of the whole page that have no block of their own on the canvas. */
+const pageChips = [["cover", "Kapak"], ["publication", "Yayın"], ["layout", "Düzen"], ["notes", "Notlar"]] as const;
+
 export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: DocumentDraft; theme: Theme; selection: CanvasSelection; onSelect: (field: string, rect?: CanvasRect) => void }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -35,10 +38,15 @@ export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: 
       return;
     }
     event.preventDefault(); event.stopPropagation();
+    const chip = node.closest<HTMLElement>("[data-chip]");
+    if (chip) { onSelect(chip.dataset.chip!, rectOf(chip)); return; }
     const target = node.closest("[data-edit-field]");
     const field = target?.getAttribute("data-edit-field");
     if (target && field) { event.preventDefault(); event.stopPropagation(); onSelect(field, rectOf(target)); }
   }}>
+    {selection.editing && draft.kind === "article" && <nav className="canvas-page-chips" aria-label="Sayfa ayarları">
+      {pageChips.map(([id, label]) => <button key={id} type="button" data-chip={id} aria-pressed={selection.id === id}>{id === "cover" && draft.article.coverUrl ? <img src={draft.article.coverUrl} alt="" /> : null}{label}</button>)}
+    </nav>}
     {draft.kind === "article" ? <ArticlePageView article={draft.article} theme={theme} preview /> : <SeriesPageView slug={draft.series.slug} theme={theme} series={[draft.series]} preview />}
   </div>;
 }

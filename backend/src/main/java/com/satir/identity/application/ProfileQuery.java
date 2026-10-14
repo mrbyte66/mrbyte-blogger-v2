@@ -17,7 +17,11 @@ import com.satir.identity.infrastructure.UserPreferenceRepository;
 public class ProfileQuery {
 
     public record ProfileView(UUID id, String name, String email, boolean verified, String avatar, Role role,
-            boolean publicationEmail, boolean publicationSubscription, String timeZone, long version) {
+            boolean publicationEmail, boolean publicationSubscription, String timeZone, Appearance appearance, long version) {
+    }
+
+    /** Colour mode, motion and Studio view kept with the account; null = not chosen. */
+    public record Appearance(String colorMode, Boolean motion, String studioView) {
     }
 
     private final UserAccountRepository users;
@@ -37,7 +41,8 @@ public class ProfileQuery {
                             .orElseGet(() -> UserPreferenceEntity.defaults(userId));
                     return new ProfileView(user.getId(), user.getDisplayName(), user.getEmail(),
                             user.isVerifiedAndActive(), user.getAvatarKey(), user.getRole(),
-                            preference.isPublicationEmail(), preference.isPublicationSubscription(), preference.getPreferredTimezone(), user.getVersion());
+                            preference.isPublicationEmail(), preference.isPublicationSubscription(), preference.getPreferredTimezone(),
+                            new Appearance(preference.getColorMode(), preference.getMotion(), preference.getStudioView()), user.getVersion());
                 });
     }
 }

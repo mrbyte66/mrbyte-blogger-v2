@@ -295,6 +295,26 @@ export interface paths {
         patch: operations["updatePreferences"];
         trace?: never;
     };
+    "/me/appearance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Colour mode, motion and Studio view kept with the account
+         * @description Replaces the whole set; null clears a value so each browser keeps its own. Not part of the profile version, so it never makes a profile edit stale.
+         */
+        put: operations["updateAppearance"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/password": {
         parameters: {
             query?: never;
@@ -1370,8 +1390,24 @@ export interface components {
                  */
                 timeZone: string;
             };
+            appearance: components["schemas"]["Appearance"];
             /** Format: int64 */
             version: number;
+        };
+        /** @description Appearance that follows the account across browsers; null means not chosen (the browser's own value applies) */
+        Appearance: {
+            /**
+             * @description Gündüz, Gece or Okuma (light with warm paper tones)
+             * @enum {string|null}
+             */
+            colorMode: "light" | "dark" | "reading" | null;
+            /** @description Site motion on or off */
+            motion: boolean | null;
+            /**
+             * @description Studio arrangement; only the owner uses it
+             * @enum {string|null}
+             */
+            studioView: "marjinalya" | "odak" | "kontakt" | "sahne" | null;
         };
         Session: {
             authenticated: boolean;
@@ -2952,6 +2988,33 @@ export interface operations {
             412: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+        };
+    };
+    updateAppearance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Appearance"];
+            };
+        };
+        responses: {
+            /** @description The stored appearance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Appearance"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
         };
     };
     changePassword: {

@@ -7,7 +7,7 @@ import com.satir.identity.application.ProfileQuery.ProfileView;
 
 /** Contract {@code Profile}: only ever returned for the caller's own account. */
 record ProfileResponse(UUID id, String name, String email, boolean verified, String avatar, String role,
-        Preferences preferences, long version) {
+        Preferences preferences, AppearanceResponse appearance, long version) {
 
     record Preferences(boolean publicationEmail, boolean publicationSubscription, String timeZone) {
     }
@@ -15,6 +15,7 @@ record ProfileResponse(UUID id, String name, String email, boolean verified, Str
     static ProfileResponse from(ProfileView view) {
         return new ProfileResponse(view.id(), view.name(), view.email(), view.verified(), view.avatar(),
                 view.role().name().toLowerCase(Locale.ROOT),
-                new Preferences(view.publicationEmail(), view.publicationSubscription(), view.timeZone()), view.version());
+                new Preferences(view.publicationEmail(), view.publicationSubscription(), view.timeZone()),
+                AppearanceResponse.from(view.appearance()), view.version());
     }
 }

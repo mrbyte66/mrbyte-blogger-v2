@@ -258,6 +258,22 @@ public class MembershipService {
         }
     }
 
+    private static final Set<String> COLOR_MODES = Set.of("light", "dark", "reading");
+    private static final Set<String> STUDIO_VIEWS = Set.of("marjinalya", "odak", "kontakt", "sahne");
+
+    /** Replaces the account's appearance; null clears a value (the browser's own choice applies). */
+    @Transactional
+    public void updateAppearance(UUID userId, String colorMode, Boolean motion, String studioView) {
+        members.byId(userId, true).orElseThrow(MembershipService::unauthenticated);
+        if (colorMode != null && !COLOR_MODES.contains(colorMode)) {
+            throw new ValidationException("colorMode", "INVALID");
+        }
+        if (studioView != null && !STUDIO_VIEWS.contains(studioView)) {
+            throw new ValidationException("studioView", "INVALID");
+        }
+        members.updateAppearance(userId, colorMode, motion, studioView);
+    }
+
     // ---------------------------------------------------------------- connections & deletion
 
     @Transactional(readOnly = true)

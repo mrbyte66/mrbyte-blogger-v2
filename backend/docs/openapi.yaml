@@ -378,6 +378,28 @@ paths:
         '422': {$ref: '#/components/responses/Problem'}
         '428': {$ref: '#/components/responses/Problem'}
 
+  /me/appearance:
+    put:
+      tags: [me]
+      operationId: updateAppearance
+      security: [{sessionCookie: [], csrfHeader: []}]
+      summary: Colour mode, motion and Studio view kept with the account
+      description: Replaces the whole set; null clears a value so each browser keeps its own. Not part of the profile version, so it never makes a profile edit stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Appearance'}
+      responses:
+        '200':
+          description: The stored appearance
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Appearance'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+
   /me/password:
     put:
       tags: [me]
@@ -1885,7 +1907,7 @@ components:
     Profile:
       type: object
       additionalProperties: false
-      required: [id, name, email, verified, avatar, role, preferences, version]
+      required: [id, name, email, verified, avatar, role, preferences, appearance, version]
       properties:
         id: {type: string, format: uuid}
         name: {type: string, maxLength: 80}
@@ -1901,7 +1923,18 @@ components:
             publicationEmail: {type: boolean, description: Author notification preference}
             publicationSubscription: {type: boolean, description: Reader subscription; defaults to true}
             timeZone: {type: string, description: IANA zone, examples: [Europe/Istanbul]}
+        appearance: {$ref: '#/components/schemas/Appearance'}
         version: {type: integer, format: int64}
+
+    Appearance:
+      type: object
+      additionalProperties: false
+      required: [colorMode, motion, studioView]
+      description: Appearance that follows the account across browsers; null means not chosen (the browser's own value applies)
+      properties:
+        colorMode: {type: [string, 'null'], enum: [light, dark, reading, null], description: 'Gündüz, Gece or Okuma (light with warm paper tones)'}
+        motion: {type: [boolean, 'null'], description: Site motion on or off}
+        studioView: {type: [string, 'null'], enum: [marjinalya, odak, kontakt, sahne, null], description: Studio arrangement; only the owner uses it}
 
     Session:
       type: object

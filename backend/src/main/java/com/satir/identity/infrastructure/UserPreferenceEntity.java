@@ -7,7 +7,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Account-wide preferences. Distinct from browser-local appearance preferences kept by the frontend. */
+/** Account-wide preferences, including the appearance that follows the account (null = not chosen). */
 @Entity
 @Table(name = "user_preference")
 public class UserPreferenceEntity {
@@ -26,6 +26,15 @@ public class UserPreferenceEntity {
 
     @Column(name = "preferred_timezone", nullable = false)
     private String preferredTimezone;
+
+    @Column(name = "color_mode")
+    private String colorMode;
+
+    @Column(name = "motion")
+    private Boolean motion;
+
+    @Column(name = "studio_view")
+    private String studioView;
 
     protected UserPreferenceEntity() {
     }
@@ -48,4 +57,10 @@ public class UserPreferenceEntity {
     public String getPreferredTimezone() {
         return preferredTimezone;
     }
+
+    public String getColorMode() { return colorMode; }
+
+    public Boolean getMotion() { return motion; }
+
+    public String getStudioView() { return studioView; }
 }

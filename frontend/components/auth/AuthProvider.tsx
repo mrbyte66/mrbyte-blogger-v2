@@ -3,6 +3,7 @@ import type { Input, Schema, Output } from "../../lib/api/contract";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthScreen, AvatarStyle } from "../../lib/auth/model";
+import { parseAppearance, type Appearance } from "../../lib/appearance";
 import { api, ApiError, describe, resetCsrf } from "../../lib/api/http";
 import { AuthDialog } from "./AuthDialog";
 import { AuthSignal } from "./AuthSignal";
@@ -11,6 +12,8 @@ import { AuthSignal } from "./AuthSignal";
 export type AccountProfile = {
   id: string; name: string; email: string; verified: boolean; avatar?: AvatarStyle; role: "member" | "owner";
   publicationEmail: boolean; publicationSubscription: boolean; timeZone: string; version: number; googleConnected: boolean;
+  /** Colour mode, motion and Studio view kept with the account (null = not chosen). */
+  appearance: Appearance;
 };
 export type AccountSession = { profile: AccountProfile; expiresAt: number };
 type ProfileDto = Schema<"Profile">;
@@ -75,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (generation !== refreshGeneration.current) return;
         const p = data.profile;
         userId.current = p.id;
-        setSession({ profile: { id: p.id, name: p.name, email: p.email, verified: p.verified, avatar: (p.avatar ?? undefined) as AvatarStyle | undefined, role: p.role, publicationEmail: p.preferences.publicationEmail, publicationSubscription: p.preferences.publicationSubscription, timeZone: p.preferences.timeZone, version: p.version, googleConnected }, expiresAt: data.expiresAt ? Date.parse(data.expiresAt) : Date.now() });
+        setSession({ profile: { id: p.id, name: p.name, email: p.email, verified: p.verified, avatar: (p.avatar ?? undefined) as AvatarStyle | undefined, role: p.role, publicationEmail: p.preferences.publicationEmail, publicationSubscription: p.preferences.publicationSubscription, timeZone: p.preferences.timeZone, version: p.version, googleConnected, appearance: parseAppearance(p.appearance) ?? { colorMode: null, motion: null, studioView: null } }, expiresAt: data.expiresAt ? Date.parse(data.expiresAt) : Date.now() });
       }
     } catch { /* keep the last known state while the server is unreachable */ }
     finally { if (generation === refreshGeneration.current) setReady(true); }

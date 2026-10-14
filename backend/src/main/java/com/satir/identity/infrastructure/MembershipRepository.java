@@ -94,6 +94,14 @@ public class MembershipRepository {
         return bumped;
     }
 
+    /** Appearance lives beside the other preferences; a missing preference row is created with its defaults. */
+    public void updateAppearance(UUID id, String colorMode, Boolean motion, String studioView) {
+        jdbc.sql("""
+                INSERT INTO user_preference (user_id, color_mode, motion, studio_view) VALUES (:id, :color, :motion, :view)
+                ON CONFLICT (user_id) DO UPDATE SET color_mode = :color, motion = :motion, studio_view = :view
+                """).param("id", id).param("color", colorMode).param("motion", motion).param("view", studioView).update();
+    }
+
     public void updateEmail(UUID id, String email, String normalized, Instant now) {
         jdbc.sql("""
                 UPDATE app_user SET email = :email, email_normalized = :normalized, verified_at = :now, status = 'ACTIVE',

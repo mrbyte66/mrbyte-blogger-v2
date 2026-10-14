@@ -259,6 +259,39 @@ class MembershipIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void appearanceFollowsTheAccountWithoutTouchingTheProfileVersion() {
+        ApiClient api = verifiedMember();
+        Response me = api.get("/api/v1/me");
+        assertThat(me.json().get("appearance").get("colorMode").isNull()).as("nothing chosen yet").isTrue();
+        assertThat(me.json().get("appearance").get("studioView").isNull()).isTrue();
+
+        java.util.Map<String, Object> body = new java.util.HashMap<>();
+        body.put("colorMode", "reading");
+        body.put("motion", false);
+        body.put("studioView", "odak");
+        Response stored = api.put("/api/v1/me/appearance", body, Map.of());
+        assertThat(stored.status()).isEqualTo(200);
+        assertThat(stored.text("colorMode")).isEqualTo("reading");
+        assertThat(stored.json().get("motion").asBoolean()).isFalse();
+
+        Response after = api.get("/api/v1/me");
+        assertThat(after.json().get("appearance").get("colorMode").asString()).isEqualTo("reading");
+        assertThat(after.json().get("appearance").get("studioView").asString()).isEqualTo("odak");
+        assertThat(after.etag()).as("appearance is not part of the profile version").isEqualTo(me.etag());
+        assertThat(api.get("/api/v1/auth/session").json().get("profile").get("appearance").get("colorMode").asString()).isEqualTo("reading");
+
+        body.put("colorMode", null);
+        assertThat(api.put("/api/v1/me/appearance", body, Map.of()).json().get("colorMode").isNull()).as("null clears a choice").isTrue();
+        body.put("colorMode", "sepia");
+        Response invalid = api.put("/api/v1/me/appearance", body, Map.of());
+        assertThat(invalid.status()).isEqualTo(422);
+        body.put("colorMode", "dark");
+        body.put("studioView", "klasik");
+        assertThat(api.put("/api/v1/me/appearance", body, Map.of()).status()).isEqualTo(422);
+        assertThat(client().put("/api/v1/me/appearance", body, Map.of()).status()).as("signed-in accounts only").isIn(401, 403);
+    }
+
+    @Test
     void emailChangeIsConfirmedFromTheNewAddress() {
         ApiClient api = verifiedMember();
         reauth(api, PASSWORD);

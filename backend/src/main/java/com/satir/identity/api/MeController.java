@@ -42,6 +42,9 @@ class MeController {
     record PreferencesPatch(Boolean publicationEmail, Boolean publicationSubscription, String timeZone) {
     }
 
+    record AppearanceBody(String colorMode, Boolean motion, String studioView) {
+    }
+
     record PasswordChange(String password, String passwordConfirmation) {
         @Override
         public String toString() {
@@ -93,6 +96,13 @@ class MeController {
         membership.updatePreferences(principal.userId(), Preconditions.requireVersion(ifMatch), body.publicationEmail(), body.publicationSubscription(),
                 body.timeZone(), current);
         return withEtag(profile(principal));
+    }
+
+    /** Not versioned: appearance changes often and must never make a profile edit stale. */
+    @PutMapping("/appearance")
+    AppearanceResponse updateAppearance(@AuthenticationPrincipal SatirPrincipal principal, @RequestBody AppearanceBody body) {
+        membership.updateAppearance(principal.userId(), body.colorMode(), body.motion(), body.studioView());
+        return AppearanceResponse.from(profileQuery.ownProfile(principal.userId()).orElseThrow(SessionSupport::unauthenticated).appearance());
     }
 
     @PutMapping("/password")

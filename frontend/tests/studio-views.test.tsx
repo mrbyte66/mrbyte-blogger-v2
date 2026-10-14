@@ -1,3 +1,4 @@
+import { writingTool } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -35,14 +36,14 @@ function chooseView(name: string) {
 }
 
 describe("Studio views", () => {
-  it("starts in Marjinalya: rail, sheet and a margin column with the page's address", () => {
+  it("starts in Marjinalya with a quiet sheet and optional writing tools", () => {
     studio();
     selectPage(articles[0].title);
     expect(root().dataset.view).toBe("marjinalya");
     expect(screen.getByRole("navigation", { name: "Studio bölümleri" })).toBeTruthy();
-    const margin = screen.getByRole("complementary", { name: "Kenar notları" });
-    expect(within(margin).getByText(`/yazilar/${articles[0].slug}`)).toBeTruthy();
-    expect(document.querySelector(".block-bar")?.textContent).toMatch(/ile blok ekle/);
+    expect(screen.queryByRole("complementary",{name:"Kenar notları"})).toBeNull();
+    expect(screen.getByLabelText("Yazı araçları")).toBeTruthy();
+    expect(document.querySelector(".block-bar")).toBeNull();
   });
 
   it("switches the view from its own menu, remembers it and tells the canvas frame", () => {
@@ -53,7 +54,7 @@ describe("Studio views", () => {
     expect(localStorage.getItem(studioViewStorageKey)).toBe("odak");
     expect(document.documentElement.dataset.studioView).toBe("odak");
     expect(screen.queryByRole("complementary", { name: "Kenar notları" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Blok" })).toBeTruthy();
+    expect(screen.getByLabelText("Yazı araçları")).toBeTruthy();
     expect(screen.getByRole("switch", { name: "Odak modu" })).toBeTruthy();
   });
 
@@ -105,14 +106,14 @@ describe("Studio views", () => {
     fireEvent.click(screen.getByRole("button", { name: "Site tasarımı" }));
     expect(screen.queryByLabelText("Kenar notları")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: `Son açılan yazı: ${articles[0].title}` }));
-    expect(screen.getByRole("complementary", { name: "Kenar notları" })).toBeTruthy();
+    expect(screen.queryByRole("complementary", { name: "Kenar notları" })).toBeNull();
   });
 
   it("closes the settings panel on Escape, on empty space and on a canvas press, but not on tool buttons", () => {
     studio();
     selectPage(articles[0].title);
     const panel = () => screen.getByLabelText("Seçili alanın ayarları");
-    const open = () => fireEvent.click(screen.getByRole("button", { name: "Kapak görseli" }));
+    const open = () => fireEvent.click(writingTool("Kapak görseli"));
     open();
     expect(panel().hidden).toBe(false);
     fireEvent.keyDown(document, { key: "Escape" });
@@ -137,7 +138,7 @@ describe("Studio views", () => {
     expect(panel().style.position).toBe("fixed");
     expect(root().classList.contains("has-inspector")).toBe(false);
     fireEvent.keyDown(document, { key: "Escape" });
-    fireEvent.click(screen.getByRole("button", { name: "Kapak görseli" }));
+    fireEvent.click(writingTool("Kapak görseli"));
     expect(panel().classList.contains("is-anchored")).toBe(false);
   });
 
@@ -188,4 +189,10 @@ describe("caret reports", () => {
     expect(parseCaret({ type: previewEvents.caret, row: 1.5, column: 1 })).toBeUndefined();
     expect(parseCaret({ type: "other", row: 1, column: 1 })).toBeUndefined();
   });
+});
+it("applies the default view to html even before a preference has ever been saved",()=>{
+ delete document.documentElement.dataset.studioView;
+ localStorage.removeItem(studioViewStorageKey);
+ studio();
+ expect(document.documentElement.dataset.studioView).toBe("marjinalya");
 });

@@ -7,7 +7,7 @@ import { announceAppearanceChange } from "../appearance-events";
  * signed in, on the account (like the colour mode); <html data-studio-view> lets the canvas frame follow it.
  */
 export const studioViews = [
-  { id: "marjinalya", label: "Marjinalya", detail: "Satır numaralı sayfa, kenarda notlar ve adres" },
+  { id: "marjinalya", label: "Marjinalya", detail: "Sessiz sayfa, araçlar gerektiğinde yanında" },
   { id: "odak", label: "Odak", detail: "Yalnız yazı; araçlar altta, geri kalan sessiz" },
   { id: "kontakt", label: "Kontakt", detail: "Kapak kartlarıyla yazı kitaplığı, yan çekmece" },
   { id: "sahne", label: "Sahne", detail: "Sayfa sahnede, bloklar altta bir şeritte" },
@@ -56,13 +56,13 @@ export function writeStudioView(view: StudioView) {
 function subscribe(notify: () => void) {
   function storage(event: StorageEvent) {
     if (event.key !== null && event.key !== studioViewStorageKey) return;
-    const stored = readStoredStudioView();
-    if (stored) document.documentElement.dataset.studioView = stored;
+    const stored = readStoredStudioView() ?? defaultStudioView;
+    document.documentElement.dataset.studioView = stored;
     notify();
   }
   // Late hydration: the early <head> script may have run before this subtree existed.
-  const stored = readStoredStudioView();
-  if (stored && document.documentElement.dataset.studioView !== stored) document.documentElement.dataset.studioView = stored;
+  const stored = readStoredStudioView() ?? parseStudioView(document.documentElement.dataset.studioView) ?? defaultStudioView;
+  if (document.documentElement.dataset.studioView !== stored) document.documentElement.dataset.studioView = stored;
   window.addEventListener(changedEvent, notify);
   window.addEventListener("storage", storage);
   return () => { window.removeEventListener(changedEvent, notify); window.removeEventListener("storage", storage); };

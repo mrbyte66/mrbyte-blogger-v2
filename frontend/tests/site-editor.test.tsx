@@ -1,4 +1,4 @@
-import { readCanvas, writeCanvas } from "./helpers/canvas";
+import { readCanvas, writeCanvas, writingTool } from "./helpers/canvas";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ArticleRoute } from "../components/builder/ArticlePage";
@@ -47,7 +47,6 @@ describe("page editing and visitor content", () => {
     expect(post).toHaveBeenCalledWith(expect.objectContaining({type:previewEvents.selection,id:"excerpt"}),window.location.origin);
     fireEvent.click(screen.getByRole("button", { name: "Önizle" }));
     message({ type: navigateEvent, target: { kind: "series", slug: initialSeries[0].slug } });
-    fireEvent.click(screen.getByRole("button", {name:"Seri başlığı"}));
     expect(readCanvas().kind).toBe("series");
   });
   it("creates an independent article, publishes it and renders it without series membership", async () => {
@@ -157,3 +156,23 @@ function selectPage(title: string | RegExp) {
   fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
   fireEvent.click(screen.getByRole("button", { name: title }));
 }
+
+it("keeps writing done during a first save and uses the returned version for the next save", async()=>{
+ const {site}=studio();
+ fireEvent.click(screen.getByRole("button",{name:/^Sayfalar:/}));
+ fireEvent.click(screen.getByRole("button",{name:/Yeni yazı/}));
+ writeCanvas("title","Kesintisiz yazmak");
+ writeCanvas("paragraph-0","İlk metin.");
+ const save=site.studio.saveArticle;
+ let release!:()=>void;
+ site.studio.saveArticle=async(...args)=>{await new Promise<void>(resolve=>{release=resolve;});return save(...args);};
+ fireEvent.click(screen.getByRole("button",{name:/Sayfayı kaydet/}));
+ writeCanvas("paragraph-0","Kaydetme sürerken eklenen metin.");
+ await act(async()=>{release();});
+ expect(readCanvas()).toMatchObject({article:{paragraphs:["Kaydetme sürerken eklenen metin."]}});
+ expect(site.article("kesintisiz-yazmak")?.paragraphs).toEqual(["İlk metin."]);
+ site.studio.saveArticle=save;
+ await click(screen.getByRole("button",{name:/Sayfayı kaydet/}));
+ expect(site.article("kesintisiz-yazmak")?.paragraphs).toEqual(["Kaydetme sürerken eklenen metin."]);
+ expect(site.calls.filter(call=>call.startsWith("save article"))).toHaveLength(2);
+});

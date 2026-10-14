@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { documentEvent, parseDocumentDraft, type DocumentDraft } from "../../lib/builder/document-protocol";
 import { documentText, inlineEditEvent } from "../../lib/builder/inline-edit";
 
@@ -62,4 +62,10 @@ export function writeCanvas(field: string, value: string) {
   act(() => {
     window.dispatchEvent(new MessageEvent("message", { data: { type: inlineEditEvent, edit }, source: frame().contentWindow, origin: window.location.origin }));
   });
+}
+
+/** Open a secondary writing control through its compact menu. */
+export function writingTool(name:string) {
+  if(!screen.queryByRole("button",{name})) fireEvent.click(screen.getByLabelText("Yazı araçları"));
+  return screen.getByRole("button",{name});
 }

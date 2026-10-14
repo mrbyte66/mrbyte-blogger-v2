@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 export function EditorIcon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, string> = {
+    microphone:"M9 4a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0zM6 10v1a6 6 0 0 0 12 0v-1M12 17v4M8 21h8",
     title:"M4 5h16M12 5v14M8 19h8", excerpt:"M4 6h16M4 12h11M4 18h7", body:"M4 5h16M4 10h16M4 15h16M4 20h10",
     cover:"M6 3h12v18H6zM6 15l3.5-3.5 3 3 2-2 3.5 3.5M14.5 7.5h.01", figure:"M3 4h18v16H3zM3 16l6-6 5 5 3-3 4 4M16 8h.01",
     code:"m8 6-6 6 6 6m8-12 6 6-6 6m-3-14-2 16", table:"M3 4h18v16H3zM3 10h18M9 4v16",

@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Theme } from "../../lib/builder/model";
 import type { DocumentDraft } from "../../lib/builder/document-protocol";
-import { documentText, inlineEditEvent, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
+import { editDocumentText, documentText, inlineEditEvent, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
 import { previewEvents, rectOf, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { adjustMarks, clearMark, covers, isSafeHref, markAt, safeMarks, toggleMark, type MarkType, type TextMark } from "../../lib/articles/marks";
 import { markedHtml } from "../../lib/articles/marked-html";
@@ -64,6 +64,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   live.current = active;
   if (active && draft) active.edit.id = draft.kind === "article" ? draft.article.slug : draft.series.slug;
   const pendingField = useRef<string | null>(null);
+  const pendingExpected=useRef<{value:string;length:number}|null>(null);
   const pendingUntil = useRef(0);
   const [position, setPosition] = useState<CSSProperties>({});
   const [value, setValue] = useState("");
@@ -74,10 +75,13 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   const [lineBox, setLineBox] = useState<{ left: number; top: number; bottom: number; height: number } | null>(null);
   const menuRef = useRef(menu); menuRef.current = menu;
   const kindRef = useRef<string | null>(null);
+  const clickPoint=useRef<{x:number;y:number}|null>(null);
   const selectAllNext = useRef(false);
   // A block turned into a heading or quote is reopened only once the Studio's draft has the new kind.
   const pendingKind = useRef<string | null>(null);
-  useEffect(() => { if (!active) setMenu(null); }, [active]);
+  useEffect(() => { if (!active) { setMenu(null); setMoreFormats(false); } }, [active]);
+  const [moreFormats, setMoreFormats] = useState(false);
+  const pendingOffset = useRef<number | null>(null);
   const [formats, setFormats] = useState<Formats>(noFormats);
   const [linkEditor, setLinkEditor] = useState<{ href: string; error: string } | null>(null);
   const history = useRef<Snapshot[]>([]);
@@ -90,9 +94,14 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   if (!active) frozen.current = children;
   const toolbar = useRef<HTMLDivElement>(null);
   const identity = draft ? `${draft.kind}:${draft.kind === "article" ? draft.article.id ?? "new" : draft.series.id}` : "home";
-  useEffect(() => { setActive(null); }, [identity, enabled]);
+  const previousIdentity=useRef(identity);
+  useEffect(() => {
+    const firstSave=previousIdentity.current==="article:new" && identity.startsWith("article:") && identity!=="article:new";
+    if(!firstSave || !enabled) setActive(null);
+    previousIdentity.current=identity;
+  },[identity,enabled]);
   // The Studio replaced the text (undo, a server copy): stop writing without sending anything back.
-  useEffect(() => { if (reset) { setLinkEditor(null); setActive(null); } }, [reset]);
+  useEffect(() => { if (reset) { pendingField.current=null; pendingExpected.current=null; pendingKind.current=null; setLinkEditor(null); setActive(null); } }, [reset]);
   useEffect(() => { if (!active) reportCaret(null); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -206,8 +215,15 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     node.setAttribute("role", "textbox"); node.setAttribute("aria-label", `${active.label} · tuval`);
     if (active.rich) node.setAttribute("aria-multiline", "true");
     node.classList.add("is-writing"); node.focus({ preventScroll: true });
+    if(clickPoint.current) {
+      const point=clickPoint.current; clickPoint.current=null;
+      const doc=document as Document & {caretRangeFromPoint?: (x:number,y:number)=>Range|null};
+      const range=doc.caretRangeFromPoint?.(point.x,point.y);
+      if(range && node.contains(range.startContainer)) { const sel=window.getSelection(); sel?.removeAllRanges(); sel?.addRange(range); }
+    }
+    if(draft?.kind==="article" && !draft.article.id && active.edit.field==="title" && active.original==="Yeni yazı") window.getSelection()?.selectAllChildren(node);
     reposition();
-    function input() {
+    function input(event: Event) {
       const item = live.current;
       if (!item) return;
       let next: string; let nextMarks: TextMark[] = [];
@@ -230,17 +246,36 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
         item.edit = { ...item.edit, value: next, previous: next, ...(item.rich ? { marks: nextMarks } : {}) };
       }
       setValue(next); reposition();
-      shortcuts(item, next);
+      if(!next && draft?.kind==="article" && item.edit.field.startsWith("paragraph-") && kindRef.current!=="paragraph") { finish(true,"paragraph"); return; }
+      if(!(event as InputEvent).isComposing) shortcuts(item, next);
     }
     function paste(event: ClipboardEvent) {
       // Rich content is never pasted: only the text, so marks always come from the toolbar.
       event.preventDefault();
       const text = event.clipboardData?.getData("text/plain") ?? "";
-      if (text) document.execCommand("insertText", false, text.replace(/\r\n?/g, "\n"));
+      const item=live.current;
+      if(!text || !item) return;
+      const clean=item.edit.field==="title" ? text.replace(/\s*\r?\n\s*/g," ") : text.replace(/\r\n?/g,"\n"), at=selectionOffsets(node) ?? {start:textOf(item).length,end:textOf(item).length};
+      if(clean.includes("\n") && draft?.kind==="article" && item.edit.field.startsWith("paragraph-")) {
+        const lines=clean.split(/\n(?:[ \t]*\n)*/);
+        const last=Number(item.edit.field.slice(10))+lines.length-1;
+        const current=textOf(item);
+        if(draft.article.paragraphs.length+lines.length-1>200 || current.length+clean.length>20000) return;
+        pendingField.current=`paragraph-${last}`; pendingUntil.current=Date.now()+2000;
+        pendingOffset.current=lines.length===1 ? at.start+clean.length : lines[lines.length-1].length;
+        const predicted=editDocumentText(draft,{...item.edit,value:current,previous:documentText(draft,item.edit.field)?.value ?? item.edit.previous,marks:marks.current,action:"paste",offset:at.start,end:at.end,pasteText:clean});
+        if(predicted?.kind!=="article") {pendingField.current=null;return;}
+        pendingExpected.current={value:documentText(predicted,pendingField.current!)?.value ?? "",length:predicted.article.paragraphs.length};
+        post(item,current,marks.current,{action:"paste",offset:at.start,end:at.end,pasteText:clean});
+        setActive(null); return;
+      }
+      const current=textOf(item), next=current.slice(0,at.start)+clean+current.slice(at.end);
+      if(next.length>item.max) return;
+      apply(item,next,safeMarks(next,adjustMarks(current,next,marks.current)),{start:at.start+clean.length,end:at.start+clean.length});
     }
     function drop(event: DragEvent) { event.preventDefault(); }
     node.addEventListener("input", input);
-    if (active.rich) { node.addEventListener("paste", paste); node.addEventListener("drop", drop); }
+    node.addEventListener("paste", paste); node.addEventListener("drop", drop);
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     document.addEventListener("selectionchange", reposition);
@@ -255,24 +290,35 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  function finish(apply: boolean, action?: InlineEdit["action"], offset?: number) {
+  function finish(apply: boolean, action?: InlineEdit["action"], offset?: number, end?: number) {
     const item = live.current;
     if (!item) return;
     const read = item.rich ? readMarked(item.node) : null;
     const next = read ? read.text : item.node.innerText ?? item.node.textContent ?? "";
     const nextMarks = read?.marks ?? [];
-    if (apply && (next.trim() || item.allowEmpty) && (next !== item.edit.previous || action || (item.rich && JSON.stringify(nextMarks) !== JSON.stringify(item.edit.marks ?? [])))) post(item, next, nextMarks, { ...(action ? { action } : {}), ...(offset !== undefined ? { offset } : {}) });
+    if (apply && (next.trim() || item.allowEmpty || action==="paragraph" || action==="remove") && (next !== item.edit.previous || action || (item.rich && JSON.stringify(nextMarks) !== JSON.stringify(item.edit.marks ?? [])))) post(item, next, nextMarks, { ...(action ? { action } : {}), ...(offset !== undefined ? { offset } : {}), ...(end !== undefined ? {end} : {}) });
     else if (!apply) {
       if (item.edit.previous !== item.original || (item.rich && JSON.stringify(item.edit.marks ?? []) !== JSON.stringify(item.originalMarks))) post(item, item.original, item.originalMarks);
       if (item.rich) paint(item, item.original, item.originalMarks); else item.node.textContent = item.original;
     }
     if (action === "insert-after" || action === "split") { pendingField.current = `paragraph-${Number(item.edit.field.slice(10)) + 1}`; pendingUntil.current = Date.now() + 2000; }
+    if(action==="split") pendingOffset.current=0;
+    if(action==="join-previous" && draft?.kind==="article") {
+      const i=Number(item.edit.field.slice(10)); pendingField.current=`paragraph-${i-1}`; pendingUntil.current=Date.now()+2000; pendingOffset.current=draft.article.paragraphs[i-1].length;
+    }
+    if(action==="join-next") { pendingField.current=item.edit.field; pendingUntil.current=Date.now()+2000; pendingOffset.current=next.length; }
+    if(action==="remove" && draft?.kind==="article") { pendingField.current=`paragraph-${Math.min(Number(item.edit.field.slice(10)),Math.max(0,draft.article.paragraphs.length-2))}`; pendingUntil.current=Date.now()+2000; pendingOffset.current=0; }
+    if(action && pendingField.current && draft?.kind==="article") {
+      const predicted=editDocumentText(draft,{...item.edit,value:next,previous:documentText(draft,item.edit.field)?.value ?? item.edit.previous,marks:nextMarks,action,...(offset!==undefined ? {offset}:{}),...(end!==undefined ? {end}: {})});
+      if(predicted?.kind==="article") pendingExpected.current={value:documentText(predicted,pendingField.current)?.value ?? "",length:predicted.article.paragraphs.length};
+    }
     setLinkEditor(null);
     setActive(null);
   }
   useEffect(() => {
     if (!pendingField.current || active) return;
-    if (Date.now() > pendingUntil.current) { pendingField.current = null; return; }
+    if (Date.now() > pendingUntil.current) { pendingField.current = null; pendingExpected.current=null; return; }
+    if(pendingExpected.current && draft?.kind==="article" && (draft.article.paragraphs.length!==pendingExpected.current.length || documentText(draft,pendingField.current)?.value!==pendingExpected.current.value)) return;
     const node = root.current?.querySelector<HTMLElement>(`[data-edit-field="${pendingField.current}"]`);
     if (pendingKind.current && draft?.kind === "article") {
       const at = Number(pendingField.current.slice(10)), format = draft.article.paragraphFormats?.[at];
@@ -280,8 +326,9 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       if (now !== pendingKind.current) return;
     }
     if (node && locate(node)) {
-      pendingField.current = null; pendingKind.current = null; node.scrollIntoView({ block: "nearest" }); activate(node);
+      pendingField.current = null; pendingExpected.current=null; pendingKind.current = null; node.scrollIntoView({ block: "nearest" }); activate(node);
       // A block made from the menu arrives with its starter text selected, so typing replaces it.
+      if(pendingOffset.current!==null) { const at=pendingOffset.current; pendingOffset.current=null; requestAnimationFrame(()=>selectOffsets(node,at,at)); }
       if (selectAllNext.current) { selectAllNext.current = false; requestAnimationFrame(() => { window.getSelection()?.selectAllChildren(node); }); }
     }
     // The new paragraph must first arrive from the parent.
@@ -295,7 +342,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const rich = text.marks !== undefined;
     const initialMarks = rich ? safeMarks(text.value, text.marks!) : [];
     history.current = [{ text: text.value, marks: initialMarks }]; cursor.current = 0; marks.current = initialMarks; saved.current = null;
-    setValue(text.value); setLinkEditor(null);
+    setValue(text.value); setLinkEditor(null); setMoreFormats(false);
     const paragraph = draft?.kind === "article" && field.startsWith("paragraph-") ? Number(field.slice(10)) : -1;
     const allowEmpty = !!draft && (field === "excerpt" || (draft.kind === "article" && paragraph >= 0 && (!draft.article.paragraphFormats?.[paragraph] || draft.article.paragraphFormats[paragraph].kind === "paragraph")));
     setActive({ original: text.value, originalMarks: initialMarks, allowEmpty, max: text.max, node, rich, label: field === "title" ? "Başlık" : "Metin", edit: { scope: draft ? "document" : "theme", id, field, value: text.value, previous: text.value, ...(rich ? { marks: initialMarks } : {}) } });
@@ -315,7 +362,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   /** Applies a new text+marks state to the active rich node and tells the Studio. */
   function apply(item: Active, text: string, nextMarks: TextMark[], select?: { start: number; end: number }) {
     marks.current = nextMarks;
-    if (item.rich) paint(item, text, nextMarks, select); else item.node.textContent = text;
+    if (item.rich) paint(item, text, nextMarks, select); else { item.node.textContent = text; item.node.focus(); if(select) selectOffsets(item.node,select.start,select.end); }
     remember({ text, marks: nextMarks });
     post(item, text, nextMarks);
     item.edit = { ...item.edit, value: text, previous: text, ...(item.rich ? { marks: nextMarks } : {}) };
@@ -377,8 +424,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const item = live.current;
     if (!item) return;
     const clearSlash = () => { if (menuRef.current && readMarked(item.node).text.startsWith("/")) { item.node.textContent = ""; item.node.dispatchEvent(new Event("input", { bubbles: true })); } };
-    if (choice.id === "paragraph") { clearSlash(); setMenu(null); item.node.focus(); return; }
-    if (choice.id === "heading2" || choice.id === "heading3" || choice.id === "quote") { turnInto(item, choice.id, ""); return; }
+    if (choice.id === "paragraph") { clearSlash(); setMenu(null); if(kindRef.current!=="paragraph") finish(true,"paragraph"); else item.node.focus(); return; }
+    if (choice.id === "heading2" || choice.id === "heading3" || choice.id === "quote") { turnInto(item, choice.id, menuRef.current && textOf(item).startsWith("/") ? "" : textOf(item)); return; }
     // Figure, code and table have their own settings: the Studio opens them as a card beside this line.
     const rect = rectOf(item.node);
     clearSlash(); setMenu(null);
@@ -448,10 +495,26 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   const matches = blockChoices.filter((choice) => !query || choice.words.split(" ").some((word) => word.startsWith(query)) || choice.label.toLocaleLowerCase("tr").startsWith(query));
   const kind = draft?.kind === "article" && index >= 0 ? (draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph") : null;
   kindRef.current = kind;
-  const showPlus = !!active?.rich && index >= 0 && draft?.kind === "article" && kind === "paragraph" && !value.trim() && !menu && !!lineBox;
+  const showPlus = !!active && index >= 0 && draft?.kind === "article" && !menu && !selectionText && !!lineBox && (typeof window === "undefined" || window.innerWidth>=480 || !value.trim());
   const menuStyle: CSSProperties | undefined = lineBox ? { left: Math.max(8, Math.min(lineBox.left, window.innerWidth - 300)), ...(lineBox.bottom + 360 < window.innerHeight ? { top: lineBox.bottom + 8 } : { bottom: window.innerHeight - lineBox.top + 8 }) } : undefined;
   return <div ref={root} className="inline-canvas-root" onKeyDownCapture={(event) => {
-    if (!enabled) return;
+    if (!enabled || event.nativeEvent.isComposing || event.keyCode===229) return;
+    if((event.metaKey||event.ctrlKey) && event.key.toLowerCase()==="s" && draft) { event.preventDefault(); window.parent.postMessage({type:previewEvents.save},window.location.origin); return; }
+    if(active && active.node.contains(event.target as Node)) {
+      const at=selectionOffsets(active.node);
+      const text=textOf(active);
+      if(event.key==="Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && ["title","excerpt"].includes(active.edit.field) && draft?.kind==="article") {
+        event.preventDefault(); const target=active.edit.field==="title" ? "excerpt" : "paragraph-0"; finish(true); pendingField.current=target; pendingUntil.current=Date.now()+2000; pendingOffset.current=0; return;
+      }
+      if(at && at.start===at.end && active.edit.field.startsWith("paragraph-") && draft?.kind==="article") {
+        const i=Number(active.edit.field.slice(10));
+        if(event.key==="Backspace" && at.start===0) { event.preventDefault(); if(kindRef.current!=="paragraph") { pendingField.current=active.edit.field; pendingUntil.current=Date.now()+2000; pendingOffset.current=0; finish(true,"paragraph"); } else if(i>0) finish(true,"join-previous"); return; }
+        if(event.key==="Delete" && at.end===text.length && i<draft.article.paragraphs.length-1) { event.preventDefault(); finish(true,"join-next"); return; }
+        if((event.key==="ArrowUp" && at.start===0 && i>0) || (event.key==="ArrowDown" && at.end===text.length && i<draft.article.paragraphs.length-1)) {
+          event.preventDefault(); const next=i+(event.key==="ArrowUp" ? -1 : 1); finish(true); pendingField.current=`paragraph-${next}`; pendingUntil.current=Date.now()+2000; pendingOffset.current=event.key==="ArrowUp" ? draft.article.paragraphs[next].length : 0; return;
+        }
+      }
+    }
     if (active && menu && active.node.contains(event.target as Node)) {
       const count = Math.max(1, matches.length);
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMenuIndex((i) => (i + (event.key === "ArrowDown" ? 1 : -1) + count) % count); return; }
@@ -462,18 +525,18 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       const insideNode = active.node.contains(event.target as Node);
       if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && active.edit.field.startsWith("paragraph-") && insideNode) {
         event.preventDefault();
-        let offset = textOf(active).length;
-        if (active.rich) { const at = selectionOffsets(active.node); if (at) offset = at.start; }
+        let offset = textOf(active).length, end=offset;
+        if (active.rich) { const at = selectionOffsets(active.node); if (at) {offset = at.start; end=at.end;} }
         else {
           const selection = window.getSelection();
           if (selection?.rangeCount && active.node.contains(selection.anchorNode)) { const range = selection.getRangeAt(0).cloneRange(); range.selectNodeContents(active.node); range.setEnd(selection.anchorNode!, selection.anchorOffset); offset = range.toString().length; }
         }
-        finish(true, "split", offset); return;
+        finish(true, "split", offset,end); return;
       }
       if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (linkEditor) { setLinkEditor(null); active.node.focus(); } else finish(false); return; }
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); finish(true); return; }
       const key = event.key.toLowerCase();
-      if (key === "z" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); travel(event.shiftKey ? 1 : -1); return; }
+      if (key === "z" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); if((!event.shiftKey && cursor.current===0) || (event.shiftKey && cursor.current>=history.current.length-1)) { finish(true); window.parent.postMessage({type:event.shiftKey ? previewEvents.redo : previewEvents.undo},window.location.origin); } else travel(event.shiftKey ? 1 : -1); return; }
       if (active.rich && insideNode && (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && (key === "x" || key === "h")) { event.preventDefault(); format(key === "x" ? "strike" : "highlight"); return; }
       if (active.rich && insideNode && (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey) {
         if (key === "b") { event.preventDefault(); format("bold"); return; }
@@ -489,7 +552,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const node = (event.target as HTMLElement).closest<HTMLElement>(draft ? "[data-edit-field]" : "[data-inline-field]");
     // A link inside the paragraph being written must not navigate.
     if (active && node === active.node) { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); return; }
-    if (node && locate(node)) { event.preventDefault(); event.stopPropagation(); activate(node); }
+    if (node && locate(node)) { event.preventDefault(); event.stopPropagation(); clickPoint.current={x:event.clientX,y:event.clientY}; activate(node); }
     else if (active) finish(true);
   }} onBlurCapture={(event) => {
     if (!active || !active.node.contains(event.target as Node)) return;
@@ -500,17 +563,17 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     {showPlus && <button type="button" className="inline-plus" aria-label="Blok ekle" title="Blok ekle · ya da / yaz" style={{ left: Math.max(4, lineBox!.left - 44), top: lineBox!.top + (lineBox!.height - 32) / 2 }} onMouseDown={(event) => event.preventDefault()} onClick={() => { setMenuIndex(0); setMenu({ query: "" }); }}><EditorIcon name="plus" size={18} /></button>}
     {active && menu && <div className="inline-block-menu" role="listbox" aria-label="Blok ekle" style={menuStyle} onMouseDown={(event) => event.preventDefault()}>
       <span className="inline-block-menu-title">{menu.query ? `“${menu.query}”` : "BLOK EKLE"}</span>
-      {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true">{choice.glyph}</span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span>{choice.keys && <kbd>{choice.keys}</kbd>}</button>)}
+      {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-label={choice.label} aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true">{choice.id.startsWith("heading") ? "T" : choice.glyph}</span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span></button>)}
+      {index>=0 && draft?.kind==="article" && !menu.query && <div className="writing-block-actions" role="group" aria-label="Paragraf işlemleri"><button aria-label="Paragrafı yukarı taşı" disabled={index===0} onClick={()=>finish(true,"move-up")}><EditorIcon name="up" size={16}/></button><button aria-label="Paragrafı aşağı taşı" disabled={index===draft.article.paragraphs.length-1} onClick={()=>finish(true,"move-down")}><EditorIcon name="down" size={16}/></button><button aria-label="Altına paragraf ekle" onClick={()=>finish(true,"insert-after")}><EditorIcon name="plus" size={16}/></button><button aria-label="Bloğu sil" onClick={()=>finish(true,"remove")}><EditorIcon name="trash" size={16}/></button></div>}
       {!matches.length && <p className="inline-block-empty">Eşleşen blok yok · Esc</p>}
     </div>}
-    {/* An empty line only shows its ＋ (like Medium); the formatting bar comes with the first character. */}
-    {active && !showPlus && !menu && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" data-rich={active.rich ? "" : undefined} style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
-      {index >= 0 && draft?.kind === "article" && <><div className="inline-group inline-kinds" role="group" aria-label="Blok türü">{blockTypes.map((item) => <button key={item.action} type="button" className="inline-kind" aria-label={item.label} title={item.label} aria-pressed={kind === item.action} disabled={kind !== item.action && ((item.action !== "paragraph" && !value.trim()) || (item.action.startsWith("heading") && value.length > 300) || (item.action === "quote" && value.length > 4000))} onClick={() => { if (kind !== item.action) finish(true, item.action); }}>{item.glyph}</button>)}</div><i /></>}
-      {active.rich && <><div className="inline-group" role="group" aria-label="Biçim">{toggles.map((item) => <button key={item.type} type="button" aria-label={item.label} title={`${item.label} · ${item.keys}`} aria-pressed={formats[item.type]} disabled={kind?.startsWith("heading")} onClick={() => format(item.type)}><EditorIcon name={item.icon} size={17} /></button>)}<button type="button" aria-label="Bağlantı" title="Bağlantı · ⌘K" aria-pressed={formats.link} disabled={kind?.startsWith("heading")} onClick={openLink}><EditorIcon name="link" size={17} /></button><button type="button" aria-label="Biçimi temizle" title="Biçimi temizle" disabled={!Object.values(formats).some(Boolean)} onClick={clearFormatting}><EditorIcon name="clear" size={17} /></button></div><i /></>}
-      {selectionText && <><button type="button" className="inline-text" aria-label={upperSelection ? "Seçimi küçük harfe çevir" : "Seçimi büyük harfe çevir"} title={upperSelection ? "Küçük harf" : "Büyük harf"} onClick={() => changeCase(!upperSelection)}>{upperSelection ? "ab" : "AB"}</button><i /></>}
-      {index >= 0 && draft?.kind === "article" && <><div className="inline-group" role="group" aria-label="Blok"><button type="button" title="Yukarı taşı" aria-label="Paragrafı yukarı taşı" disabled={index === 0} onClick={() => finish(true, "move-up")}><EditorIcon name="up" size={17} /></button><button type="button" title="Aşağı taşı" aria-label="Paragrafı aşağı taşı" disabled={index === draft.article.paragraphs.length - 1} onClick={() => finish(true, "move-down")}><EditorIcon name="down" size={17} /></button><button type="button" title="Altına paragraf ekle · ↵" aria-label="Altına paragraf ekle" onClick={() => finish(true, "insert-after")}><EditorIcon name="plus" size={17} /></button><button type="button" className="inline-danger" title="Bloğu sil" aria-label="Bloğu sil" onClick={() => finish(true, "remove")}><EditorIcon name="trash" size={17} /></button></div><i /></>}
-      <div className="inline-group" role="group" aria-label="Geçmiş"><button type="button" aria-label="Metni geri al" title="Geri al · ⌘Z" disabled={cursor.current === 0} onClick={() => travel(-1)}><EditorIcon name="undo" size={17} /></button><button type="button" aria-label="Metni yinele" title="Yinele · ⇧⌘Z" disabled={cursor.current >= history.current.length - 1} onClick={() => travel(1)}><EditorIcon name="redo" size={17} /></button></div>
-      <i /><button type="button" className="inline-done" title="Tamam · ⌘↵ (Esc vazgeçer)" aria-label="Tamam" disabled={!value.trim() && !active.allowEmpty} onClick={() => finish(true)}><EditorIcon name="check" size={17} /></button>
+    {active && (selectionText || linkEditor) && !menu && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar writing-selection-toolbar" style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={event=>event.preventDefault()}>
+      {active.rich && <><div className="inline-group" role="group" aria-label="Biçim">{toggles.filter(item=>["bold","italic","highlight"].includes(item.type)).map(item=><button key={item.type} type="button" aria-label={item.label} title={item.label} aria-pressed={formats[item.type]} onClick={()=>format(item.type)}><EditorIcon name={item.icon} size={17}/></button>)}<button type="button" aria-label="Bağlantı" title="Bağlantı" aria-pressed={formats.link} onClick={openLink}><EditorIcon name="link" size={17}/></button></div><i/></>}
+      <button type="button" aria-label="Diğer metin araçları" title="Diğer araçlar" aria-expanded={moreFormats} onClick={()=>setMoreFormats(!moreFormats)}>•••</button>
+      {moreFormats && <div className="writing-format-more" role="group" aria-label="Diğer metin araçları">
+        {active.rich && <>{toggles.filter(item=>["strike","code"].includes(item.type)).map(item=><button key={item.type} aria-label={item.label} onClick={()=>format(item.type)}><EditorIcon name={item.icon} size={16}/>{item.label}</button>)}<button aria-label="Biçimi temizle" onClick={clearFormatting}><EditorIcon name="clear" size={16}/>Biçimi temizle</button></>}
+        <button aria-label={upperSelection ? "Seçimi küçük harfe çevir" : "Seçimi büyük harfe çevir"} onClick={()=>changeCase(!upperSelection)}>{upperSelection ? "Küçük harf" : "Büyük harf"}</button>
+      </div>}
       {linkEditor && <form className="inline-link-editor" onSubmit={(event) => { event.preventDefault(); applyLink(linkEditor.href); }} onMouseDown={(event) => event.stopPropagation()}>
         <label><span>Bağlantı adresi</span><input autoFocus aria-label="Bağlantı adresi" aria-invalid={!!linkEditor.error} aria-describedby="inline-link-error" placeholder="https://…" value={linkEditor.href} onChange={(event) => setLinkEditor({ href: event.target.value, error: "" })} /></label>
         <button type="submit" className="inline-done">Uygula</button>

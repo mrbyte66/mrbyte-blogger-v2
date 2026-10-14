@@ -7,7 +7,7 @@ import { scrollBehavior } from "../../lib/motion";
 import { ArticlePageView } from "./ArticlePage";
 import { SeriesPageView } from "../series/SeriesPage";
 /** Settings of the whole page that have no block of their own on the canvas. */
-const pageChips = [["cover", "Kapak"], ["publication", "Yayın"], ["layout", "Düzen"], ["notes", "Notlar"]] as const;
+const pageChips = [["cover", "Kapak ekle"]] as const;
 
 export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: DocumentDraft; theme: Theme; selection: CanvasSelection; onSelect: (field: string, rect?: CanvasRect) => void }) {
   const root = useRef<HTMLDivElement>(null);

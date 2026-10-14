@@ -35,7 +35,7 @@ describe("inline canvas editing", () => {
     fireEvent.click(screen.getByRole("heading"));
     screen.getByLabelText("Başlık · tuval").textContent=patch.value;
     fireEvent.input(screen.getByLabelText("Başlık · tuval"));
-    fireEvent.click(screen.getByRole("button",{name:/Tamam/}));
+    fireEvent.keyDown(screen.getByLabelText("Başlık · tuval"),{key:"Enter",ctrlKey:true});
     expect(post).toHaveBeenCalledWith({type:inlineEditEvent,edit:patch},window.location.origin);
   });
   it("accepts patches only from its own same-origin frame while in editing mode", () => {

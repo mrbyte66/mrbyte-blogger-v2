@@ -1,3 +1,4 @@
+import { writingTool } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -24,7 +25,7 @@ function open(title: string | RegExp, site = new MemorySite()) {
   renderWithSite(<SiteEditor />, { site, mode: "studio" });
   fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
   fireEvent.click(screen.getByRole("button", { name: title }));
-  fireEvent.click(screen.getByRole("button", { name: "Kapak görseli" }));
+  fireEvent.click(writingTool("Kapak görseli"));
   return site;
 }
 const searchBox = () => screen.getByRole("searchbox", { name: "Çevrimiçi kapak ara" });
@@ -153,7 +154,7 @@ describe("online cover search in the Studio cover panel", () => {
     open(initialSeries[0].title);
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: /Yeni yazı/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Kapak görseli" }));
+    fireEvent.click(writingTool("Kapak görseli"));
     expect(screen.getByText("Çevrimiçi kapak aramak için önce sayfayı kaydet.")).toBeTruthy();
     expect(screen.queryByRole("searchbox")).toBeNull();
   });

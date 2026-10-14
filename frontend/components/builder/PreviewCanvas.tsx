@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "../auth/AuthProvider";
 import { inlineEditEvent, parseInlineEdit, type InlineEdit } from "../../lib/builder/inline-edit";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
@@ -8,6 +9,8 @@ import { isBlockId, isSceneField, parseCanvasRect, parseCaret, type CaretPositio
 import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 
 type Props = {
+  onSaveRequest?: () => void;
+  onHistory?: (direction: -1 | 1) => void;
   document?: DocumentDraft | null;
   onInlineEdit?: (edit: InlineEdit) => void;
   onNavigate?: (target: StudioTarget) => void;
@@ -25,7 +28,10 @@ type Props = {
   onAnchor?: (rect: DOMRect) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor, onSaveRequest, onHistory }: Props) {
+  const {session,openAuth}=useAuth();
+  const [unavailable,setUnavailable]=useState(false);
+  const [epoch,setEpoch]=useState(0);
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableHeight, setAvailableHeight] = useState(760);
@@ -39,9 +45,10 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
     setMeasured(true);
   }, []);
   const [loaded, setLoaded] = useState(false);
+  useEffect(()=>{if(unavailable && session) {setUnavailable(false);setLoaded(false);setEpoch(n=>n+1);} },[session]);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor });
-  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor };
+  const current = useRef({ serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor });
+  current.current = { serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -61,8 +68,14 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   useEffect(() => {
     function receive(event: MessageEvent) {
       if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow) return;
+      if (current.current.selection.editing && current.current.document) {
+        if(event.data?.type===previewEvents.save) current.current.onSaveRequest?.();
+        if(event.data?.type===previewEvents.undo) current.current.onHistory?.(-1);
+        if(event.data?.type===previewEvents.redo) current.current.onHistory?.(1);
+      }
       if (event.data?.type === inlineEditEvent && current.current.selection.editing) { const edit = parseInlineEdit(event.data.edit); if (edit) current.current.onInlineEdit?.(edit); }
       if (event.data?.type === navigateEvent && !current.current.selection.editing) { const target = parseStudioTarget(event.data.target); if (target) current.current.onNavigate?.(target); }
+      if(event.data?.type===previewEvents.unavailable) {setUnavailable(true);setLoaded(false);}
       if (event.data?.type === previewEvents.ready) { setLoaded(true); synchronize(); }
       if (event.data?.type === previewEvents.pointer) current.current.onPointer?.();
       if (event.data?.type === previewEvents.select || event.data?.type === previewEvents.anchor) {
@@ -97,8 +110,8 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   const scale = Math.min(1, availableWidth / width, mobile ? availableHeight / height : 1);
   return <div className="studio-canvas" ref={container}>
     <div className={`canvas-device ${mobile ? "device-mobile" : ""}`} style={{ width: width * scale, height: height * scale }}>
-      {!loaded && <div className="canvas-loading" role="status">Tuval hazırlanıyor…</div>}
-      {measured && <iframe ref={frame} onLoad={synchronize} title="Taslak tema canlı önizleme" src="/preview?embedded=1" style={{ width, height, transform: `scale(${scale})` }} />}
+      {!loaded && <div className="canvas-loading" role="status">{unavailable ? <div className="canvas-session-message"><p>Oturumun sona erdi. Açık metnin burada korunuyor.</p><button onClick={()=>openAuth("login")}>Yeniden giriş yap</button></div> : "Tuval hazırlanıyor…"}</div>}
+      {measured && <iframe ref={frame} onLoad={synchronize} title="Taslak tema canlı önizleme" src={`/preview?embedded=1&v=${epoch}`} style={{ width, height, transform: `scale(${scale})` }} />}
     </div>
   </div>;
 }

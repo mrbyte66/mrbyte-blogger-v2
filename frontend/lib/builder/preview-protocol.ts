@@ -1,4 +1,8 @@
 export const previewEvents = {
+  unavailable: "mrbyte:canvas-unavailable",
+  save: "mrbyte:save-document",
+  undo: "mrbyte:undo-document",
+  redo: "mrbyte:redo-document",
   workspace: "mrbyte:preview",
   ready: "mrbyte:canvas-ready",
   selection: "mrbyte:canvas-selection",

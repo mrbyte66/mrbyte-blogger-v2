@@ -24,6 +24,7 @@ function savedNotice(status: string) {
 
 export function SiteEditor() {
   const content = useContentWorkspace();
+  const [editorEpoch,setEditorEpoch]=useState(0);
   const [target, setTarget] = useState<StudioTarget>({ kind: "home" });
   // Pages opened lately (this browser), so switching back from the site design is one press.
   const [recent, setRecent] = useState<StudioTarget[]>([]);
@@ -58,7 +59,7 @@ export function SiteEditor() {
     if (newArticle && !(next.kind === "article" && next.slug === newArticle.slug)) setNewArticle(null);
     if (newSeries && !(next.kind === "series" && next.slug === newSeries.slug)) setNewSeries(null);
     setFieldRequest(options?.field ? { field: options.field, n: 1 } : null);
-    setTarget(next); setNotice(""); setSaveError(null); setDirty(false);
+    setEditorEpoch(n=>n+1); setTarget(next); setNotice(""); setSaveError(null); setDirty(false);
   }
   const article = target.kind === "article" ? availableArticles.find((a) => a.slug === target.slug) : undefined;
   const series = target.kind === "series" ? availableSeries.find((s) => s.slug === target.slug) : undefined;
@@ -92,7 +93,7 @@ export function SiteEditor() {
         const saved = await content.studio.saveSeries(draft.series, draft.series.status);
         setTarget({ kind: "series", slug: saved.slug }); landed = { slug: saved.slug, status: saved.status };
       }
-      setNotice(landed && target.kind !== "home" && landed.slug !== target.slug ? savedNotice(landed.status) : ""); setSaveError(null);
+      setNotice(""); setSaveError(null);
       announceContentChange();
       return true;
     } catch (cause) {
@@ -109,14 +110,14 @@ export function SiteEditor() {
     if (dirty && !confirmLeave()) { setNotice("Yeni bir seri açmadan önce düzenlemelerini kaydet veya geri al."); return; }
     // Same starting point as a new article: a valid template the canvas can render at once.
     const record: BlogSeries = { ...createSeries(), title: "Yeni seri", slug: `yeni-seri-${crypto.randomUUID().slice(0, 8)}` };
-    setNewArticle(null); setNewSeries(record); setDirty(false); setTarget({ kind: "series", slug: record.slug }); setNotice(""); setSaveError(null);
+    setEditorEpoch(n=>n+1); setNewArticle(null); setNewSeries(record); setDirty(false); setTarget({ kind: "series", slug: record.slug }); setNotice(""); setSaveError(null);
   }
   function addArticle() {
     if (dirty && !confirmLeave()) { setNotice("Yeni bir yazı açmadan önce düzenlemelerini kaydet veya geri al."); return; }
     const firstCategory = content.categories?.[0];
     // Writing started from a saved series becomes its next chapter (membership is stored on the article's Save).
     const record = { ...createArticle(), seriesId: target.kind === "series" && !newSeries ? series?.id : undefined, category: firstCategory?.name ?? "", categories: firstCategory ? [firstCategory.name] : [], categoryIds: firstCategory ? [firstCategory.id] : undefined };
-    setNewSeries(null); setDirty(false); setNewArticle(record); setTarget({ kind: "article", slug: record.slug }); setNotice(""); setSaveError(null);
+    setEditorEpoch(n=>n+1); setNewSeries(null); setDirty(false); setNewArticle(record); setTarget({ kind: "article", slug: record.slug }); setNotice(""); setSaveError(null);
   }
   const navigation = <PageNavigator target={target} articles={availableArticles} series={availableSeries} ready={content.ready} onNavigate={navigate} onCreateArticle={addArticle} onCreateSeries={addSeries} />;
   const error = saveError ?? content.error;
@@ -127,7 +128,7 @@ export function SiteEditor() {
     {notice && <p className="studio-navigation-notice" role="status">{notice}</p>}
     {!content.ready ? <p role="status" className="studio-navigation-notice">Studio içerikleri yükleniyor…</p>
       : target.kind === "home" ? <ThemeEditor navigation={navigation} onNavigate={navigate} /> : initial ? <DocumentEditor
-      navigation={navigation} key={`${target.kind}-${target.slug}`} initial={initial} fieldRequest={fieldRequest} isNew={target.kind === "article" ? !!newArticle : !!newSeries}
+      navigation={navigation} key={`${target.kind}-${editorEpoch}`} initial={initial} fieldRequest={fieldRequest} isNew={target.kind === "article" ? !!newArticle : !!newSeries}
       articles={content.articles} series={content.series} onCreateSeries={createInlineSeries}
       onDirty={(next) => { setDirty(next); if (next) setNotice((current) => savedNotices.has(current) ? "" : current); }} onNavigate={navigate} onSave={save}
       onDiscard={() => { setNewArticle(null); setNewSeries(null); setDirty(false); setTarget({ kind: "home" }); setNotice(""); setSaveError(null); }} error={error}

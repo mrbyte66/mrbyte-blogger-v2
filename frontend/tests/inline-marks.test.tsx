@@ -54,7 +54,7 @@ describe("formatting in the canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: "Kalın" }));
     expect(node.innerHTML).toBe("Merhaba dünya");
     expect(lastEdit(post).marks).toEqual([]);
-    fireEvent.click(screen.getByRole("button", { name: "Metni geri al" }));
+    fireEvent.keyDown(node,{key:"z",ctrlKey:true});
     expect(node.innerHTML).toBe("<strong>Merhaba</strong> dünya");
     expect(lastEdit(post).marks).toEqual([{ type: "bold", start: 0, end: 7 }]);
   });
@@ -106,6 +106,7 @@ describe("formatting in the canvas", () => {
     const post = mount();
     const node = open();
     select(node, 0, 7);
+    fireEvent.click(screen.getByRole("button",{name:"Diğer metin araçları"}));
     fireEvent.click(screen.getByRole("button", { name: "Üstü çizili" }));
     expect(node.innerHTML).toBe("<s>Merhaba</s> dünya");
     select(node, 8, 13);
@@ -118,6 +119,7 @@ describe("formatting in the canvas", () => {
     const post = mount({ ...base, paragraphMarks: [[{ type: "bold", start: 0, end: 7 }, { type: "highlight", start: 0, end: 13 }], []] });
     const node = open();
     select(node, 0, 13);
+    fireEvent.click(screen.getByRole("button",{name:"Diğer metin araçları"}));
     fireEvent.click(screen.getByRole("button", { name: "Biçimi temizle" }));
     expect(node.innerHTML).toBe("Merhaba dünya");
     expect(lastEdit(post).marks).toEqual([]);
@@ -126,10 +128,12 @@ describe("formatting in the canvas", () => {
   it("turns the block into a heading or removes it with one press", () => {
     const post = mount();
     open();
-    expect(screen.getByRole("button", { name: "Metin" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(screen.getByRole("button", { name: "Başlık" }));
+    expect(screen.queryByRole("toolbar")).toBeNull();
+    fireEvent.click(screen.getByRole("button",{name:"Blok ekle"}));
+    fireEvent.click(screen.getByRole("option",{name:"Başlık"}));
     expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "heading2" });
     open();
+    fireEvent.click(screen.getByRole("button",{name:"Blok ekle"}));
     fireEvent.click(screen.getByRole("button", { name: "Bloğu sil" }));
     expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "remove" });
   });

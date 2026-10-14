@@ -20,7 +20,7 @@ export function FocusExtras({ draft, saved, field, caret, onSelect }: { draft: D
       {paragraphs.map((text, index) => <button key={index} type="button" className={index === active ? "is-active" : undefined} aria-label={`Paragraf ${index + 1}`} aria-current={index === active ? "true" : undefined} style={{ width: Math.min(30, Math.max(14, 12 + Math.round(text.length / 40))) }} onClick={() => onSelect(`paragraph-${index}`)} />)}
     </nav>}
     <div className="focus-readout">
-      {caret && <span className="focus-position">Satır {caret.row} · Sütun {caret.column}</span>}
+
       <button type="button" role="switch" aria-checked={dim} aria-label="Odak modu" onClick={() => setDim(!dim)}><span /></button>
       <span className="focus-switch-label" aria-hidden="true">Odak</span>
     </div>

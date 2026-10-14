@@ -75,7 +75,7 @@ function StudioViewMenu() {
     <button type="button" className="studio-icon-button" aria-label="Studio görünümü" title="Studio görünümü" aria-expanded={open} onClick={() => setOpen(!open)}><EditorIcon name="views" size={20} /></button>
     {open && <div className="studio-view-popover" role="dialog" aria-label="Studio görünümü">
       <div className="studio-view-popover-head"><span className="studio-eyebrow">STUDIO GÖRÜNÜMÜ</span><small>Hesabına kaydedilir; site ziyaretçileri görmez.</small></div>
-      <StudioViewSwitch variant="cards" />
+      <StudioViewSwitch variant="cards" onChoose={()=>setOpen(false)} />
       {view === "odak" && <label className="studio-personal-switch"><span>Yazılan bloğun dışını soluklaştır</span><input type="checkbox" role="switch" checked={dim} onChange={(event) => setDim(event.target.checked)} /></label>}
     </div>}
   </div>;

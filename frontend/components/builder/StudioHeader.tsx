@@ -11,11 +11,12 @@ import { useDismiss } from "../../lib/studio/dismiss";
 import { EditorIcon } from "./EditorIcon";
 import { StudioViewSwitch } from "./StudioViewSwitch";
 
-export type StudioSection = "pages" | "home" | "insights";
-const sections: { id: StudioSection; label: string; hint: string; icon: string }[] = [
-  { id: "pages", label: "Yazılar", hint: "Yazılar ve seriler", icon: "pages" },
-  { id: "home", label: "Ana sayfa", hint: "Site tasarımı", icon: "homepage" },
-  { id: "insights", label: "İstatistikler", hint: "Yazı istatistikleri ve üyeler", icon: "stats" },
+export type StudioSection = "pages" | "series" | "home" | "insights";
+/** Statistics have no entry here: the product decision removed the owner's statistics UI. */
+const sections: { id: Exclude<StudioSection, "insights">; label: string; hint: string; icon: string; rail: boolean }[] = [
+  { id: "pages", label: "Yazılar", hint: "Yazılar ve seriler", icon: "pages", rail: true },
+  { id: "series", label: "Seriler", hint: "Seriler", icon: "series", rail: false },
+  { id: "home", label: "Ana sayfa", hint: "Site tasarımı", icon: "homepage", rail: true },
 ];
 
 const datelineFormat = { weekday: new Intl.DateTimeFormat("tr-TR", { weekday: "long" }), rest: new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }) };
@@ -34,13 +35,12 @@ function useSection(explicit?: StudioSection): StudioSection {
 function SectionNav({ current, className, labelled }: { current: StudioSection; className: string; labelled: boolean }) {
   const shell = useStudioShell();
   return <nav className={className} aria-label="Studio bölümleri">
-    {sections.map((section) => {
+    {sections.filter((section) => labelled || section.rail).map((section) => {
       // Icon-only buttons need a name; labelled pills are named by their visible text.
       const props = { className: "studio-nav-item", "aria-current": current === section.id ? ("page" as const) : undefined, title: section.hint, ...(labelled ? {} : { "aria-label": section.hint }) };
       const body = <><EditorIcon name={section.icon} size={22} />{labelled && <span>{section.label}</span>}</>;
-      if (section.id === "insights") return <Link key={section.id} href="/studio/istatistikler" {...props}>{body}</Link>;
       if (!shell.active) return <Link key={section.id} href="/studio" {...props}>{body}</Link>;
-      return <button key={section.id} type="button" {...props} onClick={() => section.id === "pages" ? openStudioLibrary() : shell.onNavigate({ kind: "home" })}>{body}</button>;
+      return <button key={section.id} type="button" {...props} onClick={() => section.id === "home" ? shell.onNavigate({ kind: "home" }) : openStudioLibrary({ kind: section.id === "series" ? "series" : "article" })}>{body}</button>;
     })}
   </nav>;
 }
@@ -64,7 +64,7 @@ function PersonalMenu() {
       <div className="studio-personal-section"><span className="studio-eyebrow">GÖRÜNÜM</span><StudioViewSwitch /></div>
       {view === "odak" && <label className="studio-personal-switch"><span>Yazılan bloğun dışını soluklaştır</span><input type="checkbox" role="switch" checked={dim} onChange={(event) => setDim(event.target.checked)} /></label>}
       <div className="studio-personal-row"><ThemeToggle /><AccountMenu /></div>
-      <div className="studio-personal-links"><Link className="studio-personal-link" href="/">Siteye dön</Link><Link className="studio-personal-link" href="/studio/istatistikler">İstatistikler</Link></div>
+      <div className="studio-personal-links"><Link className="studio-personal-link" href="/">Siteye dön</Link></div>
     </div>
   </details>;
 }

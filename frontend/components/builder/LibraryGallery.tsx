@@ -1,7 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { allPages } from "../../lib/api/http";
-import type { Schema } from "../../lib/api/contract";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { articleCategories, articleDate, formatArticleDate } from "../../lib/articles/metadata";
 import type { StudioTarget } from "../../lib/builder/document-protocol";
 import type { Article } from "../../lib/content";
@@ -10,7 +8,6 @@ import type { BlogSeries } from "../../lib/series/model";
 import { EditorIcon } from "./EditorIcon";
 import { CrtIcon } from "./StudioIcons";
 
-type Stats = Schema<"OwnerArticleStatsPage">["items"][number];
 type Tone = "peach" | "sky" | "mint" | "lilac" | "sand" | "rose";
 type Filter = "all" | "published" | "draft" | "scheduled" | "archived" | "trashed";
 type Sort = "newest" | "oldest" | "title";
@@ -60,15 +57,8 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
   const [sort, setSort] = useState<Sort>("newest");
   const [layout, setLayout] = useState<"gallery" | "list">("gallery");
   const [selected, setSelected] = useState<string | null>(target.kind === kind ? target.slug : null);
-  const [stats, setStats] = useState<Map<string, Stats> | null>(null);
   // Without the drawer (phones, tablets) a card opens its page right away.
   const compact = useMediaQuery("(max-width: 1099px)");
-  useEffect(() => {
-    let current = true;
-    allPages<Stats>("/studio/article-stats").then((rows) => { if (current) setStats(new Map(rows.map((row) => [row.articleId, row]))); }).catch(() => { if (current) setStats(null); });
-    return () => { current = false; };
-  }, []);
-
   const seriesOf = (slug: string) => series.find((item) => item.status !== "trashed" && item.articleSlugs.includes(slug));
   const matches = (title: string) => title.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr").trim());
 
@@ -152,7 +142,7 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
           })}</ul>}
       </div>
       <aside className="library-drawer" aria-label={kind === "article" ? "Seçili yazı" : "Seçili seri"}>
-        {!current ? <p className="library-drawer-empty">Ayrıntıları görmek için bir kart seç.</p> : kind === "article" ? <ArticleDrawer article={current as Article} stats={stats} within={seriesOf((current as Article).slug)} onOpen={(options) => open((current as Article).slug, options)} />
+        {!current ? <p className="library-drawer-empty">Ayrıntıları görmek için bir kart seç.</p> : kind === "article" ? <ArticleDrawer article={current as Article} within={seriesOf((current as Article).slug)} onOpen={(options) => open((current as Article).slug, options)} />
           : <SeriesDrawer item={current as BlogSeries} articles={articles} onOpen={() => open((current as BlogSeries).slug)} />}
       </aside>
     </div>
@@ -160,11 +150,9 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
   </div>;
 }
 
-function ArticleDrawer({ article, stats, within, onOpen }: { article: Article; stats: Map<string, Stats> | null; within?: BlogSeries; onOpen: (options?: { field?: string }) => void }) {
+function ArticleDrawer({ article, within, onOpen }: { article: Article; within?: BlogSeries; onOpen: (options?: { field?: string }) => void }) {
   const tag = tagOf(article);
-  const row = article.id ? stats?.get(article.id) : undefined;
   const published = articleStatus(article) === "published" && article.visibility !== "private";
-  const number = (value: number | undefined) => value === undefined ? "—" : value.toLocaleString("tr-TR");
   return <div className="library-drawer-body">
     <div className="library-drawer-cover">{article.coverUrl ? <img src={article.coverUrl} alt="" /> : <span className="library-nocover"><CrtIcon /><span>Henüz kapak yok</span></span>}
       <button type="button" className="library-glass-button" onClick={() => onOpen({ field: "cover" })}>{article.coverUrl ? "Kapağı değiştir" : "Kapak ekle"}</button></div>
@@ -174,8 +162,8 @@ function ArticleDrawer({ article, stats, within, onOpen }: { article: Article; s
     </div>
     <dl className="library-stats">
       <div><dt>okuma</dt><dd>{article.minutes} dk</dd></div>
-      <div><dt>görüntülenme</dt><dd>{number(row?.views)}</dd></div>
-      <div><dt>alkış</dt><dd>{number(row?.claps)}</dd></div>
+      <div><dt>konu</dt><dd>{articleCategories(article).length}</dd></div>
+      <div><dt>tarih</dt><dd>{shortDate.format(new Date(`${articleDate(article)}T12:00:00Z`))}</dd></div>
     </dl>
     <dl className="library-facts">
       <div><dt>Seri</dt><dd>{within?.title ?? "Bağımsız yazı"}</dd></div>

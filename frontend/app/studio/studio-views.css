@@ -874,3 +874,19 @@ html .studio[data-view] > .studio-topbar { min-width:0; }
 /* the goal's settings open as a popover where there is no room for them in the flow */
 .margin-goal { position:relative; }
 .margin-goal .word-goal-form { position:absolute; left:16px; right:16px; top:calc(100% - 8px); z-index:6; }
+
+/* polish */
+html .studio[data-view] .studio-personal-row .site-theme-toggle { display:inline-flex; align-items:center; gap:10px; height:44px; min-height:0; padding:0 16px; border-radius:999px; background:var(--sv-sunk); color:var(--sv-ink); font-size:13px; font-weight:600; }
+html .studio[data-view] .studio-personal-row .site-theme-toggle>span:last-child { display:inline; }
+html .studio[data-view] .studio-focus .studio-margin,
+html .studio[data-view].studio-focus .studio-margin { display:none; }
+@media (min-width:1100px) {
+  html .studio[data-view="marjinalya"] .studio-saved { height:40px; padding:0 16px; border-radius:999px; background:var(--sv-card); box-shadow:var(--sv-shadow); }
+  html .studio[data-view="marjinalya"].studio-focus.document-studio > .studio-workspace { grid-template-columns:minmax(0,1fr); }
+}
+
+/* Nothing in the frame may be scrolled by a focus or scrollIntoView call: clipped boxes are not scrollers. */
+html .studio[data-view],
+html .studio[data-view] > .studio-workspace,
+html .studio[data-view] .studio-preview,
+html .studio[data-view] .studio-canvas { overflow:clip; }

@@ -58,7 +58,8 @@ export function NotesPanel({ article, field }: { article: Article; field: string
       <div className="note-composer-foot"><span id={`${inputId}-count`}>{text.length} / {maxNoteLength}</span><button type="submit" className="studio-secondary" disabled={busy || !text.trim()}>{busy ? "Ekleniyor…" : "Notu ekle"}</button></div>
     </form>
     <p role="status" className="notes-status">{loading ? "Notlar yükleniyor…" : ""}</p>
-    {(error || problem) && <div role="alert" className="notes-error"><p>{error ?? problem}</p>{error && <button type="button" className="studio-secondary" onClick={() => void reload()}>Yeniden dene</button>}</div>}
+    {error && <div role="status" className="notes-error"><p>{error}</p><button type="button" className="studio-secondary" onClick={() => void reload()}>Yeniden dene</button></div>}
+    {problem && <div role="alert" className="notes-error"><p>{problem}</p></div>}
     {!loading && !error && !notes.length && <p className="notes-empty">Henüz not yok. Düzeltilecek bir cümle ya da sonra yazılacak bir fikir için buraya yaz.</p>}
     {open.length > 0 && <ul className="note-list">{open.map(item)}</ul>}
     {done.length > 0 && <details className="note-done"><summary>Çözülenler · {done.length}</summary><ul className="note-list">{done.map(item)}</ul></details>}

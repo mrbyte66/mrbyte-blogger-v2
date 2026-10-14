@@ -16,7 +16,7 @@ export function WordGoal({ current, saved, line = false }: { current?: Article |
   const field = useRef<HTMLInputElement>(null);
   const id = useId();
   useEffect(() => { if (editing) field.current?.focus(); }, [editing]);
-  if (today === null || goal === null) return error ? <p role="alert" className="word-goal-error">{error}</p> : null;
+  if (today === null || goal === null) return error ? <p role="status" className="word-goal-error">{error}</p> : null;
 
   const words = liveWords(today, saved ? articleWords(saved) : 0, current ? articleWords(current) : saved ? articleWords(saved) : 0);
   const done = goal > 0 && words >= goal;

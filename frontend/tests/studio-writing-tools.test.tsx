@@ -103,7 +103,7 @@ describe("özel notlar", () => {
   it("yüklenemezse hatayı gösterir ve yeniden denemeye izin verir", async () => {
     call.mockRejectedValueOnce(new ApiError(503, "SERVICE_UNAVAILABLE", "Sunucu şu anda yanıt veremiyor."));
     render(<NotesPanel article={article} field="title" />);
-    expect((await screen.findByRole("alert")).textContent).toContain("Notlar yüklenemedi");
+    expect((await screen.findByText(/Notlar yüklenemedi/)).textContent).toContain("Notlar yüklenemedi");
     call.mockResolvedValueOnce(ok({ items: [note()] }));
     fireEvent.click(screen.getByRole("button", { name: "Yeniden dene" }));
     expect(await screen.findByText("Girişi kısalt.")).toBeTruthy();

@@ -13,7 +13,7 @@ import { StudioViewSwitch } from "./StudioViewSwitch";
 export type StudioSection = "pages" | "home" | "insights";
 const sections: { id: StudioSection; label: string; hint: string; icon: string }[] = [
   { id: "pages", label: "Yazılar", hint: "Yazılar ve seriler", icon: "pages" },
-  { id: "home", label: "Ana sayfa", hint: "Ana sayfa tasarımı", icon: "homepage" },
+  { id: "home", label: "Ana sayfa", hint: "Site tasarımı", icon: "homepage" },
   { id: "insights", label: "İstatistikler", hint: "Yazı istatistikleri ve üyeler", icon: "stats" },
 ];
 
@@ -34,7 +34,8 @@ function SectionNav({ current, className, labelled }: { current: StudioSection; 
   const shell = useStudioShell();
   return <nav className={className} aria-label="Studio bölümleri">
     {sections.map((section) => {
-      const props = { className: "studio-nav-item", "aria-current": current === section.id ? ("page" as const) : undefined, title: section.hint, "aria-label": section.hint };
+      // Icon-only buttons need a name; labelled pills are named by their visible text.
+      const props = { className: "studio-nav-item", "aria-current": current === section.id ? ("page" as const) : undefined, title: section.hint, ...(labelled ? {} : { "aria-label": section.hint }) };
       const body = <><EditorIcon name={section.icon} size={22} />{labelled && <span>{section.label}</span>}</>;
       if (section.id === "insights") return <Link key={section.id} href="/studio/istatistikler" {...props}>{body}</Link>;
       if (!shell.active) return <Link key={section.id} href="/studio" {...props}>{body}</Link>;

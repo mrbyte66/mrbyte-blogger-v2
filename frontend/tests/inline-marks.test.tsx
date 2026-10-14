@@ -28,7 +28,9 @@ function select(node: HTMLElement, start: number, end: number) {
   selectOffsets(node, start, end);
   act(() => { document.dispatchEvent(new Event("selectionchange")); });
 }
-const lastEdit = (post: ReturnType<typeof vi.spyOn>) => (post.mock.calls.at(-1)![0] as { type: string; edit: InlineEdit }).edit;
+/** Messages the frame sent to the Studio, without the caret reports that accompany them. */
+const sent = (post: ReturnType<typeof vi.spyOn>) => (post.mock.calls as unknown[][]).map((call) => call[0] as { type: string; edit: InlineEdit }).filter((message: { type: string }) => message?.type === inlineEditEvent);
+const lastEdit = (post: ReturnType<typeof vi.spyOn>) => sent(post).at(-1)!.edit;
 
 describe("formatting in the canvas", () => {
   it("makes a paragraph rich-editable and bolds the selection through the toolbar", () => {
@@ -39,7 +41,7 @@ describe("formatting in the canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: "Kalın" }));
     expect(node.innerHTML).toBe("<strong>Merhaba</strong> dünya");
     expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", value: "Merhaba dünya", marks: [{ type: "bold", start: 0, end: 7 }] });
-    expect(post.mock.calls.at(-1)![0]).toMatchObject({ type: inlineEditEvent });
+    expect(sent(post).at(-1)).toMatchObject({ type: inlineEditEvent });
     expect(screen.getByRole("button", { name: "Kalın" }).getAttribute("aria-pressed")).toBe("true");
   });
 

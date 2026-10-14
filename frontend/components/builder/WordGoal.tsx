@@ -7,7 +7,7 @@ const radius = 19;
 const circumference = 2 * Math.PI * radius;
 
 /** Ring and counter for the daily word goal; `current` is the open draft, `saved` its last saved state. */
-export function WordGoal({ current, saved }: { current?: Article | null; saved?: Article | null }) {
+export function WordGoal({ current, saved, line = false }: { current?: Article | null; saved?: Article | null; line?: boolean }) {
   const { today, goal, error, setGoal } = useWritingProgress();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -29,6 +29,7 @@ export function WordGoal({ current, saved }: { current?: Article | null; saved?:
     if (failure) setProblem(failure); else setEditing(false);
   }
   return <div className={`word-goal${done ? " is-done" : ""}`}>
+    {line && goal > 0 && <div className="word-goal-line" role="progressbar" aria-label="Günlük kelime hedefi ilerlemesi" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(ratio * 100)}><span style={{ width: `${ratio * 100}%` }} /></div>}
     <button type="button" className="word-goal-button" aria-expanded={editing} aria-controls={id} onClick={() => { setDraft(String(goal)); setProblem(""); setEditing(!editing); }}>
       <svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label={goal > 0 ? `Günlük hedefin yüzde ${Math.round(ratio * 100)}'i tamamlandı` : "Günlük kelime hedefi kapalı"}>
         <circle cx="24" cy="24" r={radius} fill="none" stroke="currentColor" strokeOpacity=".18" strokeWidth="5" />

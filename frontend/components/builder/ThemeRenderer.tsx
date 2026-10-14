@@ -21,6 +21,7 @@ import { ViewCount } from "../ViewCount";
 import { SeriesCatalog } from "../series/SeriesCatalog";
 import { useSeriesWorkspace } from "../../lib/series/use-series-workspace";
 import { DocumentPreview } from "./DocumentPreview";
+import { StudioViewSync } from "./StudioViewSync";
 import { documentEvent, navigateEvent, parseDocumentDraft, targetFromLink, type DocumentDraft } from "../../lib/builder/document-protocol";
 import { useProgressiveItems } from "../../lib/use-progressive-items";
 import { useVisibleArticleView } from "../../lib/reactions/use-views";
@@ -158,6 +159,7 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
     const destination = targetFromLink(articleSlug ? `/yazilar/${articleSlug}` : seriesSlug ? `/seriler/${seriesSlug}` : link?.getAttribute("href") ?? "");
     if (destination) { event.preventDefault(); event.stopPropagation(); window.parent.postMessage({ type: navigateEvent, target: destination }, window.location.origin); }
   } : undefined}>
+    {embedded && <StudioViewSync />}
     {!embedded && <div className="preview-bar"><Link href="/studio">← Stüdyoya dön</Link><span>TASLAK ÖNİZLEME · {workspace.draft.name}</span><span>Henüz uygulanmadı</span></div>}
     {storageError && <p role="alert" className="preview-warning">{storageError}</p>}
     <InlineCanvasEditor selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>

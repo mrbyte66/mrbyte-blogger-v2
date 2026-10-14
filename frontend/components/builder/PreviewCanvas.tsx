@@ -3,7 +3,7 @@
 import { inlineEditEvent, parseInlineEdit, type InlineEdit } from "../../lib/builder/inline-edit";
 import { useEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
-import { isBlockId, isSceneField, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
+import { isBlockId, isSceneField, parseCaret, type CaretPosition, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
 
 import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 
@@ -15,17 +15,19 @@ type Props = {
   workspace: Workspace;
   selection: CanvasSelection;
   onSelect: (id: string, field?: SceneField) => void;
+  /** Where the writing caret sits in the frame (document editing only). */
+  onCaret?: (caret: CaretPosition) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableHeight, setAvailableHeight] = useState(760);
   const [availableWidth, setAvailableWidth] = useState(600);
   const [loaded, setLoaded] = useState(false);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit });
-  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit };
+  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret });
+  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -45,6 +47,8 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
       if (event.data?.type === inlineEditEvent && current.current.selection.editing) { const edit = parseInlineEdit(event.data.edit); if (edit) current.current.onInlineEdit?.(edit); }
       if (event.data?.type === navigateEvent && !current.current.selection.editing) { const target = parseStudioTarget(event.data.target); if (target) current.current.onNavigate?.(target); }
       if (event.data?.type === previewEvents.ready) { setLoaded(true); synchronize(); }
+      const caret = parseCaret(event.data);
+      if (caret !== undefined) current.current.onCaret?.(caret);
       if (event.data?.type === previewEvents.select && isBlockId(event.data.id) && (current.current.document ? isDocumentField(event.data.id) : current.current.workspace.draft.blocks.some((block) => block.id === event.data.id))) {
         const field = event.data.field;
         const scene = current.current.workspace.draft.blocks.find((block) => block.id === event.data.id)?.kind === "scene";

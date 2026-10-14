@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CrtIcon } from "./StudioIcons";
+import { BlockArt } from "./BlockArt";
 import { addBlock, blockDescriptions, blockKinds, blockLabels, canMoveBlock, inferStarter, moveBlock, type Starter, type Theme } from "../../lib/builder/model";
 
 const symbols = { header: "≡", intro: "Aa", scene: <CrtIcon />, articles: "▤", series: "▥", quote: "“", about: "◎", projects: "⌘", footer: "↳" };
@@ -34,8 +35,8 @@ export function ThemeStructure({ sections = "all", theme, ready, selectedId, pal
         {sections !== "starters" && <section aria-labelledby="structure-heading">
         <div className="studio-section-title"><h1 id="structure-heading">Sayfa yapısı</h1><span>{theme.blocks.length} blok</span></div>
         {!theme.blocks.length && <p className="property-note">Sayfan şu an boş. Blok ekleyerek yeni bir düzen oluşturabilirsin.</p>}
-        <ol className="studio-block-list">{theme.blocks.map((block) => <li key={block.id} data-selected={block.id === selectedId} className={block.id === selectedId ? "is-selected" : ""}>
-          <button disabled={!ready} className="block-select" aria-pressed={block.id === selectedId} onClick={() => onSelect(block.id)}><span className="block-symbol" aria-hidden="true">{symbols[block.kind]}</span><span>{blockLabels[block.kind]}<small>{block.kind === "header" ? "Başta sabit" : block.kind === "footer" ? "Sonda sabit" : ["intro", "scene"].includes(block.kind) ? "Giriş · sabit" : "İçerik bölümü"}</small></span></button>
+        <ol className="studio-block-list">{theme.blocks.map((block) => <li key={block.id} data-selected={block.id === selectedId} data-kind={block.kind} className={block.id === selectedId ? "is-selected" : ""}>
+          <button disabled={!ready} className="block-select" aria-pressed={block.id === selectedId} onClick={() => onSelect(block.id)}><span className="block-art-frame" aria-hidden="true"><BlockArt kind={block.kind} /></span><span className="block-symbol" aria-hidden="true">{symbols[block.kind]}</span><span>{blockLabels[block.kind]}<small>{block.kind === "header" ? "Başta sabit" : block.kind === "footer" ? "Sonda sabit" : ["intro", "scene"].includes(block.kind) ? "Giriş · sabit" : "İçerik bölümü"}</small></span></button>
           <div className="block-order"><button disabled={!ready || !canMoveBlock(theme, block.id, -1)} title={canMoveBlock(theme, block.id, -1) ? "Bir sıra yukarı" : "Bu konum yerleşim kuralıyla korunuyor"} aria-label={`${blockLabels[block.kind]} yukarı taşı`} onClick={() => { onChange(moveBlock(theme, block.id, -1)); onSelect(block.id); }}>↑</button><button disabled={!ready || !canMoveBlock(theme, block.id, 1)} title={canMoveBlock(theme, block.id, 1) ? "Bir sıra aşağı" : "Bu konum yerleşim kuralıyla korunuyor"} aria-label={`${blockLabels[block.kind]} aşağı taşı`} onClick={() => { onChange(moveBlock(theme, block.id, 1)); onSelect(block.id); }}>↓</button></div>
         </li>)}</ol>
         <button className="studio-add" disabled={!ready} aria-expanded={paletteOpen} aria-controls="block-palette" onClick={() => onPaletteChange(!paletteOpen)}><span aria-hidden="true">{paletteOpen ? "−" : "+"}</span> Blok ekle</button>

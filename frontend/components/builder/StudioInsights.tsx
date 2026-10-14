@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, describe } from "../../lib/api/http";
 import type { Page, Schema } from "../../lib/api/contract";
 import { StudioHeader } from "./StudioHeader";
+import { useStudioView } from "../../lib/studio/view";
 
 type ArticleStatsRow = Schema<"OwnerArticleStatsPage">["items"][number];
 type MemberRow = Schema<"MemberPage">["items"][number];
@@ -32,14 +33,15 @@ function Pager({ page, totalPages, onChange }: { page: number; totalPages: numbe
  * time, device breakdown, per-reader history, libraries or notes are collected or shown.
  */
 export function StudioInsights() {
+  const [view] = useStudioView();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const statsPath = useCallback((page: number) => `/studio/article-stats?page=${page}&size=20`, []);
   const membersPath = useCallback((page: number) => `/studio/members?page=${page}&size=20${search ? `&q=${encodeURIComponent(search)}` : ""}`, [search]);
   const stats = usePage<ArticleStatsRow>(statsPath);
   const members = usePage<MemberRow>(membersPath);
-  return <div className="studio insights-studio">
-    <StudioHeader navigation={<Link className="studio-text-link" href="/studio">← Studio’ya dön</Link>} actions={null} status={<span className="studio-state">İstatistikler</span>} />
+  return <div className="studio insights-studio" data-view={view}>
+    <StudioHeader section="insights" navigation={<Link className="studio-text-link" href="/studio">← Studio’ya dön</Link>} actions={null} status={<span className="studio-state">İstatistikler</span>} />
     <main className="insights-layout">
       <section aria-labelledby="insights-articles">
         <h1 id="insights-articles">Yazı istatistikleri</h1>

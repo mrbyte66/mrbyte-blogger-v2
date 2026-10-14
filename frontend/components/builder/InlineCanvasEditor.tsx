@@ -3,10 +3,11 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import type { Theme } from "../../lib/builder/model";
 import type { DocumentDraft } from "../../lib/builder/document-protocol";
 import { documentText, inlineEditEvent, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
-import type { CanvasSelection } from "../../lib/builder/preview-protocol";
+import { previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { adjustMarks, clearMark, covers, isSafeHref, markAt, safeMarks, toggleMark, type MarkType, type TextMark } from "../../lib/articles/marks";
 import { markedHtml } from "../../lib/articles/marked-html";
 import { readMarked, selectOffsets, selectionOffsets } from "../../lib/builder/rich-text";
+import { editRowSelector } from "../../lib/builder/rows";
 import { EditorIcon } from "./EditorIcon";
 
 type Active = { original: string; originalMarks: TextMark[]; allowEmpty: boolean; edit: InlineEdit; max: number; node: HTMLElement; label: string; rich: boolean };
@@ -25,6 +26,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
   live.current = active;
   if (active && draft) active.edit.id = draft.kind === "article" ? draft.article.slug : draft.series.slug;
   const pendingField = useRef<string | null>(null);
+  const pendingUntil = useRef(0);
   const [position, setPosition] = useState<CSSProperties>({});
   const [value, setValue] = useState("");
   const [selectionText, setSelectionText] = useState(false);
@@ -34,12 +36,15 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
   const cursor = useRef(0);
   const marks = useRef<TextMark[]>([]);
   const saved = useRef<{ start: number; end: number } | null>(null);
+  const lastCaret = useRef("none");
   const root = useRef<HTMLDivElement>(null);
   const frozen = useRef<ReactNode>(children);
   if (!active) frozen.current = children;
   const toolbar = useRef<HTMLDivElement>(null);
   const identity = draft ? `${draft.kind}:${draft.kind === "article" ? draft.article.id ?? "new" : draft.series.id}` : "home";
   useEffect(() => { setActive(null); }, [identity, enabled]);
+  useEffect(() => { if (!active) reportCaret(null); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
 
   function locate(node: HTMLElement) {
     const field = node.getAttribute(draft ? "data-edit-field" : "data-inline-field")!;
@@ -83,6 +88,27 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
     setPosition({ left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)), top: rect.top > 58 ? rect.top - 48 : Math.max(8, Math.min(rect.bottom + 8, window.innerHeight - 52)), "--inline-paper": css.getPropertyValue("--panel") || "#fff", "--inline-ink": css.color } as CSSProperties);
     setSelectionText(selected);
     setFormats(readFormats(item));
+    reportCaret(item);
+  }
+  /** Tells the Studio which numbered block row and column the caret is in (shown by some views). */
+  function reportCaret(item: Active | null) {
+    if (!draft) return;
+    let caret: { row: number; column: number } | null = null;
+    if (item) {
+      const nodes = Array.from(root.current?.querySelectorAll(editRowSelector) ?? []);
+      const row = nodes.indexOf(item.node) + 1;
+      let column = 0;
+      if (item.rich) { const at = selectionOffsets(item.node); if (at) column = at.start + 1; }
+      else {
+        const selection = window.getSelection();
+        if (selection?.rangeCount && item.node.contains(selection.anchorNode)) { const range = selection.getRangeAt(0).cloneRange(); range.selectNodeContents(item.node); range.setEnd(selection.anchorNode!, selection.anchorOffset); column = range.toString().length + 1; }
+      }
+      if (row > 0 && column > 0) caret = { row, column };
+    }
+    const key = caret ? `${caret.row}:${caret.column}` : "none";
+    if (lastCaret.current === key) return;
+    lastCaret.current = key;
+    window.parent.postMessage(caret ? { type: previewEvents.caret, ...caret } : { type: previewEvents.caret, row: null }, window.location.origin);
   }
 
   /** Posts the current text (and marks for rich fields) to the Studio and remembers it as the latest value. */
@@ -170,12 +196,13 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
       if (item.edit.previous !== item.original || (item.rich && JSON.stringify(item.edit.marks ?? []) !== JSON.stringify(item.originalMarks))) post(item, item.original, item.originalMarks);
       if (item.rich) paint(item, item.original, item.originalMarks); else item.node.textContent = item.original;
     }
-    if (action === "insert-after" || action === "split") pendingField.current = `paragraph-${Number(item.edit.field.slice(10)) + 1}`;
+    if (action === "insert-after" || action === "split") { pendingField.current = `paragraph-${Number(item.edit.field.slice(10)) + 1}`; pendingUntil.current = Date.now() + 2000; }
     setLinkEditor(null);
     setActive(null);
   }
   useEffect(() => {
     if (!pendingField.current || active) return;
+    if (Date.now() > pendingUntil.current) { pendingField.current = null; return; }
     const node = root.current?.querySelector<HTMLElement>(`[data-edit-field="${pendingField.current}"]`);
     if (node && locate(node)) { pendingField.current = null; node.scrollIntoView({ block: "nearest" }); activate(node); }
     // The new paragraph must first arrive from the parent.
@@ -201,7 +228,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
     if (node && locate(node)) {
       node.scrollIntoView({ block: "center", behavior: "instant" });
       activate(node);
-    }
+    } else { pendingField.current = field; pendingUntil.current = Date.now() + 2000; } // the block may still be on its way from the Studio
     // Only an explicit tool request moves the caret, never typing or a server echo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selection?.request, enabled]);

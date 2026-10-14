@@ -10,6 +10,7 @@ import { PageNavigator } from "./PageNavigator";
 import { ThemeEditor } from "./ThemeEditor";
 import { DocumentEditor } from "./DocumentEditor";
 import { announceContentChange } from "../data/PublicContentRefresh";
+import { StudioShellProvider } from "../../lib/studio/shell";
 
 const leaveMessage = "Kaydedilmemiş değişiklikler var. Kaydetmeden bu sayfadan çıkmak istiyor musun?";
 /** Asks before discarding unsaved edits; environments without dialogs keep the edits. */
@@ -29,16 +30,20 @@ export function SiteEditor() {
   const [newArticle, setNewArticle] = useState<Article | null>(null);
   // A new series is an unsaved draft on the live canvas, like a new article; it is created on its first Save.
   const [newSeries, setNewSeries] = useState<BlogSeries | null>(null);
+  // A library action can ask the page it opens to show a settings panel (cover, publication plan).
+  const [fieldRequest, setFieldRequest] = useState<{ field: string; n: number } | null>(null);
   const availableArticles = newArticle ? [...content.articles, newArticle] : content.articles;
   const availableSeries = newSeries ? [...content.series, newSeries] : content.series;
-  function navigate(next: StudioTarget) {
-    if (JSON.stringify(next) === JSON.stringify(target)) return;
+  function navigate(next: StudioTarget, options?: { field?: string }) {
+    const same = JSON.stringify(next) === JSON.stringify(target);
+    if (same) { if (options?.field) setFieldRequest((previous) => ({ field: options.field!, n: (previous?.n ?? 0) + 1 })); return; }
     if (dirty && !confirmLeave()) { setNotice("Sayfa değiştirmeden önce düzenlemelerini kaydet veya geri al."); return; }
     if (next.kind === "article" && !availableArticles.some((a) => a.slug === next.slug)) return;
     if (next.kind === "series" && !availableSeries.some((s) => s.slug === next.slug)) return;
     // Leaving an unsaved new article or series discards it (it was never stored).
     if (newArticle && !(next.kind === "article" && next.slug === newArticle.slug)) setNewArticle(null);
     if (newSeries && !(next.kind === "series" && next.slug === newSeries.slug)) setNewSeries(null);
+    setFieldRequest(options?.field ? { field: options.field, n: 1 } : null);
     setTarget(next); setNotice(""); setSaveError(null); setDirty(false);
   }
   const article = target.kind === "article" ? availableArticles.find((a) => a.slug === target.slug) : undefined;
@@ -101,15 +106,16 @@ export function SiteEditor() {
   }
   const navigation = <PageNavigator target={target} articles={availableArticles} series={availableSeries} ready={content.ready} onNavigate={navigate} onCreateArticle={addArticle} onCreateSeries={addSeries} />;
   const error = saveError ?? content.error;
-  return <div className="studio-site-editor">
+  const shell = { active: true, target, articles: availableArticles, series: availableSeries, ready: content.ready, error, onNavigate: navigate, onCreateArticle: addArticle, onCreateSeries: addSeries, onReload: () => { void content.studio?.reload(); } };
+  return <StudioShellProvider value={shell}><div className="studio-site-editor">
     {target.kind === "home" && error && <p role="alert" className="studio-navigation-notice">{error}</p>}
     {notice && <p className="studio-navigation-notice" role="status">{notice}</p>}
     {!content.ready ? <p role="status" className="studio-navigation-notice">Studio içerikleri yükleniyor…</p>
       : target.kind === "home" ? <ThemeEditor navigation={navigation} onNavigate={navigate} /> : initial ? <DocumentEditor
-      navigation={navigation} key={`${target.kind}-${target.slug}`} initial={initial} isNew={target.kind === "article" ? !!newArticle : !!newSeries}
+      navigation={navigation} key={`${target.kind}-${target.slug}`} initial={initial} fieldRequest={fieldRequest} isNew={target.kind === "article" ? !!newArticle : !!newSeries}
       articles={content.articles} series={content.series} onCreateSeries={createInlineSeries}
       onDirty={(next) => { setDirty(next); if (next) setNotice((current) => savedNotices.has(current) ? "" : current); }} onNavigate={navigate} onSave={save}
       onDiscard={() => { setNewArticle(null); setNewSeries(null); setDirty(false); setTarget({ kind: "home" }); setNotice(""); setSaveError(null); }} error={error}
     /> : <p role="status">Sayfa yükleniyor…</p>}
-  </div>;
+  </div></StudioShellProvider>;
 }

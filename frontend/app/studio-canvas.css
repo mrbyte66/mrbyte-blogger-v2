@@ -1,0 +1,26 @@
+/*
+ * How the Studio views shape the live canvas frame (/preview?embedded=1). The frame reads the chosen
+ * view from <html data-studio-view>; the rest of the page is the real site and is never restyled.
+ * The row selector below must match lib/builder/rows.ts.
+ */
+
+/* Marjinalya: numbered rows in a gutter with a warm margin rule, like a manuscript page. */
+html[data-studio-view="marjinalya"] .document-editing .article-view { counter-reset:edit-row; border-left:1px solid #f7d5c4; padding-left:24px; margin-left:-25px; }
+html[data-studio-view="marjinalya"] .document-editing .article-view :is([data-edit-field="title"],[data-edit-field="excerpt"],[data-edit-field^="paragraph-"],[data-edit-field="figure"],[data-edit-field="code"],[data-edit-field="table"]) { counter-increment:edit-row; position:relative; }
+html[data-studio-view="marjinalya"] .document-editing .article-view :is([data-edit-field="title"],[data-edit-field="excerpt"],[data-edit-field^="paragraph-"],[data-edit-field="figure"],[data-edit-field="code"],[data-edit-field="table"])::after {
+  content:counter(edit-row,decimal-leading-zero); position:absolute; left:-84px; top:.55em; width:48px; text-align:right;
+  font:500 11px/1 'DM Mono','IBM Plex Mono',monospace; letter-spacing:.06em; color:#8a968d; pointer-events:none; user-select:none; white-space:nowrap;
+}
+html[data-studio-view="marjinalya"] .document-editing .article-view .document-selected::after,
+html[data-studio-view="marjinalya"] .document-editing .article-view .is-writing::after { color:#24402f; font-weight:700; }
+html[data-theme="dark"][data-studio-view="marjinalya"] .document-editing .article-view { border-left-color:#f0c4ad66; }
+html[data-theme="dark"][data-studio-view="marjinalya"] .document-editing .article-view :is([data-edit-field])::after { color:#6f7c73; }
+html[data-theme="dark"][data-studio-view="marjinalya"] .document-editing .article-view .document-selected::after,
+html[data-theme="dark"][data-studio-view="marjinalya"] .document-editing .article-view .is-writing::after { color:#cdeec3; }
+
+/* Odak: everything but the block being written steps back; the caret takes the accent. */
+html[data-studio-view="odak"] .document-editing .is-writing { caret-color:#9d8fe0; }
+html[data-studio-view="odak"]:not([data-studio-dim="off"]) .document-editing .article-view:has(.is-writing) :is([data-edit-field="title"],[data-edit-field="excerpt"],[data-edit-field^="paragraph-"],[data-edit-field="figure"],[data-edit-field="code"],[data-edit-field="table"]):not(.is-writing) { opacity:.36; transition:opacity 240ms cubic-bezier(.2,.8,.2,1); }
+html[data-studio-view="odak"] .document-editing .article-view :is([data-edit-field]) { transition:opacity 240ms cubic-bezier(.2,.8,.2,1); }
+html[data-studio-view="odak"] .document-editing .article-engagement { display:none; }
+@media (prefers-reduced-motion:reduce) { html[data-studio-view] .document-editing .article-view :is([data-edit-field]) { transition:none; } }

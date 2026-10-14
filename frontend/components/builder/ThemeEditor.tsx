@@ -12,7 +12,7 @@ import { useSeriesWorkspace } from "../../lib/series/use-series-workspace";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyDraft, blockDescriptions, blockLabels, blockPlacementNote,
-  cloneTheme, createTheme, removeBlock,
+  cloneTheme, createTheme, inferStarter, removeBlock,
   replaceBlock, restoreApplied, themeErrors, type Starter, type Theme,
 } from "../../lib/builder/model";
 import { useWorkspace } from "../../lib/builder/use-workspace";
@@ -22,7 +22,9 @@ import { CanvasToolbar } from "./CanvasToolbar";
 import { PreviewCanvas } from "./PreviewCanvas";
 import { ThemeSettings } from "./ThemeSettings";
 import { SiteIndexing } from "./SiteIndexing";
-import { ThemeStructure } from "./ThemeStructure";
+import { ThemeStructure, starters } from "./ThemeStructure";
+import { StudioViewSwitch } from "./StudioViewSwitch";
+import { useStudioView } from "../../lib/studio/view";
 
 
 export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode; onNavigate?: (target: StudioTarget) => void }) {
@@ -44,7 +46,9 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   const [confirmation, setConfirmation] = useState<"restore" | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const preferences = useRef<HTMLDialogElement>(null);
-  const [preferenceTab, setPreferenceTab] = useState<"appearance" | "discovery">("appearance");
+  const [preferenceTab, setPreferenceTab] = useState<"appearance" | "discovery" | "view">("appearance");
+  const [view] = useStudioView();
+  const [structureOpen, setStructureOpen] = useState(false);
   const properties = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLElement>(null);
   const selected = workspace.draft.blocks.find((block) => block.id === selectedId) ?? workspace.draft.blocks[0];
@@ -102,12 +106,16 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
     if (!next.blocks.length) setPaletteOpen(true);
   }
 
-  return <main className={`studio ${panelOpen ? "has-inspector" : ""} ${focused ? "studio-focus" : ""}`}>
-    <StudioHeader navigation={navigation} status={<span className="studio-state" title="Taslak otomatik kaydedilir; Uygula ziyaretçilerin gördüğü ana sayfayı değiştirir.">{dirty ? "Tema taslağı" : "Yayınla aynı"}</span>} actions={<><button className="studio-site-preferences" title="Site tercihleri" aria-label="Site tercihleri" onClick={() => preferences.current?.showModal()}><EditorIcon name="settings"/></button><Link className="studio-text-link" href="/" target="_blank" aria-label="Siteyi aç ↗" title="Siteyi aç">Site ↗</Link><Link className="studio-secondary" href="/preview" target="_blank" aria-label="Taslağı tam ekran gör ↗" title="Taslağı tam ekran gör">Önizle ↗</Link><button className="studio-primary" onClick={apply} disabled={!ready || !dirty || errors.length > 0}>Temayı uygula <span aria-hidden="true">↗</span></button></>} />
+  const selectedStarter = inferStarter(workspace.draft);
+  const actionNodes = <><button className="studio-site-preferences" title="Site tercihleri" aria-label="Site tercihleri" onClick={() => preferences.current?.showModal()}><EditorIcon name="settings"/></button><Link className="studio-text-link" href="/" target="_blank" aria-label="Siteyi aç ↗" title="Siteyi aç">Site ↗</Link><Link className="studio-secondary" href="/preview" target="_blank" aria-label="Taslağı tam ekran gör ↗" title="Taslağı tam ekran gör">Önizle ↗</Link><button className="studio-primary" onClick={apply} disabled={!ready || !dirty || errors.length > 0}>Temayı uygula <span aria-hidden="true">↗</span></button></>;
+  return <main className={`studio ${panelOpen ? "has-inspector" : ""} ${focused ? "studio-focus" : ""} ${structureOpen ? "has-structure" : ""}`} data-view={view}>
+    <StudioHeader navigation={navigation} status={<span className="studio-state" title="Taslak otomatik kaydedilir; Uygula ziyaretçilerin gördüğü ana sayfayı değiştirir.">{dirty ? "Tema taslağı" : "Yayınla aynı"}</span>}
+      center={view === "sahne" ? <div className="studio-starters" role="group" aria-label="Başlangıç düzeni">{starters.map((item) => <button key={item.id} type="button" aria-label={item.label} title={item.detail} aria-pressed={selectedStarter === item.id} disabled={!ready} onClick={() => useStarter(item.id)}>{item.label}</button>)}</div> : undefined}
+      actions={view === "odak" ? null : actionNodes} />
 
     <div className="studio-workspace">
 
-      <aside className="studio-sidebar" aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
+      <aside className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
       <section className="studio-preview" aria-label="Canlı önizleme" ref={canvas}>
         <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setPanelOpen(!panelOpen); setInspector("theme"); }}><EditorIcon name="settings"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
         <p role="status" className="studio-status canvas-feedback">{message}</p>
@@ -120,11 +128,17 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
         <fieldset disabled={!ready} className="inspector-fields">{inspector === "block" ? selected ? <><span className="studio-eyebrow">{selectedId ? "SEÇİLİ BLOK" : "BLOK ÖZELLİKLERİ"}</span><h2>{blockLabels[selected.kind]}</h2><details className="studio-help"><summary>Bu bölüm hakkında</summary><p>{blockDescriptions[selected.kind]} {blockPlacementNote(selected.kind)}</p></details><BlockProperties block={selected} activeSceneField={sceneField} focusRequest={focusRequest} onChange={(block) => edit(replaceBlock(workspace.draft, block))} onManageSeries={() => { if (series[0]) onNavigate?.({ kind: "series", slug: series[0].slug }); }} /><button className="studio-remove" onClick={removeSelected}>Bloğu kaldır −</button></> : <div className="inspector-empty"><span aria-hidden="true">＋</span><h2>Yeni bir bölüm ekle.</h2><p>Son bloğu da kaldırdın. “Blok ekle” ile yeniden başlayabilirsin; ana sayfadaki teman korunuyor.</p><button className="studio-secondary" onClick={() => setPaletteOpen(true)}>Blok paletini aç</button></div> : <><span className="studio-eyebrow">TEMA</span><h2>Görsel kimlik</h2><p className="property-summary">Yalnızca renk değil: yazı karakteri, atmosfer, genişlik ve ritim.</p><ThemeSettings theme={workspace.draft} onChange={edit} /></>}</fieldset>
         <div className="studio-save-state"><span className="studio-eyebrow">TASLAK & ANA SAYFA</span><p>{!ready ? "Kayıt yükleniyor…" : dirty ? "Şu an taslağı düzenliyorsun; taslak otomatik kaydedilir. Ana sayfa henüz değişmedi." : "Taslak, yayındaki ana sayfayla aynı."}</p><button disabled={!ready || !dirty} onClick={() => setConfirmation("restore")}>Taslağı uygulanan temaya döndür ↶</button>{undo && <button className="undo-removal" onClick={() => { save({ ...workspace, draft: undo }); setUndo(null); setMessage("Önceki taslak geri geldi."); }}>{undoKind === "remove" ? "Son kaldırmayı geri al" : "Önceki düzene dön"} ↶</button>}{storageError && <p role="alert" className="studio-error">{storageError}</p>}{errors.length > 0 && <ul className="studio-error">{errors.map((error) => <li key={error}>{error}</li>)}</ul>}</div>
       </aside>
+      {view === "odak" && <div className="studio-dock" role="toolbar" aria-label="Tasarım araçları">
+        <button type="button" aria-pressed={structureOpen} onClick={() => setStructureOpen(!structureOpen)}><EditorIcon name="layout" size={20} /><span>Yapı</span></button>
+        <button type="button" aria-pressed={panelOpen && inspector === "theme"} onClick={() => { if (panelOpen && inspector === "theme") setPanelOpen(false); else { setInspector("theme"); setPanelOpen(true); } }}><EditorIcon name="settings" size={20} /><span>Tasarım</span></button>
+        <span className="dock-divider" aria-hidden="true" />
+        <div className="dock-actions">{actionNodes}</div>
+      </div>}
     </div>
     <dialog ref={preferences} className="studio-preferences-dialog" aria-labelledby="site-preferences-title" onClick={event => { if(event.target === event.currentTarget) preferences.current?.close(); }}>
       <div className="inspector-heading"><div><span className="studio-eyebrow">SİTENİN BÜTÜNÜ</span><h2 id="site-preferences-title">Site tercihleri</h2></div><button aria-label="Site tercihlerini kapat" onClick={() => preferences.current?.close()}><EditorIcon name="close"/></button></div>
-      <div className="preference-tabs" role="tablist" aria-label="Site tercihleri"><button role="tab" aria-selected={preferenceTab==="appearance"} onClick={()=>setPreferenceTab("appearance")}>Başlangıç düzeni</button><button role="tab" aria-selected={preferenceTab==="discovery"} onClick={()=>setPreferenceTab("discovery")}>Keşfedilebilirlik</button></div>
-      <section role="tabpanel">{preferenceTab==="appearance" ? <><p className="preference-intro">Sitenin başlangıç noktasını seç.<br/><span>İçeriklerin korunur. Düzen önce taslağa alınır.</span></p><ThemeStructure sections="starters" theme={workspace.draft} ready={ready} paletteOpen={false} onPaletteChange={()=>{}} onChooseStarter={starter=>{useStarter(starter);preferences.current?.close();}} onChange={edit} onSelect={selectFromList}/></> : <SiteIndexing/>}</section>
+      <div className="preference-tabs" role="tablist" aria-label="Site tercihleri"><button role="tab" aria-selected={preferenceTab==="appearance"} onClick={()=>setPreferenceTab("appearance")}>Başlangıç düzeni</button><button role="tab" aria-selected={preferenceTab==="discovery"} onClick={()=>setPreferenceTab("discovery")}>Keşfedilebilirlik</button><button role="tab" aria-selected={preferenceTab==="view"} onClick={()=>setPreferenceTab("view")}>Studio görünümü</button></div>
+      <section role="tabpanel">{preferenceTab==="appearance" ? <><p className="preference-intro">Sitenin başlangıç noktasını seç.<br/><span>İçeriklerin korunur. Düzen önce taslağa alınır.</span></p><ThemeStructure sections="starters" theme={workspace.draft} ready={ready} paletteOpen={false} onPaletteChange={()=>{}} onChooseStarter={starter=>{useStarter(starter);preferences.current?.close();}} onChange={edit} onSelect={selectFromList}/></> : preferenceTab==="view" ? <><p className="preference-intro">Studio’yu nasıl görmek istersin?<br/><span>Yalnız bu tarayıcıda geçerli; içeriklerin ve sitenin görünümü değişmez.</span></p><StudioViewSwitch variant="cards"/></> : <SiteIndexing/>}</section>
     </dialog>
     <dialog className="studio-confirm" ref={dialog} aria-labelledby="confirm-title" onCancel={() => setConfirmation(null)}><div><span className="studio-eyebrow">MEVCUT TASLAK DEĞİŞECEK</span><h2 id="confirm-title">Taslağı geri al?</h2><p>Mevcut taslak düzenin ve ayarların, ana sayfada uygulanan temayla değiştirilecek. İçeriklerin ve ana sayfa değişmez; bunun için ayrıca “Temayı uygula” gerekir.</p><div className="confirm-actions"><button className="studio-secondary" onClick={() => setConfirmation(null)}>Vazgeç</button><button className="studio-primary" onClick={confirm}>Taslağı değiştir</button></div></div></dialog>
   </main>;

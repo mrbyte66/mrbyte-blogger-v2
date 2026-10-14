@@ -15,10 +15,15 @@ import type { Article } from "../../lib/content";
 import { slugifySeriesTitle, type BlogSeries } from "../../lib/series/model";
 import { scrollBehavior } from "../../lib/motion";
 import { CanvasToolbar } from "./CanvasToolbar";
+import { BlockBar, DockBlockMenu, insertBlock, type BlockKind } from "./BlockBar";
+import { FocusExtras } from "./FocusExtras";
+import { MarginColumn } from "./MarginColumn";
+import type { CaretPosition } from "../../lib/builder/preview-protocol";
+import { useStudioView } from "../../lib/studio/view";
 import { PreviewCanvas } from "./PreviewCanvas";
 import { ArticleProperties, articleFields } from "./ArticleProperties";
 import { SeriesProperties, hasPublicChapter, seriesFields } from "./SeriesProperties";
-export function DocumentEditor({ navigation, initial, articles, series, isNew = false, onDirty, onNavigate, onSave, onDiscard, onCreateSeries, error }: { navigation?: ReactNode; initial: DocumentDraft; articles: readonly Article[]; series: readonly BlogSeries[]; isNew?: boolean; onDirty: (dirty: boolean) => void; onNavigate: (target: StudioTarget) => void; onSave: (draft: DocumentDraft, seriesId?: string | null) => Promise<boolean>; onCreateSeries: (series: BlogSeries) => Promise<BlogSeries | null>; onDiscard: () => void; error: string | null }) {
+export function DocumentEditor({ navigation, initial, fieldRequest = null, articles, series, isNew = false, onDirty, onNavigate, onSave, onDiscard, onCreateSeries, error }: { navigation?: ReactNode; initial: DocumentDraft; fieldRequest?: { field: string; n: number } | null; articles: readonly Article[]; series: readonly BlogSeries[]; isNew?: boolean; onDirty: (dirty: boolean) => void; onNavigate: (target: StudioTarget) => void; onSave: (draft: DocumentDraft, seriesId?: string | null) => Promise<boolean>; onCreateSeries: (series: BlogSeries) => Promise<BlogSeries | null>; onDiscard: () => void; error: string | null }) {
   const { workspace, ready } = useWorkspace();
   const inspectorRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLElement>(null);
@@ -32,6 +37,10 @@ export function DocumentEditor({ navigation, initial, articles, series, isNew = 
   const [mobile, setMobile] = useState(false);
   const [editing, setEditing] = useState(true);
   const [message, setMessage] = useState("");
+  const [view] = useStudioView();
+  const [caret, setCaret] = useState<CaretPosition>(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const handledRequest = useRef(0);
   const initialSeriesId = initial.kind === "article" ? initial.article.seriesId ?? series.find((s) => s.status !== "trashed" && s.articleSlugs.includes(initial.article.slug))?.id ?? null : null;
   const [seriesId, setSeriesId] = useState(initialSeriesId);
   const [savedSeriesId, setSavedSeriesId] = useState(initialSeriesId);
@@ -75,6 +84,20 @@ export function DocumentEditor({ navigation, initial, articles, series, isNew = 
     setField(id); setEditing(true); setRequest((n) => n + 1);
     setPanelOpen(!["title","excerpt","summary","body"].includes(id) && !id.startsWith("paragraph-"));
   }
+  // Library actions (cover, publication plan) open the page with that settings panel already showing.
+  useEffect(() => {
+    if (!fieldRequest || fieldRequest.n === handledRequest.current) return;
+    handledRequest.current = fieldRequest.n;
+    select(fieldRequest.field);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fieldRequest]);
+  function insert(kind: BlockKind) {
+    if (!ready || saving) return;
+    const result = insertBlock(draft, field, kind);
+    if (!result) return;
+    change(result.draft);
+    select(result.field);
+  }
   function change(next: DocumentDraft) {
     if (!baseline && draft.kind === next.kind) {
       const oldRecord = draft.kind === "article" ? draft.article : draft.series;
@@ -98,7 +121,7 @@ export function DocumentEditor({ navigation, initial, articles, series, isNew = 
     const saved = await onSave(next, draft.kind === "article" ? seriesId : undefined);
     setSaving(false);
     if (saved) {
-      setDraft(next); setBaseline(structuredClone(next)); setSavedSeriesId(seriesId); onDirty(false);
+      setDraft(next); setBaseline(structuredClone(next)); setSavedSeriesId(seriesId); setSavedAt(new Date()); onDirty(false);
       const privateNote = next.kind === "article" && next.article.visibility === "private" ? " Yazı özel: yalnız sen görebilirsin." : "";
       setMessage((nextStatus === "scheduled" ? "Yayın planı kaydedildi. Sunucu yazıyı planlanan zamanda yayımlayacak." : nextStatus === "trashed" ? "Çöp kutusuna taşındı. İçerik işlemlerinden geri yükleyebilirsin." : nextStatus === "archived" ? "Arşivlendi; ziyaretçilerden gizlendi." : nextStatus === "draft" ? "Taslak kaydedildi; ziyaretçilerden gizli." : "Kaydedildi ve yayında.") + privateNote + (publishedSeriesNote ? ` ${selectedSeries?.title} serisi de yayınlandı.` : ""));
     } else setMessage("");
@@ -111,18 +134,24 @@ export function DocumentEditor({ navigation, initial, articles, series, isNew = 
     if (!baseline) { onDiscard(); return; }
     setDraft(structuredClone(baseline)); setSeriesId(savedSeriesId); setCreatingSeries(false); setSeriesFormDirty(false); setMessage("Düzenlemeler geri alındı.");
   }
-  return <main className={`studio document-studio ${panelOpen ? "has-inspector" : ""} ${focused ? "studio-focus" : ""}`}>
-    <StudioHeader navigation={navigation} status={<span className={`studio-state status-${status}`} title={dirty ? "Kaydedilmemiş değişiklikler var" : "Kaydedildi"}>{statusLabels[status]}{dirty ? " · düzenleniyor" : ""}</span>} actions={<>
+  const clock = savedAt ? new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(savedAt) : null;
+  const showPublish = (view === "marjinalya" || view === "odak") && status !== "published" && !(draft.kind === "article" && draft.article.visibility === "private");
+  const actionNodes = <>
       {baseline && (baseline.kind === "article" ? articleStatus(baseline.article) : baseline.series.status) === "published" && <Link className="studio-text-link" href={baseline.kind === "article" ? `/yazilar/${baseline.article.slug}` : `/seriler/${baseline.series.slug}`} target="_blank" aria-label="Kaydedilmiş sayfayı aç ↗" title="Kaydedilmiş sayfayı aç">Site ↗</Link>}
       <button className="studio-secondary" disabled={!dirty} onClick={revert} aria-label="Değişiklikleri geri al" title="Değişiklikleri geri al">↶</button>
       <DocumentActions status={status} disabled={!ready || !valid || creatingSeries || saving} canPublish={canPublish} publishHint={publishHint} onSave={save} onSchedule={draft.kind === "article" ? () => select("publication") : undefined} />
       <button className="studio-primary" disabled={!ready || !dirty || !valid || missingBody || creatingSeries || saving} onClick={() => save()}>{saving ? "Kaydediliyor…" : "Sayfayı kaydet ↗"}</button>
-    </>} />
+      {showPublish && <button className="studio-primary studio-publish" disabled={!ready || !valid || !canPublish || creatingSeries || saving} title={canPublish ? undefined : publishHint} onClick={() => save("published")}>Yayınla</button>}
+    </>;
+  return <main className={`studio document-studio ${panelOpen ? "has-inspector" : ""} ${focused ? "studio-focus" : ""}`} data-view={view}>
+    <StudioHeader navigation={navigation} status={<><span className={`studio-state status-${status}`} title={dirty ? "Kaydedilmemiş değişiklikler var" : "Kaydedildi"}>{statusLabels[status]}{dirty ? " · düzenleniyor" : ""}</span>{view !== "sahne" && <span className={`studio-saved${dirty ? " is-dirty" : ""}`} aria-hidden="true">{dirty ? "Kaydedilmedi" : isNew && !baseline ? "Henüz kaydedilmedi" : clock ? `Kayıtlı · ${clock}` : "Kayıtlı"}</span>}</>} actions={view === "odak" ? null : actionNodes} />
 
     <div className="studio-workspace">
-      <aside className="studio-sidebar document-dock" aria-label="Sayfa alanları"><nav className="document-field-list">{fields.map(([id, name]) => <button key={id} title={name} aria-label={name} aria-pressed={panelOpen && (field === id || (id === "body" && field.startsWith("paragraph-")))} onClick={() => { if (panelOpen && field === id) setPanelOpen(false); else select(id); }}><EditorIcon name={id}/><span>{({title:"Başlık",excerpt:"Özet",body:"Metin",cover:"Kapak",figure:"Görsel",code:"Kod",table:"Tablo",meta:"Bilgiler",publication:"Yayın",layout:"Düzen",summary:"Açıklama",chapters:"Bölümler"} as Record<string,string>)[id]}</span></button>)}</nav></aside>
-      <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali"><CanvasToolbar focused={focused} onFocus={setFocused} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>{draft.kind === "article" && <ArticleSeriesContext series={series} selectedId={seriesId} creating={creatingSeries} onSelect={(id) => { setSeriesId(id); setCreatingSeries(false); setSeriesFormDirty(false); }} onCreate={() => { setCreatingSeries(true); setPanelOpen(true); }} />}</CanvasToolbar><p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>{!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}<PreviewCanvas onInlineEdit={(patch) => { if (!ready || saving) return; const next = editDocumentText(draft, patch); if (next) change(next); }} workspace={workspace} document={preview} mobile={mobile} selection={{ id: field, request, editing }} onSelect={(id) => select(id, true)} onNavigate={onNavigate} /></section>
+      <aside className="studio-sidebar document-dock" aria-label="Sayfa alanları">{view === "marjinalya" && <BlockBar draft={draft} field={field} disabled={!ready || saving} caret={caret} onInsert={insert} />}<nav className="document-field-list">{fields.map(([id, name]) => <button key={id} title={name} aria-label={name} aria-pressed={panelOpen && (field === id || (id === "body" && field.startsWith("paragraph-")))} onClick={() => { if (panelOpen && field === id) setPanelOpen(false); else select(id); }}><EditorIcon name={id}/><span>{({title:"Başlık",excerpt:"Özet",body:"Metin",cover:"Kapak",figure:"Görsel",code:"Kod",table:"Tablo",meta:"Bilgiler",publication:"Yayın",layout:"Düzen",summary:"Açıklama",chapters:"Bölümler"} as Record<string,string>)[id]}</span></button>)}</nav>{view === "odak" && draft.kind === "article" && <DockBlockMenu draft={draft} field={field} disabled={!ready || saving} onInsert={insert} onOpenField={(id) => select(id)} />}{view === "odak" && <><span className="dock-divider" aria-hidden="true" /><div className="dock-actions">{actionNodes}</div></>}</aside>
+      <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali"><CanvasToolbar focused={focused} onFocus={setFocused} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>{draft.kind === "article" && <ArticleSeriesContext series={series} selectedId={seriesId} creating={creatingSeries} onSelect={(id) => { setSeriesId(id); setCreatingSeries(false); setSeriesFormDirty(false); }} onCreate={() => { setCreatingSeries(true); setPanelOpen(true); }} />}</CanvasToolbar><p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>{!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}<PreviewCanvas onCaret={setCaret} onInlineEdit={(patch) => { if (!ready || saving) return; const next = editDocumentText(draft, patch); if (next) change(next); }} workspace={workspace} document={preview} mobile={mobile} selection={{ id: field, request, editing }} onSelect={(id) => select(id, true)} onNavigate={onNavigate} /></section>
       <aside ref={inspectorRef} hidden={!panelOpen} className="studio-inspector inspector-linked" aria-label="Seçili alanın ayarları"><div className="inspector-heading"><div><span className="studio-eyebrow">DÜZENLE</span><h2>{label}</h2></div><button aria-label="Ayar panelini kapat" onClick={() => setPanelOpen(false)}><EditorIcon name="close"/></button></div>{creatingSeries && <div ref={seriesFormRef} className="inline-series-anchor"><InlineSeriesForm onDirty={setSeriesFormDirty} onCancel={closeSeriesForm} onSave={async (record) => { const created = await onCreateSeries(record); if (!created) return false; setSeriesId(created.id); closeSeriesForm(); setMessage("Seri taslak olarak oluşturuldu ve seçildi. Yazını kaydettiğinde ilk bölümü olacak."); return true; }} />{error && <p role="alert" className="studio-error">{error}</p>}</div>}<fieldset className="inspector-fields" disabled={!ready}>{panelOpen && (draft.kind === "article" ? <ArticleProperties onSchedule={() => save("scheduled")} onCancelSchedule={() => save("draft")} scheduleDisabled={!ready || !valid || !canPublish || creatingSeries || saving} allowSlugEdit={!baseline} article={draft.article} field={field} onChange={(article) => change({ kind: "article", article })} /> : <SeriesProperties series={draft.series} collection={series} articles={articles} field={field} onChange={(item) => change({ kind: "series", series: item })} />)}</fieldset></aside>
+      {view === "marjinalya" && <MarginColumn draft={draft} saved={baseline} field={field} isNew={!baseline} slugEdited={slugEdited} onOpenField={(id) => select(id)} />}
+      {view === "odak" && <FocusExtras draft={draft} saved={baseline} field={field} caret={caret} onSelect={(id) => select(id)} />}
     </div>
   </main>;
 }

@@ -1,5 +1,6 @@
 import "./studio.css";
 import "./studio-design.css";
+import "./studio-views.css";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { StudioLogin } from "../../components/auth/StudioLogin";

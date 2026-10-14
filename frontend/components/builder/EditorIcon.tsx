@@ -16,6 +16,11 @@ export function EditorIcon({ name, size = 18 }: { name: string; size?: number })
     link:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1",
     unlink:"M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1M4 4l16 16",
     up:"m6 14 6-6 6 6", down:"m6 10 6 6 6-6", plus:"M12 4v16M4 12h16", series:"M7 3h14v16H7zM3 7v14h14",
+    pages:"M7 3.5h7l4 4v13H7zM14 3.5v4h4", homepage:"M4 4h16v16H4zM4 10h16M10 10v10", stats:"M5.5 19v-7M12 19V5M18.5 19v-4",
+    note:"M5 4h14v12l-5 5H5zM14 21v-5h5", goal:"M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01",
+    paragraph:"M13 4v16M17 4v16M13 4H9a4 4 0 0 0 0 8h4", heading:"M6 4v16M18 4v16M6 12h12", quote:"M7 8h4v4a4 4 0 0 1-4 4M15 8h4v4a4 4 0 0 1-4 4",
+    device:"M3 5h18v11H3zM8 20h8M12 16v4", search:"M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm9 3-4.5-4.5",
+    grid:"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z", list:"M4 6h16M4 12h16M4 18h16", user:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0} as CSSProperties}><path d={paths[name] ?? paths.settings}/></svg>;
 }

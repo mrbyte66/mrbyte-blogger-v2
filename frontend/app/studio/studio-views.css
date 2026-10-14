@@ -310,16 +310,18 @@ html .studio[data-view] .studio-saved { min-width:132px; }
 html .studio[data-view] .studio-state-suffix { display:none; }
 html .studio[data-view] .studio-header-state { flex-shrink:0; }
 
+/* The settings panel floats over the page instead of squeezing it: nothing underneath moves. */
+html .studio[data-view] .studio-workspace { position:relative; }
+html .studio[data-view] .studio-inspector { position:absolute; grid-area:auto; z-index:35; top:12px; right:12px; bottom:12px; left:auto; width:min(360px,calc(100% - 24px)); height:auto; max-height:none; padding:20px; border:1px solid var(--sv-glass-line); border-radius:28px; background:var(--sv-glass); box-shadow:var(--sv-shadow); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); overflow:auto; animation:sv-pop 260ms var(--sv-ease); }
+html .studio[data-view] .studio-inspector[hidden] { display:none; }
+html .studio[data-view] .inspector-heading h2 { font-size:22px; letter-spacing:-.02em; }
+html .studio[data-view] .inspector-heading>button { border-radius:50%; background:var(--sv-sunk); }
+html .studio[data-view] .inspector-linked { box-shadow:var(--sv-shadow); }
 @media (min-width:1100px) {
   /* where the goal already has a place of its own, the compact chip in the top bar stays away */
   html .studio:is([data-view="marjinalya"],[data-view="odak"]) .studio-header-state .word-goal-compact { display:none; }
   /* The settings panel floats over the page instead of squeezing it: nothing underneath moves. */
-  html .studio[data-view] .studio-workspace { position:relative; }
-  html .studio[data-view] .studio-inspector { position:absolute; z-index:35; top:16px; right:16px; bottom:16px; left:auto; width:min(360px,calc(100% - 32px)); height:auto; max-height:none; padding:22px; border:1px solid var(--sv-glass-line); border-radius:28px; background:var(--sv-glass); box-shadow:var(--sv-shadow); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); overflow:auto; animation:sv-pop 260ms var(--sv-ease); }
-  html .studio[data-view] .studio-inspector[hidden] { display:none; }
-  html .studio[data-view] .inspector-heading h2 { font-size:22px; letter-spacing:-.02em; }
-  html .studio[data-view] .inspector-heading>button { border-radius:50%; background:var(--sv-sunk); }
-  html .studio[data-view] .inspector-linked { box-shadow:var(--sv-shadow); }
+
   /* in Marjinalya's article pages the panel takes the margin column's place instead */
   html .studio[data-view="marjinalya"].document-studio .studio-inspector { position:relative; inset:auto; width:auto; border:0; border-left:1px solid var(--sv-line); border-radius:0; background:var(--sv-sunk); box-shadow:none; -webkit-backdrop-filter:none; backdrop-filter:none; animation:none; padding:22px 24px; }
 }
@@ -700,7 +702,9 @@ html .studio[data-view="marjinalya"].document-studio .document-field-list button
 html .studio[data-view="marjinalya"].document-studio .document-field-list button>span { font-size:13px; opacity:1; }
 html .studio[data-view="marjinalya"].document-studio .block-bar { flex:0 0 auto; flex-wrap:nowrap; }
 html .studio[data-view="marjinalya"].document-studio .block-bar-hint { display:none; }
-html .studio[data-view="marjinalya"].document-studio .studio-inspector { grid-row:1; grid-column:1; }
+@media (max-width:1099px) {
+  html .studio[data-view="marjinalya"].document-studio .studio-inspector { grid-row:1; grid-column:1; }
+}
 @media (min-width:1100px) {
   html .studio[data-view="marjinalya"].document-studio > .studio-workspace { grid-template-columns:minmax(0,1fr) 360px; }
   html .studio[data-view="marjinalya"].document-studio .studio-sidebar { grid-column:1/-1; flex-wrap:wrap; overflow:visible; justify-content:space-between; }
@@ -818,7 +822,6 @@ html .studio[data-view] .studio-preview>.studio-status:not(:empty) { background:
 html .studio[data-view] .studio-preview>.studio-error { bottom:64px; background:#f6c3cf; color:#5a1f2d; border:0; }
 html .studio[data-view] .studio-preview>.studio-status:empty { display:none; }
 @media (min-width:1100px) {
-  html .studio[data-view] .studio-inspector { grid-area:auto; }
   html .studio[data-view="sahne"] .studio-preview>.studio-status:not(:empty) { position:static; width:auto; max-width:min(560px,calc(100% - 480px)); margin:0 0 20px 44px; pointer-events:auto; }
   html .studio[data-view="sahne"] .studio-preview>.studio-error { position:static; width:auto; margin:0 0 70px 44px; grid-column:1/-1; grid-row:2; align-self:end; justify-self:start; z-index:6; }
 }
@@ -863,3 +866,11 @@ html .studio[data-view] > .studio-topbar { min-width:0; }
 .word-goal-skeleton { display:block; width:150px; height:32px; border-radius:999px; background:var(--sv-sunk); animation:sv-shimmer 900ms ease-in-out infinite alternate; }
 .word-goal-compact.word-goal-pending { min-height:40px; }
 .word-goal-compact .word-goal-skeleton { width:128px; height:30px; }
+@media (min-width:1100px) {
+  /* Sahne: controls come first so a button appearing in the context group never moves them */
+  html .studio[data-view="sahne"] .canvas-controls { order:-1; }
+}
+
+/* the goal's settings open as a popover where there is no room for them in the flow */
+.margin-goal { position:relative; }
+.margin-goal .word-goal-form { position:absolute; left:16px; right:16px; top:calc(100% - 8px); z-index:6; }

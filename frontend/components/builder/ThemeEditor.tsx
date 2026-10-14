@@ -63,6 +63,8 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   }, [confirmation]);
   // The settings panel closes on Escape or a press on empty space (the canvas reports its own presses).
   useDismiss(panelOpen, () => setPanelOpen(false), [properties, sidebarRef], "empty");
+  // The block palette is a popover in some views: it closes the same way.
+  useDismiss(paletteOpen, () => setPaletteOpen(false), [sidebarRef], "outside");
   const selectFromCanvas = useCallback((id: string, field?: SceneField) => {
     setPanelOpen(true); setFocused(false);
     setSceneField(field);

@@ -362,7 +362,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
     if (target && !toolbar.current?.contains(target) && !active.node.contains(target)) finish(true);
   }}>
     {active ? frozen.current : children}
-    {active && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" style={position} onMouseDown={(event) => event.preventDefault()}>
+    {active && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
       <button aria-label="Metni geri al" title="Geri al · ⌘Z" disabled={cursor.current === 0} onClick={() => travel(-1)}><EditorIcon name="undo" size={16} /></button>
       <button aria-label="Metni yinele" title="Yinele · ⇧⌘Z" disabled={cursor.current >= history.current.length - 1} onClick={() => travel(1)}><EditorIcon name="redo" size={16} /></button>
       {active.rich && <><i />

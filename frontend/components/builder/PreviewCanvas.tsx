@@ -1,5 +1,6 @@
 "use client";
 
+import { inlineEditEvent, parseInlineEdit, type InlineEdit } from "../../lib/builder/inline-edit";
 import { useEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
 import { isBlockId, isSceneField, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
@@ -8,6 +9,7 @@ import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type 
 
 type Props = {
   document?: DocumentDraft | null;
+  onInlineEdit?: (edit: InlineEdit) => void;
   onNavigate?: (target: StudioTarget) => void;
   mobile: boolean;
   workspace: Workspace;
@@ -15,14 +17,14 @@ type Props = {
   onSelect: (id: string, field?: SceneField) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableWidth, setAvailableWidth] = useState(600);
   const [loaded, setLoaded] = useState(false);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate });
-  current.current = { serialized, selection, workspace, onSelect, document, onNavigate };
+  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit });
+  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -39,6 +41,7 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   useEffect(() => {
     function receive(event: MessageEvent) {
       if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow) return;
+      if (event.data?.type === inlineEditEvent && current.current.selection.editing) { const edit = parseInlineEdit(event.data.edit); if (edit) current.current.onInlineEdit?.(edit); }
       if (event.data?.type === navigateEvent && !current.current.selection.editing) { const target = parseStudioTarget(event.data.target); if (target) current.current.onNavigate?.(target); }
       if (event.data?.type === previewEvents.ready) { setLoaded(true); synchronize(); }
       if (event.data?.type === previewEvents.select && isBlockId(event.data.id) && (current.current.document ? isDocumentField(event.data.id) : current.current.workspace.draft.blocks.some((block) => block.id === event.data.id))) {

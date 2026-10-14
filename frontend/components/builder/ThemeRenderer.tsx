@@ -1,4 +1,5 @@
 "use client";
+import { InlineCanvasEditor } from "./InlineCanvasEditor";
 import { AccountMenu } from "../auth/AccountMenu";
 
 import { scrollBehavior } from "../../lib/motion";
@@ -43,7 +44,7 @@ function ArticleFeed({ block, preview }: { block: ArticlesBlock; preview: boolea
   const more = progressive && feed.hasMore;
   return <section className="theme-section feed-section" id="yazilar" aria-labelledby={`${block.id}-title`}>
     <div className="section-kicker"><span>01 / DÜŞÜNCELER & NOTLAR</span><span>{String(items.length).padStart(2, "0")} YAZI</span></div>
-    <div className="feed-heading"><h2 id={`${block.id}-title`}>{block.title}</h2><span className="feed-sample">{items.length} yazı</span></div>
+    <div className="feed-heading"><h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2><span className="feed-sample">{items.length} yazı</span></div>
     <div className={`feed-list feed-${block.display}`}>
       {(progressive ? items.slice(0, feed.visible) : items).map((article, index) => <FeedArticle article={article} index={index} preview={preview} key={article.slug} />)}
     </div>
@@ -60,7 +61,7 @@ function SeriesBlock({ block }: { block: Extract<PageBlock, { kind: "series" }> 
   const { series } = useSeriesWorkspace();
   return <section className={`theme-section series-block series-block-${block.display}`} id="seriler" aria-labelledby={`${block.id}-title`}>
     <p className="editorial-eyebrow">ADIM ADIM / OKUMA YOLLARI</p>
-    <h2 id={`${block.id}-title`}>{block.title}</h2>
+    <h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2>
     <SeriesCatalog series={series} />
   </section>;
 }
@@ -71,16 +72,16 @@ function BlockContent({ block, theme, primaryTitle, preview, editing }: { block:
         case "intro": {
           const Heading = primaryTitle === block.id ? "h1" : "h2";
           return <section className={`theme-section editorial-intro intro-${block.layout}`}>
-          <p className="editorial-eyebrow"><span aria-hidden="true">↳</span> {block.eyebrow}</p><Heading>{block.title}</Heading><div className="editorial-intro-bottom"><p>{block.description}</p><span className="editorial-orbit" aria-hidden="true">✳</span></div>
+          <p className="editorial-eyebrow"><span aria-hidden="true">↳</span> {block.eyebrow}</p><Heading data-inline-field="title">{block.title}</Heading><div className="editorial-intro-bottom"><p data-inline-field="description">{block.description}</p><span className="editorial-orbit" aria-hidden="true">✳</span></div>
         </section>;
         }
         case "scene": return <Experience editing={editing} key={`${block.id}-${theme.surface}`} colorMode={theme.surface === "night" ? "dark" : theme.surface === "warm" ? "light" : "remember"} headingLevel={primaryTitle === block.id ? "h1" : "h2"} siteName={theme.siteName} title={block.title} emphasis={block.emphasis} description={block.description} featuredArticleSlug={block.featuredArticleSlug} showFeaturedArticle={block.showFeaturedArticle} featuredSeriesSlug={block.featuredSeriesSlug} showFeaturedSeries={block.showFeaturedSeries} />;
         case "articles": return <ArticleFeed key={`${block.id}-${block.category}-${block.loading}`} block={block} preview={preview} />;
         case "series": return <SeriesBlock block={block} />;
-        case "quote": return <section className={`theme-section theme-quote quote-${block.display}`}><blockquote><p><span className="quote-mark" aria-hidden="true">“</span>{block.text}<span className="quote-mark" aria-hidden="true">”</span></p><cite>{block.attribution}</cite></blockquote></section>;
-        case "about": return <section className="theme-section theme-about" id="hakkimda" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">EKRANIN DİĞER TARAFINDA</p><h2 id={`${block.id}-title`}>{block.title}</h2><p>{block.text}</p></section>;
-        case "projects": return <section className="theme-section theme-projects" id="projeler" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">KOD & DENEYLER</p><h2 id={`${block.id}-title`}>{block.title}</h2><div className="project-empty"><span aria-hidden="true">[ _ ]</span><p>İlk deney için yer hazır.<br /><small>Henüz proje eklenmedi.</small></p></div></section>;
-        case "footer": return <footer className="theme-section theme-footer"><a href="#top">{theme.siteName}<span>.</span></a><p>{block.text}</p><a className="footer-top" href="#top">Başa dön ↑</a></footer>;
+        case "quote": return <section className={`theme-section theme-quote quote-${block.display}`}><blockquote><p><span className="quote-mark" aria-hidden="true">“</span><span data-inline-field="text">{block.text}</span><span className="quote-mark" aria-hidden="true">”</span></p><cite data-inline-field="attribution">{block.attribution}</cite></blockquote></section>;
+        case "about": return <section className="theme-section theme-about" id="hakkimda" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">EKRANIN DİĞER TARAFINDA</p><h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2><p data-inline-field="text">{block.text}</p></section>;
+        case "projects": return <section className="theme-section theme-projects" id="projeler" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">KOD & DENEYLER</p><h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2><div className="project-empty"><span aria-hidden="true">[ _ ]</span><p>İlk deney için yer hazır.<br /><small>Henüz proje eklenmedi.</small></p></div></section>;
+        case "footer": return <footer className="theme-section theme-footer"><a href="#top">{theme.siteName}<span>.</span></a><p data-inline-field="text">{block.text}</p><a className="footer-top" href="#top">Başa dön ↑</a></footer>;
       }
 }
 
@@ -159,6 +160,6 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
   } : undefined}>
     {!embedded && <div className="preview-bar"><Link href="/studio">← Stüdyoya dön</Link><span>TASLAK ÖNİZLEME · {workspace.draft.name}</span><span>Henüz uygulanmadı</span></div>}
     {storageError && <p role="alert" className="preview-warning">{storageError}</p>}
-    {document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}
+    <InlineCanvasEditor enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
   </div>;
 }

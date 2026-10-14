@@ -1,6 +1,8 @@
+import { useState } from "react";
+import { CrtIcon } from "./StudioIcons";
 import { addBlock, blockDescriptions, blockKinds, blockLabels, canMoveBlock, inferStarter, moveBlock, type Starter, type Theme } from "../../lib/builder/model";
 
-const symbols = { header: "≡", intro: "Aa", scene: "[ ]", articles: "▤", series: "▥", quote: "“", about: "◎", projects: "⌘", footer: "↳" };
+const symbols = { header: "≡", intro: "Aa", scene: <CrtIcon />, articles: "▤", series: "▥", quote: "“", about: "◎", projects: "⌘", footer: "↳" };
 export const starters: { id: Starter; label: string; detail: string }[] = [
   { id: "scene", label: "Karakterli evren", detail: "Tek ekran · etkileşimli sahne" },
   { id: "feed", label: "Açık defter", detail: "Kaydırılan sayfa · yazı akışı" },
@@ -21,11 +23,12 @@ type Props = {
 
 export function ThemeStructure({ theme, ready, selectedId, paletteOpen, onPaletteChange, onChooseStarter, onChange, onSelect }: Props) {
   const selectedStarter = inferStarter(theme);
+  const [showStarters, setShowStarters] = useState(false);
   return (
       <section className="studio-structure" aria-label="Tema yapısı">
         <section aria-labelledby="starter-heading">
-          <div className="studio-section-title"><h2 id="starter-heading">Başlangıç düzenleri</h2></div>
-          <div className="starter-options">{starters.map((starter) => <button key={starter.id} className="starter-card" aria-label={`${starter.label} başlangıç düzeni`} aria-pressed={selectedStarter === starter.id} disabled={!ready} onClick={() => onChooseStarter(starter.id)}><span className={`starter-visual starter-${starter.id}`} aria-hidden="true">{starter.id === "scene" ? <><i /><b>[ ]</b><i /></> : <><b>{starter.id === "magazine" ? "Aa." : "Aa"}</b><i /><i /><i /></>}</span><span><strong>{starter.label}</strong><small>{starter.detail}</small>{selectedStarter === starter.id && <span className="starter-current">Bu yapı seçili ✓</span>}</span></button>)}</div>
+          <div className="studio-section-title"><h2 id="starter-heading">Başlangıç düzeni</h2></div><button className="starter-picker-trigger" aria-label="Başlangıç düzenini değiştir" aria-expanded={showStarters} onClick={() => setShowStarters(!showStarters)}><CrtIcon /><span>{starters.find((s) => s.id === selectedStarter)?.label ?? "Özel düzen"}</span><span aria-hidden="true">⌄</span></button>
+          <div className="starter-options" hidden={!showStarters}>{starters.map((starter) => <button key={starter.id} className="starter-card" aria-label={`${starter.label} başlangıç düzeni`} aria-pressed={selectedStarter === starter.id} disabled={!ready} onClick={() => { onChooseStarter(starter.id); setShowStarters(false); }}><span className={`starter-visual starter-${starter.id}`} aria-hidden="true">{starter.id === "scene" ? <CrtIcon /> : <><b>{starter.id === "magazine" ? "Aa." : "Aa"}</b><i /><i /><i /></>}</span><span><strong>{starter.label}</strong>{selectedStarter === starter.id && <span className="starter-current">Seçili ✓</span>}</span></button>)}</div>
         </section>
         <section aria-labelledby="structure-heading">
         <div className="studio-section-title"><h1 id="structure-heading">Sayfa yapısı</h1><span>{theme.blocks.length} blok</span></div>

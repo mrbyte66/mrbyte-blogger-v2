@@ -146,3 +146,18 @@
 
 .document-editing [data-edit-field].document-selected { outline:2px solid var(--ink); outline-offset:5px; }
 .document-editing.document-focus [data-edit-field]:not([data-edit-field="body"]):not(.document-selected) { opacity:.65; }
+
+/* Inline editing lives in the preview frame and never changes public rendering. */
+.canvas-editing [data-inline-field] { cursor:text; border-radius:3px; }
+.canvas-editing [data-inline-field]:hover { outline:1px dashed currentColor; outline-offset:5px; }
+.canvas-inline-editor { position:fixed; z-index:100; color:var(--ink,#25352e); background:var(--panel,#fff); border:1px solid var(--line,#c9d2c4); border-radius:10px; box-shadow:0 14px 60px #14231830; padding:12px; animation:inline-edit-in 160ms ease-out; }
+.canvas-inline-editor textarea { display:block; width:100%; min-height:54px; max-height:calc(100dvh - 140px); resize:none; border:0; background:transparent; color:inherit; font:inherit; letter-spacing:inherit; line-height:inherit; padding:0; outline:none; }
+.canvas-inline-editor small { display:block; font:10px/1.6 'DM Sans',sans-serif; color:var(--muted,#66736b); margin-top:8px; }
+.inline-edit-toolbar { position:absolute; bottom:calc(100% + 8px); left:0; display:flex; gap:4px; align-items:center; background:var(--panel,#fff); border:1px solid var(--line,#c9d2c4); border-radius:9px; box-shadow:0 4px 20px #14231820; padding:4px; white-space:nowrap; font:11px/1.4 'DM Sans',sans-serif; letter-spacing:0; }
+.inline-edit-toolbar>span { color:var(--muted,#66736b); padding:0 8px; }
+.inline-edit-toolbar button { border:0; border-radius:6px; min-height:32px; padding:7px 10px; font:inherit; }
+.inline-edit-toolbar button:last-child { color:#fff; background:#304836; }
+.inline-edit-toolbar button:disabled { opacity:.45; }
+.inline-edit-toolbar button:focus-visible { outline:2px solid currentColor; outline-offset:2px; }
+@keyframes inline-edit-in { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .canvas-inline-editor { animation:none; } }

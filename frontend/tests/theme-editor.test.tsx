@@ -78,6 +78,7 @@ describe("visual theme authoring", () => {
   it("persists a draft independently, then applies it to the homepage snapshot", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
+    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     await user.clear(screen.getByLabelText("Site adı"));
     await user.type(screen.getByLabelText("Site adı"), "MRBYTE");
@@ -123,6 +124,7 @@ describe("visual theme authoring", () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
     fireEvent.change(screen.getByLabelText("Başlık"), { target: { value: "Benim evrenim" } });
+    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
     const current = screen.getByRole("button", { name: "Karakterli evren başlangıç düzeni" });
     expect(current.getAttribute("aria-pressed")).toBe("true");
     await user.click(current);
@@ -156,6 +158,7 @@ describe("visual theme authoring", () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
     fireEvent.change(screen.getByLabelText("Başlık"), { target: { value: "Yeni başlık" } });
+    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     expect(savedWorkspace()?.draft).toEqual(createTheme("feed"));
     expect(savedWorkspace()?.applied).toEqual(createWorkspace().applied);
@@ -172,6 +175,7 @@ describe("visual theme authoring", () => {
   it("reports failed apply without claiming or persisting a new applied snapshot", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
+    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     site.failNext = new ApiError(503, "SERVICE_UNAVAILABLE", "Sunucu şu anda yanıt veremiyor.");
     await user.click(screen.getByRole("button", { name: /Temayı uygula/ }));

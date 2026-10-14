@@ -101,7 +101,7 @@ describe("page editing and visitor content", () => {
     fireEvent.change(screen.getByLabelText("Sayfa ara"), { target: { value: "sessizliği" } });
     expect(screen.getByRole("button", { name: "İyi kodun sessizliği" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: articles[0].title })).toBeNull();
-    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent(screen.getByRole("dialog", { name: "Sayfalar" }), new Event("cancel", { bubbles: false, cancelable: true }));
     expect(screen.queryByRole("navigation", { name: "Sayfalar" })).toBeNull();
     expect(document.activeElement).toBe(trigger);
   });

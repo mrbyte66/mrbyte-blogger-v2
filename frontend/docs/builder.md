@@ -9,3 +9,9 @@ URL alanı ilk yayın öncesi düzenlenebilir; sonrasında disabled/read-only. K
 Seri bölümleri bağımsız Yazılar listesine karışmaz; ilk bölümde draft seri yayınlanır. Seri archive/trash yazıları silmez; çöp geri alınır. Sayfa seçimleri taslak/public durumunu doğru söyler.
 
 Site genelinde tek indeksleme kontrolü Studio ayarında. Owner private yazı ürünü ve istatistik UI’sı kaldırılacak; Pexels araması şimdilik yok. Kapak upload/select korunur. Tema kütüphanesi/nesting/grid ve zengin editör Backlog. Eski localStorage/prototype açıklamaları yeni mimari kaynağı değildir.
+
+Studio üst çubuğundaki sayfa seçici geniş bir dialog açar; arama, durum filtresi ve yazı/seri oluşturma buradadır. Escape ve dış alan tıklaması kapatır, odak seçiciye döner. Başlangıç düzenleri kompakt seçicidedir; düzen değişiminden sonra önceki taslağa dönüş sunulur. Tuvale odaklan yan panelleri gizler.
+
+Düzenle modunda desteklenen başlık, özet ve paragraflar tuvalden tıklama veya Enter ile açılır. Bağlamsal metin editöründe Tamam / Ctrl–⌘+Enter taslağa aktarır; Escape vazgeçer. Frame origin/source, alan izin listesi ve önceki değer doğrulanır. URL/yayın durumu bu mesajla değişmez. Zengin metin biçimlendirme #25 kapsamındadır.
+
+Tema tasarımı → Keşfedilebilirlik altında tek site indeksleme anahtarı vardır. Gerçek backend ayarı version/If-Match ile hemen kaydedilir; başarısız işlem başarılı gösterilmez. Deployment indeksleme koruması ayrıca geçerlidir. Studio chrome açık/koyu tema, dar ekran ve reduced-motion desteğiyle çalışır; CRT artwork korunur.

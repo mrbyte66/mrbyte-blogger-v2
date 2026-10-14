@@ -695,7 +695,9 @@ html .studio[data-view="sahne"] .studio-starters { display:none; }
   html .studio[data-view] .studio-header-state,
   html .studio[data-view] .studio-top-actions { display:contents; }
   html .studio[data-view] .studio-brand-tile { --sv-tile:44px; order:1; }
-  html .studio[data-view] .studio-location .studio-page-picker { order:2; flex:1 1 100%; min-width:0; }
+  html .studio[data-view] .studio-location .studio-page-picker { order:2; flex:1 1 calc(100% - 56px); min-width:0; }
+  /* Marjinalya hides its rail on phones and has no brand tile in the bar, so the picker takes the row */
+  html .studio[data-view="marjinalya"] .studio-location .studio-page-picker { flex-basis:100%; }
   html .studio[data-view] .studio-personal { order:3; gap:6px; }
   html .studio[data-view] .studio-header-state>* { order:4; }
   html .studio[data-view] .studio-top-actions>:not(.studio-personal) { order:5; }
@@ -876,8 +878,12 @@ html .studio[data-view] > .studio-topbar { min-width:0; }
   html .studio[data-view] .studio-state-suffix { display:inline; }
   html .studio[data-view] .studio-top-actions .studio-text-link { display:none; }
   html .studio[data-view="marjinalya"] .studio-dateline { display:none; }
-  html .studio[data-view="kontakt"] .studio-location .studio-page-picker { flex-basis:220px; max-width:220px; }
-  html .studio[data-view="kontakt"] .studio-pills .studio-nav-item { padding:0 16px; }
+  html .studio[data-view="kontakt"] .studio-location .studio-page-picker { flex-basis:220px; max-width:220px; min-width:0; }
+  /* the pills keep their names for assistive tech but show only their icons, so nothing has to overlap */
+  html .studio[data-view="kontakt"] .studio-pills .studio-nav-item { width:44px; padding:0; justify-content:center; }
+  html .studio[data-view="kontakt"] .studio-pills .studio-nav-item svg { display:block; }
+  html .studio[data-view="kontakt"] .studio-pills .studio-nav-item span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+  html .studio[data-view] .studio-personal .color-mode-switch { --cm-size:32px; }
 }
 @media (min-width:1300px) and (max-width:1439px) {
   html .studio[data-view="marjinalya"] .studio-dateline { display:none; }

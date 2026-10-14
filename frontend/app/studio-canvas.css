@@ -29,18 +29,18 @@ html[data-studio-view="odak"] .document-editing .article-engagement { display:no
  * The writing toolbar: a pill of labelled groups (block type · marks · case · block · history · done).
  * It springs in, follows the caret smoothly and wraps onto a second row in narrow frames.
  */
-html[data-studio-view] .inline-edit-toolbar { gap:4px; padding:5px; border-radius:24px; max-width:min(720px,calc(100vw - 16px)); overflow:visible; flex-wrap:wrap; justify-content:center;
+html[data-studio-view] .inline-edit-toolbar { gap:2px; padding:5px; border-radius:24px; max-width:min(720px,calc(100vw - 16px)); overflow:visible; flex-wrap:wrap; justify-content:center;
   background:color-mix(in srgb,var(--inline-paper,#fff) 94%,transparent); border:1px solid color-mix(in srgb,var(--inline-ink,#243329) 12%,transparent);
   box-shadow:0 1px 2px rgba(20,28,24,.08),0 14px 34px -14px rgba(20,28,24,.42); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
   animation:inline-toolbar-in 280ms cubic-bezier(.34,1.32,.5,1) both; transition:left 140ms cubic-bezier(.2,.8,.2,1),top 140ms cubic-bezier(.2,.8,.2,1); }
 html[data-studio-view] .inline-edit-toolbar .inline-group { display:flex; align-items:center; gap:2px; }
-html[data-studio-view] .inline-edit-toolbar button { width:36px; height:36px; border-radius:999px; color:var(--inline-ink,#243329); opacity:.86; transition:background 160ms cubic-bezier(.2,.8,.2,1),transform 160ms cubic-bezier(.34,1.32,.5,1),opacity 160ms,color 160ms; }
+html[data-studio-view] .inline-edit-toolbar button { width:33px; height:34px; border-radius:999px; color:var(--inline-ink,#243329); opacity:.86; transition:background 160ms cubic-bezier(.2,.8,.2,1),transform 160ms cubic-bezier(.34,1.32,.5,1),opacity 160ms,color 160ms; }
 html[data-studio-view] .inline-edit-toolbar button:hover:not(:disabled) { opacity:1; background:color-mix(in srgb,var(--inline-ink,#243329) 9%,transparent); transform:translateY(-1px); }
 html[data-studio-view] .inline-edit-toolbar button:active:not(:disabled) { transform:scale(.88); }
 html[data-studio-view] .inline-edit-toolbar button:disabled { opacity:.22; }
 html[data-studio-view] .inline-edit-toolbar button[aria-pressed=true] { opacity:1; background:color-mix(in srgb,var(--inline-ink,#243329) 14%,transparent); box-shadow:none; }
 html[data-studio-view] .inline-edit-toolbar .inline-kinds { padding:2px; border-radius:999px; background:color-mix(in srgb,var(--inline-ink,#243329) 6%,transparent); }
-html[data-studio-view] .inline-edit-toolbar .inline-kind { width:34px; height:32px; font:700 12px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:-.02em; }
+html[data-studio-view] .inline-edit-toolbar .inline-kind { width:32px; height:30px; font:700 12px/1 'IBM Plex Mono',ui-monospace,monospace; letter-spacing:-.02em; }
 html[data-studio-view] .inline-edit-toolbar .inline-kind[aria-pressed=true] { background:var(--inline-paper,#fff); box-shadow:0 1px 2px rgba(20,28,24,.12),0 4px 10px -4px rgba(20,28,24,.3); }
 html[data-studio-view] .inline-edit-toolbar .inline-text { font:600 12px/1 system-ui,sans-serif; letter-spacing:.02em; }
 html[data-studio-view] .inline-edit-toolbar .inline-danger:hover:not(:disabled) { color:#a63d2f; background:#f6d9d2; }
@@ -48,7 +48,7 @@ html[data-studio-view] .inline-edit-toolbar .inline-done { opacity:1; background
 html[data-studio-view] .inline-edit-toolbar .inline-done:hover:not(:disabled) { background:#24402f; }
 html[data-theme="dark"][data-studio-view] .inline-edit-toolbar .inline-done { background:#cdeec3; color:#14201a; }
 html[data-theme="dark"][data-studio-view] .inline-edit-toolbar .inline-danger:hover:not(:disabled) { color:#ffc1b4; background:#4a2a24; }
-html[data-studio-view] .inline-edit-toolbar>i { height:20px; margin:0 2px; }
+html[data-studio-view] .inline-edit-toolbar>i { height:20px; margin:0 3px; }
 html[data-studio-view] .inline-edit-toolbar .inline-link-editor { border-radius:22px; }
 @keyframes inline-toolbar-in { from { opacity:0; transform:translateY(6px) scale(.94); } to { opacity:1; transform:none; } }
 @media (prefers-reduced-motion:reduce) { html[data-studio-view] .inline-edit-toolbar { animation:none; transition:none; } }

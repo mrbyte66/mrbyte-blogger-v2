@@ -1451,7 +1451,7 @@ paths:
       tags: [studio]
       operationId: studioUpdateSiteSettings
       security: [{sessionCookie: [], csrfHeader: []}]
-      summary: Change author name, site SEO and the indexing switch
+      summary: Change author name, site SEO, the indexing switch and the daily word goal
       parameters: [{$ref: '#/components/parameters/IfMatch'}]
       requestBody:
         required: true
@@ -1464,6 +1464,7 @@ paths:
                 authorPublicName: {type: [string, 'null'], maxLength: 80}
                 seo: {$ref: '#/components/schemas/SiteSeo'}
                 indexingEnabled: {type: boolean}
+                dailyWordGoal: {type: integer, minimum: 0, maximum: 20000, description: Words per day the owner aims to write; 0 turns the goal off}
       responses:
         '200': {$ref: '#/components/responses/SiteSettings'}
         '401': {$ref: '#/components/responses/Problem'}
@@ -1471,6 +1472,114 @@ paths:
         '412': {$ref: '#/components/responses/Problem'}
         '422': {$ref: '#/components/responses/Problem'}
         '428': {$ref: '#/components/responses/Problem'}
+
+  /studio/articles/{articleId}/notes:
+    parameters: [{name: articleId, in: path, required: true, schema: {type: string, format: uuid}}]
+    get:
+      tags: [studio]
+      operationId: studioListArticleNotes
+      summary: The owner's private notes on a writing (never public, never part of a revision)
+      responses:
+        '200':
+          description: Notes, oldest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/ArticleNote'}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+    post:
+      tags: [studio]
+      operationId: studioCreateArticleNote
+      security: [{sessionCookie: [], csrfHeader: []}]
+      summary: Add a private note, optionally anchored to a block of the current document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body]
+              properties:
+                blockId: {type: [string, 'null'], format: uuid, description: Stable block ID inside the current document; null attaches the note to the whole writing}
+                body: {type: string, minLength: 1, maxLength: 1000}
+      responses:
+        '201':
+          description: Created
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ArticleNote'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '409': {description: '`NOTE_LIMIT` (200 notes per writing)', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
+        '422': {$ref: '#/components/responses/Problem'}
+
+  /studio/articles/{articleId}/notes/{noteId}:
+    parameters:
+      - {name: articleId, in: path, required: true, schema: {type: string, format: uuid}}
+      - {name: noteId, in: path, required: true, schema: {type: string, format: uuid}}
+    patch:
+      tags: [studio]
+      operationId: studioUpdateArticleNote
+      security: [{sessionCookie: [], csrfHeader: []}]
+      summary: Edit a note's text or mark it resolved
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                body: {type: string, minLength: 1, maxLength: 1000}
+                resolved: {type: boolean}
+      responses:
+        '200':
+          description: Updated note
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ArticleNote'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+    delete:
+      tags: [studio]
+      operationId: studioDeleteArticleNote
+      security: [{sessionCookie: [], csrfHeader: []}]
+      summary: Delete a note
+      responses:
+        '204': {description: Deleted}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
+  /studio/writing/today:
+    get:
+      tags: [studio]
+      operationId: studioWritingToday
+      summary: Words the owner added today (site time zone)
+      responses:
+        '200':
+          description: Progress for the current day; the goal itself is part of the site settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [date, words]
+                properties:
+                  date: {type: string, format: date}
+                  words: {type: integer, minimum: 0}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
 
   /studio/theme:
     get:
@@ -2172,6 +2281,18 @@ components:
         type: {type: string, const: paragraph}
         id: {type: string, format: uuid}
         text: {type: string, maxLength: 20000}
+        marks: {type: array, maxItems: 200, items: {$ref: '#/components/schemas/Mark'}}
+
+    Mark:
+      type: object
+      additionalProperties: false
+      required: [type, start, end]
+      description: Inline formatting over the block's plain text. Offsets are UTF-16 code units, so reader annotations keep their anchors; marks of one type never overlap
+      properties:
+        type: {type: string, enum: [bold, italic, code, link]}
+        start: {type: integer, minimum: 0}
+        end: {type: integer, minimum: 1}
+        href: {type: string, maxLength: 500, description: 'Only for `link`: an https address, a mailto address or a site-relative path'}
 
     HeadingBlock:
       type: object
@@ -2192,6 +2313,7 @@ components:
         id: {type: string, format: uuid}
         text: {type: string, minLength: 1, maxLength: 4000}
         attribution: {type: string, maxLength: 200}
+        marks: {type: array, maxItems: 200, items: {$ref: '#/components/schemas/Mark'}}
 
     CodeBlock:
       type: object
@@ -2569,15 +2691,27 @@ components:
         indexingEnabled: {type: boolean, description: Owner switch and deployment gate combined}
         canonicalOrigin: {type: string}
 
+    ArticleNote:
+      type: object
+      required: [id, blockId, body, resolved, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        blockId: {type: [string, 'null'], format: uuid}
+        body: {type: string, minLength: 1, maxLength: 1000}
+        resolved: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+
     SiteSettings:
       type: object
-      required: [authorPublicName, seo, indexingEnabled, deploymentIndexingEnabled, canonicalOrigin, version]
+      required: [authorPublicName, seo, indexingEnabled, deploymentIndexingEnabled, canonicalOrigin, dailyWordGoal, version]
       properties:
         authorPublicName: {type: [string, 'null']}
         seo: {$ref: '#/components/schemas/SiteSeo'}
         indexingEnabled: {type: boolean}
         deploymentIndexingEnabled: {type: boolean, description: Read-only deployment gate}
         canonicalOrigin: {type: [string, 'null'], description: Read-only deployment configuration}
+        dailyWordGoal: {type: integer, minimum: 0, maximum: 20000, description: Owner's daily writing goal in words; 0 means off}
         version: {type: integer, format: int64}
 
     ThemeWorkspace:

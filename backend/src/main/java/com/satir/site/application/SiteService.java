@@ -49,7 +49,7 @@ public class SiteService {
     }
 
     public record SettingsView(String authorPublicName, SiteSeo seo, boolean indexingEnabled,
-            boolean deploymentIndexingEnabled, String canonicalOrigin, long version) {
+            boolean deploymentIndexingEnabled, String canonicalOrigin, int dailyWordGoal, long version) {
     }
 
     public record ThemeWorkspaceView(long version, UUID draftRevisionId, UUID appliedRevisionId, ThemeDocument draft,
@@ -109,12 +109,12 @@ public class SiteService {
     public SettingsView settings() {
         SiteRepository.Settings settings = site.settings(false);
         return new SettingsView(settings.authorPublicName(), seo(settings), settings.indexingEnabled(), deploymentIndexing,
-                canonicalOrigin, settings.version());
+                canonicalOrigin, settings.dailyWordGoal(), settings.version());
     }
 
     @Transactional
     public SettingsView updateSettings(UUID ownerId, long expectedVersion, String authorPublicName, SiteSeo seo,
-            Boolean indexingEnabled) {
+            Boolean indexingEnabled, Integer dailyWordGoal) {
         SiteRepository.Settings current = site.settings(true);
         Preconditions.check(expectedVersion, current.version());
         String author = authorPublicName == null ? current.authorPublicName() : authorPublicName.strip();
@@ -123,8 +123,12 @@ public class SiteService {
         }
         SiteSeo nextSeo = seo == null ? seo(current) : seo.validated();
         boolean indexing = indexingEnabled == null ? current.indexingEnabled() : indexingEnabled;
+        int goal = dailyWordGoal == null ? current.dailyWordGoal() : dailyWordGoal;
+        if (goal < 0 || goal > 20_000) {
+            throw new ValidationException("dailyWordGoal", "RANGE");
+        }
         site.updateSettings(author == null || author.isEmpty() ? null : author, json.writeValueAsString(nextSeo), indexing,
-                clock.instant());
+                goal, clock.instant());
         audit.record(ownerId, "SITE_SETTINGS_UPDATE", "SITE", null, AuditLog.Outcome.SUCCESS);
         return settings();
     }

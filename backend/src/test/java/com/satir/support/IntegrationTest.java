@@ -89,7 +89,7 @@ public abstract class IntegrationTest {
                     media_asset, cover_job, anonymous_actor CASCADE
                 """).update();
         jdbc.sql("INSERT INTO theme_workspace (id, updated_at) VALUES (1, now()) ON CONFLICT (id) DO NOTHING").update();
-        jdbc.sql("UPDATE site_settings SET author_public_name = NULL, seo = '{}', indexing_enabled = FALSE, version = 0").update();
+        jdbc.sql("UPDATE site_settings SET author_public_name = NULL, seo = '{}', indexing_enabled = FALSE, daily_word_goal = 500, version = 0").update();
         jdbc.sql("DELETE FROM category WHERE slug NOT IN ('yazilim', 'edebiyat', 'kultur')").update();
         clock.reset();
         mail.reset();

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 /**
  * Article body blocks (API contract §2). Plain text only — no HTML, scripts or iframes; the
  * frontend escapes everything. IDs are stable across revisions so private annotations can anchor.
+ * Paragraphs and quotes may carry separate inline {@link Mark}s instead of markup inside the text.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -24,13 +25,27 @@ public sealed interface Block {
 
     UUID id();
 
-    record Paragraph(UUID id, String text) implements Block {
+    record Paragraph(UUID id, String text, List<Mark> marks) implements Block {
+        public Paragraph(UUID id, String text) {
+            this(id, text, null);
+        }
     }
 
     record Heading(UUID id, String text, Integer level) implements Block {
     }
 
-    record Quote(UUID id, String text, String attribution) implements Block {
+    record Quote(UUID id, String text, String attribution, List<Mark> marks) implements Block {
+        public Quote(UUID id, String text, String attribution) {
+            this(id, text, attribution, null);
+        }
+    }
+
+    /**
+     * Inline formatting over a block's plain text ({@code bold}, {@code italic}, {@code code}, {@code link}).
+     * Offsets are UTF-16 code units of {@code text}, so reader annotations keep anchoring to the same text.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record Mark(String type, int start, int end, String href) {
     }
 
     record Code(UUID id, String text, String language, String caption) implements Block {

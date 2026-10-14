@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class SiteRepository {
 
-    public record Settings(String authorPublicName, String seoJson, boolean indexingEnabled, long version) {
+    public record Settings(String authorPublicName, String seoJson, boolean indexingEnabled, int dailyWordGoal, long version) {
     }
 
     public record Workspace(UUID draftRevisionId, UUID appliedRevisionId, long version) {
@@ -25,20 +25,20 @@ public class SiteRepository {
     }
 
     public Settings settings(boolean forUpdate) {
-        return jdbc.sql("SELECT author_public_name, seo::text AS seo, indexing_enabled, version FROM site_settings WHERE id = 1"
+        return jdbc.sql("SELECT author_public_name, seo::text AS seo, indexing_enabled, daily_word_goal, version FROM site_settings WHERE id = 1"
                         + (forUpdate ? " FOR UPDATE" : ""))
                 .query((rs, row) -> new Settings(rs.getString("author_public_name"), rs.getString("seo"),
-                        rs.getBoolean("indexing_enabled"), rs.getLong("version")))
+                        rs.getBoolean("indexing_enabled"), rs.getInt("daily_word_goal"), rs.getLong("version")))
                 .single();
     }
 
-    public void updateSettings(String authorPublicName, String seoJson, boolean indexingEnabled, Instant now) {
+    public void updateSettings(String authorPublicName, String seoJson, boolean indexingEnabled, int dailyWordGoal, Instant now) {
         jdbc.sql("""
                 UPDATE site_settings SET author_public_name = :author, seo = CAST(:seo AS jsonb), indexing_enabled = :indexing,
-                    updated_at = :now, version = version + 1 WHERE id = 1
+                    daily_word_goal = :goal, updated_at = :now, version = version + 1 WHERE id = 1
                 """)
                 .param("author", authorPublicName).param("seo", seoJson).param("indexing", indexingEnabled)
-                .param("now", Timestamp.from(now)).update();
+                .param("goal", dailyWordGoal).param("now", Timestamp.from(now)).update();
     }
 
     public Workspace workspace(boolean forUpdate) {

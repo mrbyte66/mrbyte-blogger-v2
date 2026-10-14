@@ -1115,8 +1115,66 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change author name, site SEO and the indexing switch */
+        /** Change author name, site SEO, the indexing switch and the daily word goal */
         patch: operations["studioUpdateSiteSettings"];
+        trace?: never;
+    };
+    "/studio/articles/{articleId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+            };
+            cookie?: never;
+        };
+        /** The owner's private notes on a writing (never public, never part of a revision) */
+        get: operations["studioListArticleNotes"];
+        put?: never;
+        /** Add a private note, optionally anchored to a block of the current document */
+        post: operations["studioCreateArticleNote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/articles/{articleId}/notes/{noteId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a note */
+        delete: operations["studioDeleteArticleNote"];
+        options?: never;
+        head?: never;
+        /** Edit a note's text or mark it resolved */
+        patch: operations["studioUpdateArticleNote"];
+        trace?: never;
+    };
+    "/studio/writing/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Words the owner added today (site time zone) */
+        get: operations["studioWritingToday"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/studio/theme": {
@@ -1654,6 +1712,16 @@ export interface components {
             /** Format: uuid */
             id: string;
             text: string;
+            marks?: components["schemas"]["Mark"][];
+        };
+        /** @description Inline formatting over the block's plain text. Offsets are UTF-16 code units, so reader annotations keep their anchors; marks of one type never overlap */
+        Mark: {
+            /** @enum {string} */
+            type: "bold" | "italic" | "code" | "link";
+            start: number;
+            end: number;
+            /** @description Only for `link`: an https address, a mailto address or a site-relative path */
+            href?: string;
         };
         HeadingBlock: {
             /**
@@ -1677,6 +1745,7 @@ export interface components {
             id: string;
             text: string;
             attribution?: string;
+            marks?: components["schemas"]["Mark"][];
         };
         CodeBlock: {
             /**
@@ -2053,6 +2122,18 @@ export interface components {
             indexingEnabled: boolean;
             canonicalOrigin?: string;
         };
+        ArticleNote: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            blockId: string | null;
+            body: string;
+            resolved: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         SiteSettings: {
             authorPublicName: string | null;
             seo: components["schemas"]["SiteSeo"];
@@ -2061,6 +2142,8 @@ export interface components {
             deploymentIndexingEnabled: boolean;
             /** @description Read-only deployment configuration */
             canonicalOrigin: string | null;
+            /** @description Owner's daily writing goal in words; 0 means off */
+            dailyWordGoal: number;
             /** Format: int64 */
             version: number;
         };
@@ -4830,6 +4913,8 @@ export interface operations {
                     authorPublicName?: string | null;
                     seo?: components["schemas"]["SiteSeo"];
                     indexingEnabled?: boolean;
+                    /** @description Words per day the owner aims to write; 0 turns the goal off */
+                    dailyWordGoal?: number;
                 };
             };
         };
@@ -4840,6 +4925,164 @@ export interface operations {
             412: components["responses"]["Problem"];
             422: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+        };
+    };
+    studioListArticleNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notes, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["ArticleNote"][];
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    studioCreateArticleNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: uuid
+                     * @description Stable block ID inside the current document; null attaches the note to the whole writing
+                     */
+                    blockId?: string | null;
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArticleNote"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            /** @description `NOTE_LIMIT` (200 notes per writing) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["Problem"];
+        };
+    };
+    studioDeleteArticleNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    studioUpdateArticleNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                noteId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body?: string;
+                    resolved?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated note */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArticleNote"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+        };
+    };
+    studioWritingToday: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Progress for the current day; the goal itself is part of the site settings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: date */
+                        date: string;
+                        words: number;
+                    };
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     studioGetTheme: {

@@ -17,6 +17,10 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
             "bash", "sql", "json", "yaml", "html", "css", "kotlin", "go", "rust", "csharp", "cpp");
     private static final Pattern STATIC_PATH = Pattern.compile("/assets/[a-zA-Z0-9._/-]{1,200}");
     private static final Pattern SENTENCE = Pattern.compile("[^.!?…]+(?:[.!?…]+(?=\\s|$)|$)");
+    private static final Set<String> MARK_TYPES = Set.of("bold", "italic", "code", "link");
+    private static final int MAX_MARKS = 200;
+    /** Links: https, mailto or a site-relative path. No scripts, data URLs or protocol-relative addresses. */
+    private static final Pattern LINK_HREF = Pattern.compile("https://[^\\s]{1,480}|mailto:[^\\s@]{1,100}@[^\\s]{1,100}|/(?!/)[^\\s]{0,480}");
 
     public static ArticleDocument empty() {
         return new ArticleDocument(1, List.of());
@@ -50,7 +54,10 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
 
     private static void validateBlock(String field, Block block) {
         switch (block) {
-            case Block.Paragraph p -> text(field + ".text", p.text(), 0, 20_000);
+            case Block.Paragraph p -> {
+                text(field + ".text", p.text(), 0, 20_000);
+                marks(field + ".marks", p.text(), p.marks());
+            }
             case Block.Heading h -> {
                 text(field + ".text", h.text(), 1, 300);
                 if (h.level() == null || (h.level() != 2 && h.level() != 3)) {
@@ -60,6 +67,7 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
             case Block.Quote q -> {
                 text(field + ".text", q.text(), 1, 4000);
                 optionalText(field + ".attribution", q.attribution(), 200);
+                marks(field + ".marks", q.text(), q.marks());
             }
             case Block.Code c -> {
                 text(field + ".text", c.text(), 0, 50_000);
@@ -129,8 +137,8 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
         return texts;
     }
 
-    /** Server-derived reading time: 200 words per minute, at least one minute. */
-    public int readingMinutes() {
+    /** Words in the text a reader sees: paragraphs, headings and quotes. */
+    public long wordCount() {
         long words = 0;
         for (Block block : blocks) {
             String text = switch (block) {
@@ -143,7 +151,12 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
                 words += text.strip().split("\\s+").length;
             }
         }
-        return (int) Math.max(1, Math.min(240, Math.ceil(words / 200.0)));
+        return words;
+    }
+
+    /** Server-derived reading time: 200 words per minute, at least one minute. */
+    public int readingMinutes() {
+        return (int) Math.max(1, Math.min(240, Math.ceil(wordCount() / 200.0)));
     }
 
     /** Body preview: whole sentences until ~200 characters (same rule as the prototype). */
@@ -184,6 +197,50 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
         if (length < min || length > max || (min > 0 && value.isBlank())) {
             throw new ValidationException(field, min > 0 && value.isBlank() ? "REQUIRED" : "LENGTH");
         }
+    }
+
+    /** Marks must stay inside the text, never split a surrogate pair and never overlap their own kind. */
+    private static void marks(String field, String text, List<Block.Mark> marks) {
+        if (marks == null || marks.isEmpty()) {
+            return;
+        }
+        if (marks.size() > MAX_MARKS) {
+            throw new ValidationException(field, "LENGTH");
+        }
+        for (int i = 0; i < marks.size(); i++) {
+            Block.Mark mark = marks.get(i);
+            String at = field + "[" + i + "]";
+            if (mark == null || mark.type() == null || !MARK_TYPES.contains(mark.type())) {
+                throw new ValidationException(at + ".type", "INVALID");
+            }
+            if (mark.start() < 0 || mark.end() <= mark.start() || mark.end() > text.length()) {
+                throw new ValidationException(at + ".end", "RANGE");
+            }
+            if (splitsSurrogatePair(text, mark.start()) || splitsSurrogatePair(text, mark.end())) {
+                throw new ValidationException(at + ".start", "RANGE");
+            }
+            if ("link".equals(mark.type())) {
+                if (mark.href() == null || !LINK_HREF.matcher(mark.href()).matches()) {
+                    throw new ValidationException(at + ".href", "FORMAT");
+                }
+            } else if (mark.href() != null) {
+                throw new ValidationException(at + ".href", "INVALID");
+            }
+        }
+        for (String type : MARK_TYPES) {
+            List<Block.Mark> sameType = marks.stream().filter(m -> type.equals(m.type()))
+                    .sorted(java.util.Comparator.comparingInt(Block.Mark::start)).toList();
+            for (int i = 1; i < sameType.size(); i++) {
+                if (sameType.get(i).start() < sameType.get(i - 1).end()) {
+                    throw new ValidationException(field, "OVERLAP");
+                }
+            }
+        }
+    }
+
+    private static boolean splitsSurrogatePair(String text, int index) {
+        return index > 0 && index < text.length()
+                && Character.isHighSurrogate(text.charAt(index - 1)) && Character.isLowSurrogate(text.charAt(index));
     }
 
     private static void optionalText(String field, String value, int max) {

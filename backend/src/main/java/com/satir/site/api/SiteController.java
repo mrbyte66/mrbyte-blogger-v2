@@ -29,7 +29,7 @@ import com.satir.site.domain.ThemeDocument;
 @RequestMapping("/api/v1")
 class SiteController {
 
-    record SettingsPatch(String authorPublicName, SiteService.SiteSeo seo, Boolean indexingEnabled) {
+    record SettingsPatch(String authorPublicName, SiteService.SiteSeo seo, Boolean indexingEnabled, Integer dailyWordGoal) {
     }
 
     record ApplyRequest(UUID draftRevisionId) {
@@ -61,7 +61,7 @@ class SiteController {
     ResponseEntity<SettingsView> updateSettings(@AuthenticationPrincipal SatirPrincipal owner,
             @RequestHeader(value = HttpHeaders.IF_MATCH, required = false) String ifMatch, @RequestBody SettingsPatch body) {
         SettingsView view = site.updateSettings(owner.userId(), Preconditions.requireVersion(ifMatch),
-                body.authorPublicName(), body.seo(), body.indexingEnabled());
+                body.authorPublicName(), body.seo(), body.indexingEnabled(), body.dailyWordGoal());
         return ResponseEntity.ok().eTag(Preconditions.etag(view.version())).body(view);
     }
 

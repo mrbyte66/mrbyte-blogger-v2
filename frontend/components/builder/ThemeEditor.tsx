@@ -63,6 +63,8 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   }, [confirmation]);
   // The settings panel closes on Escape or a press on empty space (the canvas reports its own presses).
   useDismiss(panelOpen, () => setPanelOpen(false), [properties, sidebarRef], "empty");
+  // Odak's structure list is a panel on request; it goes away like the settings panel does.
+  useDismiss(structureOpen, () => setStructureOpen(false), [sidebarRef], "empty");
   // The block palette is a popover in some views: it closes the same way.
   useDismiss(paletteOpen, () => setPaletteOpen(false), [sidebarRef], "outside");
   const selectFromCanvas = useCallback((id: string, field?: SceneField) => {
@@ -125,7 +127,7 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
       <section className="studio-preview" aria-label="Canlı önizleme" ref={canvas}>
         <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setPanelOpen(!panelOpen); setInspector("theme"); }}><EditorIcon name="settings"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
         <p role="status" className="studio-status canvas-feedback">{message}</p>
-        <PreviewCanvas onPointer={() => setPanelOpen(false)} onInlineEdit={(patch) => { if (!ready) return; const block = workspace.draft.blocks.find((b) => b.id === patch.id); const next = block && editThemeText(block, patch); if (next) edit(replaceBlock(workspace.draft, next)); }} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
+        <PreviewCanvas onPointer={() => { setPanelOpen(false); setStructureOpen(false); }} onInlineEdit={(patch) => { if (!ready) return; const block = workspace.draft.blocks.find((b) => b.id === patch.id); const next = block && editThemeText(block, patch); if (next) edit(replaceBlock(workspace.draft, next)); }} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
         <div className="canvas-bottom"><span>{editingCanvas ? "METNE TIKLA, YERİNDE DÜZENLE." : "ZİYARETÇİ ÖNİZLEMESİ"}</span><span>İçerikler tema değişince korunur.</span></div>
       </section>
       <aside hidden={!panelOpen} className={`studio-inspector ${selectedId && inspector === "block" ? "inspector-linked" : ""}`} aria-label="Düzenleme özellikleri" ref={properties}>

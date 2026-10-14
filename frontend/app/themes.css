@@ -160,7 +160,7 @@
 @keyframes inline-edit-in { from { opacity:0; transform:translateY(4px) scale(.97); } to { opacity:1; transform:none; } }
 @media(prefers-reduced-motion:reduce) { .inline-edit-toolbar { animation:none; } .canvas-text-target { transition:none; } }
 .document-editing [data-edit-field]:hover { outline-color:transparent; }
-.document-editing .site-page-header { display:none; }
+.document-editing .site-page-header { display:flex; }
 .document-editing .reading-page { padding-top:46px; }
 .document-editing .article-engagement { opacity:.45; }
 .inline-edit-toolbar select { max-width:90px; border:0; background:transparent; color:inherit; font-size:11px; padding:4px; }

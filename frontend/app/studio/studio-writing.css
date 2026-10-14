@@ -1,41 +1,42 @@
 /* A stable, quiet writing surface shared by the four personal Studio views. */
 html .studio.writing-studio[data-view] > .studio-workspace {
  grid-template-columns:minmax(0,1fr)!important;
- grid-template-rows:minmax(0,1fr) 48px!important;
- grid-template-areas:"canvas" "dock"!important;
+ display:grid;
+ grid-template-rows:minmax(0,1fr)!important;
+ grid-template-areas:"canvas"!important;
 }
 html .studio.writing-studio[data-view] .studio-preview { grid-area:canvas; min-width:0; }
 html .studio.writing-studio[data-view] .studio-inspector { position:fixed; z-index:40; inset:100px 28px auto auto; width:340px; height:auto; max-height:calc(100dvh - 128px); border:1px solid var(--sv-line); border-radius:22px; box-shadow:var(--sv-shadow); }
-html .studio.writing-studio[data-view] .writing-dock { grid-area:dock; position:relative; display:flex; justify-content:space-between; align-items:center; flex-direction:row; width:auto; inset:auto; margin:0; min-height:48px; max-height:none; padding:6px 24px; border:0; border-top:1px solid var(--sv-line); border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
 .writing-tools { position:relative; }
-.writing-tools>summary { display:flex; align-items:center; gap:7px; list-style:none; cursor:pointer; color:var(--sv-sub); font-size:11px; padding:6px 0; }
+.writing-tools>summary { display:flex; align-items:center; gap:7px; list-style:none; cursor:pointer; color:var(--sv-ink); font-size:12px; padding:8px 10px; border:1px solid var(--sv-line); border-radius:999px; white-space:nowrap; }
 .writing-tools>summary::-webkit-details-marker { display:none; }
-.writing-tools>nav { position:absolute; bottom:38px; left:0; width:220px; max-height:60dvh; overflow:auto; padding:8px; border:1px solid var(--sv-line); border-radius:16px; background:var(--sv-card); box-shadow:var(--sv-shadow); z-index:50; animation:writing-menu-in 160ms ease-out; }
+.writing-tools>nav { position:absolute; top:calc(100% + 8px); left:0; width:220px; max-height:60dvh; overflow:auto; padding:8px; border:1px solid var(--sv-line); border-radius:16px; background:var(--sv-card); box-shadow:var(--sv-shadow); z-index:50; animation:writing-menu-in 160ms ease-out; }
+html .studio.writing-studio[data-view] .writing-tools>nav { display:flex; flex-direction:column; gap:2px; }
 html .studio.writing-studio[data-view] .writing-tools>nav button { display:flex; width:100%; min-width:0; min-height:36px; flex-direction:row; gap:10px; padding:8px 10px; background:transparent; border:0; border-radius:9px; box-shadow:none; color:var(--sv-ink); }
-html .studio.writing-studio[data-view] .writing-tools>nav button>span { font-size:12px; opacity:1; }
+html .studio.writing-studio[data-view] .writing-tools>nav button>span { display:inline; font-size:12px; opacity:1; }
 html .studio.writing-studio[data-view] .writing-tools>nav button:hover { background:var(--sv-sunk); }
 html .studio.writing-studio[data-view] .studio-margin,
 html .studio.writing-studio[data-view] .focus-goal,
 html .studio.writing-studio[data-view] .focus-readout,
 html .studio.writing-studio[data-view] .studio-dateline { display:none; }
-html .studio.writing-studio[data-view] .studio-canvas-tools { flex-wrap:nowrap; min-height:58px; height:58px; padding:10px 0; }
+html .studio.writing-studio[data-view] .studio-canvas-tools { flex-wrap:wrap; flex:0 0 auto; min-height:58px; height:auto; padding:10px 0; gap:8px; margin:0; align-self:stretch; justify-self:stretch; }
 html .studio.writing-studio[data-view] .canvas-controls { flex-shrink:0; }
 .writing-voice { display:flex; align-items:center; gap:6px; padding:5px 9px; color:var(--sv-sub); background:none; border:1px solid var(--sv-line); border-radius:999px; height:29px; font-size:11px; opacity:.45; cursor:not-allowed; white-space:nowrap; }
 .writing-voice small { font-size:8px; }
-html .studio.writing-studio[data-view] .canvas-context { gap:14px; min-width:0; }
+html .studio.writing-studio[data-view] .canvas-context { gap:8px; min-width:0; flex-wrap:wrap; }
 html .studio.writing-studio[data-view] .studio-header-state { gap:9px; }
 html .studio.writing-studio[data-view] .studio-saved { min-width:90px; font-size:10px; }
 html .studio.writing-studio[data-view] .studio-status:not(:empty) { position:absolute; z-index:35; bottom:16px; left:50%; transform:translateX(-50%); margin:0; max-width:calc(100% - 32px); border:1px solid var(--sv-line); border-radius:12px; box-shadow:var(--sv-shadow); }
 html .studio.writing-studio[data-view] .studio-inspector { animation:writing-menu-in 160ms ease-out; transition:none; }
-html .studio.writing-studio.studio-focus[data-view] .writing-dock { display:flex; }
+
 html .studio.writing-studio[data-view] .studio-icon-button { width:36px; height:36px; flex:0 0 36px; }
 @keyframes writing-menu-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 @media(max-width:700px) {
- html .studio.writing-studio[data-view] .studio-canvas-tools { height:78px; min-height:78px; flex-wrap:wrap; gap:3px; }
- html .studio.writing-studio[data-view] .canvas-context { width:100%; justify-content:space-between; }
+ html .studio.writing-studio[data-view] .studio-canvas-tools { height:auto; min-height:0; flex-wrap:wrap; gap:8px; }
+ html .studio.writing-studio[data-view] .canvas-context { width:100%; justify-content:flex-start; }
  html .studio.writing-studio[data-view] .canvas-controls { width:100%; justify-content:flex-end; }
  html .studio.writing-studio[data-view] .studio-inspector { inset:auto 8px 8px; width:auto; max-height:70dvh; border-radius:20px; }
- html .studio.writing-studio[data-view] .writing-dock { padding-inline:14px; }
+
  html .studio.writing-studio[data-view] .studio-saved { display:none; }
  .writing-voice { padding-inline:6px; font-size:10px; }
 }
@@ -50,6 +51,28 @@ html .studio.writing-studio[data-view] .studio-state { min-width:65px; justify-c
 html .studio.writing-studio[data-view] .studio-state-suffix { display:none; }
 html .studio.writing-studio[data-view] .studio-top-actions { flex-shrink:0; }
 @media(max-width:700px) { html .studio.writing-studio[data-view] .studio-top-actions>.studio-primary { width:78px; flex-basis:78px; font-size:11px; } html .studio.writing-studio[data-view] .studio-top-actions>.studio-publish { width:72px; flex-basis:72px; } }
+
+/* View colours and character remain personal; page commands never change location. */
+html .studio.writing-studio[data-view] .studio-preview { display:flex; flex-direction:column; width:100%; height:100%; max-width:none; margin:0; padding:0 24px 18px; min-height:0; }
+html .studio.writing-studio[data-view] .studio-canvas { flex:1 1 0; min-height:0; width:100%; height:auto; margin:0; }
+html .studio.writing-studio[data-view] .studio-inspector .site-design-controls { grid-column:1/-1; }
+.site-design-apply { position:sticky; bottom:-24px; padding:14px 0 0; background:var(--sv-card); border-top:1px solid var(--sv-line); }
+.site-design-apply .studio-primary { width:100%; }
+.site-design-apply p { font-size:12px; line-height:1.5; margin:8px 0; }
+@media(min-width:1100px) {
+ html .studio.writing-studio[data-view="odak"],html .studio.writing-studio[data-view="kontakt"],html .studio.writing-studio[data-view="sahne"] { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:72px minmax(0,1fr); grid-template-areas:"top" "work"; padding:0; align-items:stretch; gap:0; }
+ html .studio.writing-studio[data-view]:not([data-view="marjinalya"])>.studio-topbar { grid-area:top; display:flex; height:72px; padding:0 24px; border-bottom:1px solid var(--sv-line); gap:12px; }
+ html .studio.writing-studio[data-view]:not([data-view="marjinalya"])>.studio-workspace { grid-area:work; margin:0; height:auto; overflow:hidden; }
+ html .studio.writing-studio[data-view] .studio-location { display:flex; flex:1; min-width:0; gap:12px; }
+ html .studio.writing-studio[data-view] .studio-page-picker { min-width:0; flex:0 1 380px; max-width:380px; }
+ html .studio.writing-studio[data-view] .studio-page-trigger strong { max-width:100%; }
+ html .studio.writing-studio[data-view] .studio-top-actions { margin-left:auto; display:flex; gap:8px; }
+ html .studio.writing-studio[data-view="odak"] .studio-preview { max-width:1240px; margin:auto; }
+ html .studio.writing-studio[data-view="sahne"] .studio-canvas { padding:20px 68px; }
+ html .studio.writing-studio[data-view="sahne"] .studio-canvas-tools { z-index:7; }
+}
 @media(max-width:700px) {
- html .studio.writing-studio[data-view] .studio-canvas-tools { flex:0 0 112px; height:112px; min-height:112px; align-content:center; }
+ html .studio.writing-studio[data-view] .studio-preview { padding:0 10px 10px; }
+ .writing-voice span,.writing-voice small { display:none; }
+ .writing-tools>nav { max-width:calc(100vw - 32px); }
 }

@@ -23,13 +23,13 @@ function Choice<T extends string>({ label, hint, value, options, onChange }: { l
 }
 const lines = (count: number) => Array.from({ length: count }, (_, index) => <i key={index} />);
 
-export function ThemeSettings({ theme, onChange }: { theme: Theme; onChange: (theme: Theme) => void }) {
+export function ThemeSettings({ theme, onChange, readingFirst = false }: { theme: Theme; onChange: (theme: Theme) => void; readingFirst?: boolean }) {
   const color = accentColor(theme.accent);
   const [hex, setHex] = useState(color);
   useEffect(() => setHex(color), [color]);
   const validHex = /^#[a-fA-F0-9]{6}$/.test(hex);
   const set = <K extends keyof Theme>(key: K) => (value: Theme[K]) => onChange({ ...theme, [key]: value });
-  return <div className="theme-settings">
+  const identity = <>
     <h3 className="settings-group settings-full">Kimlik</h3>
     <label className="studio-field"><span>Tema adı</span><input maxLength={80} value={theme.name} onChange={(event) => onChange({ ...theme, name: event.target.value })} /></label>
     <label className="studio-field"><span>Site adı</span><input maxLength={40} value={theme.siteName} onChange={(event) => onChange({ ...theme, siteName: event.target.value })} /></label>
@@ -39,6 +39,8 @@ export function ThemeSettings({ theme, onChange }: { theme: Theme; onChange: (th
       {!validHex && <small role="status">Altı haneli bir renk kodu gir: örneğin #83b9e8. Son geçerli renk korunur.</small>}
     </div>
 
+  </>;
+  const writing = <>
     <h3 className="settings-group settings-full">Yazı</h3>
     <Choice label="Tipografi" value={theme.typography} onChange={set("typography")} options={[
       { value: "modern", label: "Modern", preview: <b className="type-sans">Aa</b> },
@@ -48,6 +50,11 @@ export function ThemeSettings({ theme, onChange }: { theme: Theme; onChange: (th
     <Choice label="Yazı boyutu" hint="Yazı ve seri sayfalarındaki okuma metni." value={theme.textSize} onChange={set("textSize")} options={[
       { value: "small", label: "Küçük", preview: <b>A</b> }, { value: "medium", label: "Orta", preview: <b>A</b> }, { value: "large", label: "Büyük", preview: <b>A</b> },
     ]} />
+
+  </>;
+  return <div className="theme-settings">
+    {readingFirst ? writing : identity}
+    {readingFirst ? identity : writing}
 
     <h3 className="settings-group settings-full">Sayfa</h3>
     <Choice label="Sayfa atmosferi" value={theme.surface} onChange={set("surface")} options={[

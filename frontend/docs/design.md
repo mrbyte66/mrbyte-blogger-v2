@@ -9,3 +9,5 @@ Panel/sayfa geri dönüşü filtre/scroll/focus bağlamını korur. Yazı/seri k
 Studio yapı/canvas/inspector masaüstünde birlikte görünür, mobilde okunur paneller. Site adı seçilmedi; eski ürün adını yeni tasarım gereksinimi diye koruma. [Ürün](../../docs/product.md), [Studio](builder.md).
 
 Formlarda hatalı alan kırmızı çerçeve ve alanın altındaki kısa açıklamayla belirtilir; yalnız renge dayanılmaz. Açık/koyu tema ve ekran okuyucu için aria-invalid/aria-describedby kullanılır. Kullanıcı yazmaya başladığında hatası görünür; düzeltince çerçeve ve uyarı kalkar. Parlama kullanılmaz.
+
+Studio’da değişiklik en az tıklama ve kısa mouse yolu ile yapılır. Metin tuvalde düzenlenir; ikincil panel seçilen alanın/araç düğmesinin yanında açılır. Kayıt ve yayın komutları sayfa ve görünüm değişiminde aynı yerde kalır.

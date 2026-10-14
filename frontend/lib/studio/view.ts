@@ -8,7 +8,7 @@ import { announceAppearanceChange } from "../appearance-events";
  */
 export const studioViews = [
   { id: "marjinalya", label: "Marjinalya", detail: "Sessiz sayfa, araçlar gerektiğinde yanında" },
-  { id: "odak", label: "Odak", detail: "Yalnız yazı; araçlar altta, geri kalan sessiz" },
+  { id: "odak", label: "Odak", detail: "Yazı merkezde; gerekli kontroller hep elinin altında" },
   { id: "kontakt", label: "Kontakt", detail: "Kapak kartlarıyla yazı kitaplığı, yan çekmece" },
   { id: "sahne", label: "Sahne", detail: "Sayfa sahnede, bloklar altta bir şeritte" },
 ] as const;

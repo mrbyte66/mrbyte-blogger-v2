@@ -128,7 +128,7 @@ describe("Studio views", () => {
     expect(panel().hidden).toBe(true);
   });
 
-  it("opens settings pressed on the canvas as a card beside the block, and from the dock in the column", () => {
+  it("opens settings beside the pressed block or the chosen writing tool", () => {
     studio();
     selectPage(articles[0].title);
     const panel = () => screen.getByLabelText("Seçili alanın ayarları");
@@ -139,7 +139,7 @@ describe("Studio views", () => {
     expect(root().classList.contains("has-inspector")).toBe(false);
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(writingTool("Kapak görseli"));
-    expect(panel().classList.contains("is-anchored")).toBe(false);
+    expect(panel().classList.contains("is-anchored")).toBe(true);
   });
 
   it("offers the library as cover cards with a detail drawer in Kontakt", async () => {

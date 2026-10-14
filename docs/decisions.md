@@ -58,3 +58,7 @@ Kayıt sonrası doğrulama postası gönderilince kullanıcı ana sayfaya döneb
 ## Pano sadeleştirmesi — 2026-10-13
 
 Kayıt (Mevcut/Planlanan/Tamamlandı) alanı kaldırıldı; işin durumu yalnız Status ile izlenir. Gereksinimler kategori gruplu tam listedir; klondan gelen özelliklerin mevcut etiketleri kalır. Yerel Project alan eşitlemesi kaldırılır; GitHub’ın Done → issue kapanışı otomasyonu korunur.
+
+## Studio etkileşim ilkesi — 2026-10-15
+
+Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az gezdirerek yapabilmeli. Metin önce tuvalde doğrudan düzenlenir; ikincil araçlar seçilen alanın veya tetikleyicinin yakınında açılır. Gerekli kayıt, yayın ve gezinme kontrolleri görünüm/sayfa değişince kaybolmaz ya da yer değiştirmez. Minimalistlik gerekli işlevleri saklamak veya sahneyi boşaltmak değildir.

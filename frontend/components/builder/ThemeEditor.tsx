@@ -137,13 +137,13 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   return <main className={`studio ${panelOpen ? "has-inspector" : ""} ${focused ? "studio-focus" : ""} ${structureOpen ? "has-structure" : ""}`} data-view={view}>
     <StudioHeader navigation={navigation} status={<span className="studio-state" title="Taslak otomatik kaydedilir; Uygula ziyaretçilerin gördüğü ana sayfayı değiştirir.">{dirty ? "Tema taslağı" : "Yayınla aynı"}</span>}
       center={view === "sahne" ? <div className="studio-starters" role="group" aria-label="Başlangıç düzeni">{starters.map((item) => <button key={item.id} type="button" aria-label={item.label} title={item.detail} aria-pressed={selectedStarter === item.id} disabled={!ready} onClick={() => useStarter(item.id)}>{item.label}</button>)}</div> : undefined}
-      actions={view === "odak" ? null : actionNodes} />
+      actions={actionNodes} />
 
     <div className="studio-workspace">
 
       <aside ref={sidebarRef} className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} data-layer="" aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
       <section className="studio-preview" aria-label="Canlı önizleme" ref={canvas}>
-        <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setInspector("theme"); if (panelOpen && !isTopLayer(properties.current)) raiseLayer(properties.current); else setPanelOpen(!panelOpen); }}><EditorIcon name="design"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
+        <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setFocused(false); setInspector("theme"); if (panelOpen && !isTopLayer(properties.current)) raiseLayer(properties.current); else setPanelOpen(!panelOpen); }}><EditorIcon name="design"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
         <p role="status" className="studio-status canvas-feedback">{message}</p>
         <PreviewCanvas onPointer={() => { setPanelOpen(false); setStructureOpen(false); }} onInlineEdit={canvasEdit} resetKey={resetKey} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
         <div className="canvas-bottom"><span>{editingCanvas ? "METNE TIKLA, YERİNDE DÜZENLE." : "ZİYARETÇİ ÖNİZLEMESİ"}</span><span>İçerikler tema değişince korunur.</span></div>
@@ -155,10 +155,7 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
         <div className="studio-save-state"><span className="studio-eyebrow">TASLAK & ANA SAYFA</span><p>{!ready ? "Kayıt yükleniyor…" : dirty ? "Şu an taslağı düzenliyorsun; taslak otomatik kaydedilir. Ana sayfa henüz değişmedi." : "Taslak, yayındaki ana sayfayla aynı."}</p><button disabled={!ready || !dirty} onClick={() => setConfirmation("restore")}>Taslağı uygulanan temaya döndür ↶</button>{undo && <button className="undo-removal" onClick={() => { save({ ...workspace, draft: undo }); setResetKey((n) => n + 1); setUndo(null); setMessage("Önceki taslak geri geldi."); }}>{undoKind === "remove" ? "Son kaldırmayı geri al" : "Önceki düzene dön"} ↶</button>}{storageError && <p role="alert" className="studio-error">{storageError}</p>}{errors.length > 0 && <ul className="studio-error">{errors.map((error) => <li key={error}>{error}</li>)}</ul>}</div>
       </aside>
       {view === "odak" && <div className="studio-dock" data-layer="" role="toolbar" aria-label="Tasarım araçları">
-        <button type="button" aria-pressed={structureOpen} onClick={() => setStructureOpen(!structureOpen)}><EditorIcon name="structure" size={20} /><span>Yapı</span></button>
-        <button type="button" aria-pressed={panelOpen && inspector === "theme"} onClick={() => { if (panelOpen && inspector === "theme" && !isTopLayer(properties.current)) raiseLayer(properties.current); else if (panelOpen && inspector === "theme") setPanelOpen(false); else { setInspector("theme"); setPanelOpen(true); } }}><EditorIcon name="design" size={20} /><span>Tasarım</span></button>
-        <span className="dock-divider" aria-hidden="true" />
-        <div className="dock-actions">{actionNodes}</div>
+        <button type="button" aria-pressed={structureOpen} onClick={() => { setFocused(false); setStructureOpen(!structureOpen); }}><EditorIcon name="structure" size={20} /><span>Yapı</span></button>
       </div>}
     </div>
     <dialog ref={preferences} className="studio-preferences-dialog" aria-labelledby="site-preferences-title" onClick={event => { if(event.target === event.currentTarget) preferences.current?.close(); }}>

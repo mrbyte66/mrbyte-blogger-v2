@@ -160,6 +160,6 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
   } : undefined}>
     {!embedded && <div className="preview-bar"><Link href="/studio">← Stüdyoya dön</Link><span>TASLAK ÖNİZLEME · {workspace.draft.name}</span><span>Henüz uygulanmadı</span></div>}
     {storageError && <p role="alert" className="preview-warning">{storageError}</p>}
-    <InlineCanvasEditor enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
+    <InlineCanvasEditor selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
   </div>;
 }

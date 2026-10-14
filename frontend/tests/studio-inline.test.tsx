@@ -22,17 +22,19 @@ describe("inline canvas editing", () => {
     expect(editDocumentText(draft,{...articlePatch,value:" "})).toBeNull();
     expect(parseInlineEdit({...patch,value:{danger:true}})).toBeNull();
   });
-  it("keeps typing local until confirmation and allows Escape to cancel", () => {
+  it("streams edits from the canvas and restores the original on Escape", () => {
     const post = vi.spyOn(window.parent,"postMessage");
     render(<InlineCanvasEditor theme={workspace.draft} draft={null} enabled><div data-block-id={block.id}><h1 data-inline-field="title">Kod yazarım.</h1></div></InlineCanvasEditor>);
     expect(screen.getByRole("heading").getAttribute("tabindex")).toBe("0");
     fireEvent.keyDown(screen.getByRole("heading"), {key:"Enter"});
-    fireEvent.change(screen.getByLabelText("Başlık · tuval"),{target:{value:"İlk taslak"}});
-    expect(post).not.toHaveBeenCalled();
+    screen.getByLabelText("Başlık · tuval").textContent="İlk taslak";
+    fireEvent.input(screen.getByLabelText("Başlık · tuval"));
+    expect(post).toHaveBeenLastCalledWith({type:inlineEditEvent,edit:{...patch,value:"İlk taslak"}},window.location.origin);
     fireEvent.keyDown(screen.getByLabelText("Başlık · tuval"),{key:"Escape"});
-    expect(post).not.toHaveBeenCalled();
+    expect(post).toHaveBeenLastCalledWith({type:inlineEditEvent,edit:{...patch,previous:"İlk taslak",value:"Kod yazarım."}},window.location.origin);
     fireEvent.click(screen.getByRole("heading"));
-    fireEvent.change(screen.getByLabelText("Başlık · tuval"),{target:{value:patch.value}});
+    screen.getByLabelText("Başlık · tuval").textContent=patch.value;
+    fireEvent.input(screen.getByLabelText("Başlık · tuval"));
     fireEvent.click(screen.getByRole("button",{name:/Tamam/}));
     expect(post).toHaveBeenCalledWith({type:inlineEditEvent,edit:patch},window.location.origin);
   });
@@ -48,5 +50,24 @@ describe("inline canvas editing", () => {
     send(window.location.origin,frame.contentWindow); expect(onInlineEdit).toHaveBeenCalledOnce();
     rerender(<PreviewCanvas {...props} selection={{...selection,editing:false}} />);
     send(window.location.origin,frame.contentWindow); expect(onInlineEdit).toHaveBeenCalledOnce();
+  });
+});
+
+describe("paragraph structure and stable anchors", () => {
+  const draft = {kind:"article" as const, article:{...articles[0],paragraphs:["Birinci","İkinci"],blockIds:{paragraphs:["id-one","id-two"]},paragraphFormats:[{kind:"heading" as const,level:2 as const},{kind:"paragraph" as const}]}};
+  const edit: InlineEdit={scope:"document",id:articles[0].slug,field:"paragraph-0",previous:"Birinci",value:"Düzenlenen"};
+  it("moves text, formatting and annotation identity together",()=>{
+    const next=editDocumentText(draft,{...edit,action:"move-down"});
+    expect(next?.kind==="article" && next.article.paragraphs).toEqual(["İkinci","Düzenlenen"]);
+    expect(next?.kind==="article" && next.article.blockIds?.paragraphs).toEqual(["id-two","id-one"]);
+    expect(next?.kind==="article" && next.article.paragraphFormats?.[1]).toEqual({kind:"heading",level:2});
+    expect(editDocumentText(draft,{...edit,action:"move-up"})).toBeNull();
+  });
+  it("inserts a separate anchor and enforces heading length",()=>{
+    const next=editDocumentText(draft,{...edit,action:"insert-after"});
+    expect(next?.kind==="article" && next.article.paragraphs).toHaveLength(3);
+    expect(next?.kind==="article" && next.article.blockIds?.paragraphs[1]).not.toBe("id-one");
+    expect(editDocumentText(draft,{...edit,value:"x".repeat(301),action:"heading2"})).toBeNull();
+    expect(editDocumentText(draft,{...edit,action:"quote"})).toMatchObject({article:{paragraphFormats:[{kind:"quote"},{kind:"paragraph"}]}});
   });
 });

@@ -11,6 +11,7 @@ export const starters: { id: Starter; label: string; detail: string }[] = [
 
 
 type Props = {
+  sections?: "all" | "structure" | "starters";
   theme: Theme;
   ready: boolean;
   selectedId?: string;
@@ -21,16 +22,16 @@ type Props = {
   onSelect: (id: string) => void;
 };
 
-export function ThemeStructure({ theme, ready, selectedId, paletteOpen, onPaletteChange, onChooseStarter, onChange, onSelect }: Props) {
+export function ThemeStructure({ sections = "all", theme, ready, selectedId, paletteOpen, onPaletteChange, onChooseStarter, onChange, onSelect }: Props) {
   const selectedStarter = inferStarter(theme);
   const [showStarters, setShowStarters] = useState(false);
   return (
       <section className="studio-structure" aria-label="Tema yapısı">
-        <section aria-labelledby="starter-heading">
+        {sections !== "structure" && <section aria-labelledby="starter-heading">
           <div className="studio-section-title"><h2 id="starter-heading">Başlangıç düzeni</h2></div><button className="starter-picker-trigger" aria-label="Başlangıç düzenini değiştir" aria-expanded={showStarters} onClick={() => setShowStarters(!showStarters)}><CrtIcon /><span>{starters.find((s) => s.id === selectedStarter)?.label ?? "Özel düzen"}</span><span aria-hidden="true">⌄</span></button>
-          <div className="starter-options" hidden={!showStarters}>{starters.map((starter) => <button key={starter.id} className="starter-card" aria-label={`${starter.label} başlangıç düzeni`} aria-pressed={selectedStarter === starter.id} disabled={!ready} onClick={() => { onChooseStarter(starter.id); setShowStarters(false); }}><span className={`starter-visual starter-${starter.id}`} aria-hidden="true">{starter.id === "scene" ? <CrtIcon /> : <><b>{starter.id === "magazine" ? "Aa." : "Aa"}</b><i /><i /><i /></>}</span><span><strong>{starter.label}</strong>{selectedStarter === starter.id && <span className="starter-current">Seçili ✓</span>}</span></button>)}</div>
-        </section>
-        <section aria-labelledby="structure-heading">
+          <div className="starter-options" hidden={sections !== "starters" && !showStarters}>{starters.map((starter) => <button key={starter.id} className="starter-card" aria-label={`${starter.label} başlangıç düzeni`} aria-pressed={selectedStarter === starter.id} disabled={!ready} onClick={() => { onChooseStarter(starter.id); setShowStarters(false); }}><span className={`starter-visual starter-${starter.id}`} aria-hidden="true">{starter.id === "scene" ? <CrtIcon /> : <><b>{starter.id === "magazine" ? "Aa." : "Aa"}</b><i /><i /><i /></>}</span><span><strong>{starter.label}</strong>{selectedStarter === starter.id && <span className="starter-current">Seçili ✓</span>}</span></button>)}</div>
+        </section>}
+        {sections !== "starters" && <section aria-labelledby="structure-heading">
         <div className="studio-section-title"><h1 id="structure-heading">Sayfa yapısı</h1><span>{theme.blocks.length} blok</span></div>
         {!theme.blocks.length && <p className="property-note">Sayfan şu an boş. Blok ekleyerek yeni bir düzen oluşturabilirsin.</p>}
         <ol className="studio-block-list">{theme.blocks.map((block) => <li key={block.id} data-selected={block.id === selectedId} className={block.id === selectedId ? "is-selected" : ""}>
@@ -45,7 +46,7 @@ export function ThemeStructure({ theme, ready, selectedId, paletteOpen, onPalett
           return <button key={kind} aria-label={`${blockLabels[kind]} ${disabled ? "mevcut" : "ekle"}`} disabled={disabled} onClick={() => { const id = crypto.randomUUID(); onChange(addBlock(theme, kind, id)); onSelect(id); }}><span aria-hidden="true">{symbols[kind]}</span><span><strong>{blockLabels[kind]}</strong><small>{exists ? "Sayfada mevcut" : otherLead ? "Önce mevcut giriş bloğunu kaldır" : blockDescriptions[kind]}</small></span><b aria-hidden="true">{disabled ? "✓" : "+"}</b></button>;
         })}</div>}
         <p className="studio-sidebar-foot">Üst menü başta, giriş başlangıçta, footer sonda kalır. İçerik bölümlerini kendi aralarında sırala.</p>
-        </section>
+        </section>}
       </section>
   );
 }

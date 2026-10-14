@@ -32,6 +32,7 @@ export type Article = {
   excerpt: string;
   minutes: number;
   presentation?: { width: "comfortable" | "wide"; heading: "left" | "center"; showMeta: boolean };
+  paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote"; level?: 2 | 3; attribution?: string }[];
   paragraphs: readonly string[];
   code?: string;
   figure?: { src: string; alt: string; caption: string; width: number; height: number };

@@ -1,3 +1,4 @@
+import { readCanvas, writeCanvas } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -24,7 +25,8 @@ describe("series authoring beside the canvas", () => {
     const site = studio(new MemorySite({ series: [initialSeries[0], initialSeries[2]].map((s) => ({ ...s })) }));
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: /Yeni yazı/ }));
-    fireEvent.change(screen.getByLabelText("Yazının serisi"), { target: { value: "new" } });
+    fireEvent.click(screen.getByRole("button", { name: "Yazının serisi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yeni seri oluştur" }));
     fireEvent.change(screen.getByLabelText("Yeni seri başlığı"), { target: { value: "Şiir ve kültür" } });
     expect((screen.getByLabelText("Yeni seri bağlantısı") as HTMLInputElement).value).toBe("siir-ve-kultur");
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seriyi kaydet" })); });
@@ -54,15 +56,16 @@ describe("series authoring beside the canvas", () => {
     const site = studio();
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: /Yeni yazı/ }));
-    fireEvent.change(screen.getByLabelText("Yazı başlığı"), { target: { value: "Korunan yazım" } });
-    fireEvent.change(screen.getByLabelText("Yazının serisi"), { target: { value: "new" } });
+    writeCanvas("title", "Korunan yazım");
+    fireEvent.click(screen.getByRole("button", { name: "Yazının serisi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yeni seri oluştur" }));
     fireEvent.change(screen.getByLabelText("Yeni seri başlığı"), { target: { value: "Yeni seri" } });
     fireEvent.change(screen.getByLabelText("Yeni seri bağlantısı"), { target: { value: "Türkçe Link!" } });
     expect(screen.getByRole("button", { name: "Seriyi kaydet" }).hasAttribute("disabled")).toBe(true);
     expect(site.calls).not.toContain("create series");
     fireEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
-    expect((screen.getByLabelText("Yazı başlığı") as HTMLInputElement).value).toBe("Korunan yazım");
+    expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"article"}>).article.title).toBe("Korunan yazım");
     fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
   });
   it("uploads a cover image and saves presentation in the shared page editor", async () => {

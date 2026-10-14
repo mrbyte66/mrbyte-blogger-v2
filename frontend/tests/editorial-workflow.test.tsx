@@ -1,3 +1,4 @@
+import { readCanvas, writeCanvas } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -26,29 +27,31 @@ const seriesId = (site: MemorySite, slug: string) => site.series.find((s) => s.s
 describe("article-first editorial workflow", () => {
   it("saves an empty writing draft, connects an existing series and publishes it later", async () => {
     const site = studio(); newWriting();
-    fireEvent.change(screen.getByLabelText("Yazı başlığı"), { target: { value: "Yeni bölüm" } });
-    fireEvent.change(screen.getByLabelText("Yazının serisi"), { target: { value: seriesId(site, initialSeries[0].slug) } });
+    writeCanvas("title", "Yeni bölüm");
+    fireEvent.click(screen.getByRole("button", { name: "Yazının serisi" }));
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(initialSeries[0].title) }));
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(site.article("yeni-bolum")).toMatchObject({ status: "draft" });
     expect(site.series[0].articleSlugs).toContain("yeni-bolum");
     expect(publicArticles(site.articles).some((a) => a.slug === "yeni-bolum")).toBe(false);
     expect(publicSeries(site.series, site.articles)[0].articleSlugs).not.toContain("yeni-bolum");
     fireEvent.click(screen.getByRole("button", { name: "Metin ve paragraflar" }));
-    fireEvent.change(screen.getByLabelText("Paragraf 1"), { target: { value: "İlk bölümün metni." } });
+    writeCanvas("paragraph-0", "İlk bölümün metni.");
     await action("Yayına al");
     expect(publicSeries(site.series, site.articles)[0].articleSlugs).toContain("yeni-bolum");
   });
   it("creates an inline draft series and binds the current writing as its first chapter", async () => {
     const site = studio(); newWriting();
-    fireEvent.change(screen.getByLabelText("Yazının serisi"), { target: { value: "new" } });
+    fireEvent.click(screen.getByRole("button", { name: "Yazının serisi" }));
+    fireEvent.click(screen.getByRole("button", { name: "Yeni seri oluştur" }));
     fireEvent.change(screen.getByLabelText("Yeni seri başlığı"), { target: { value: "Yeni ufuklar" } });
     await click(screen.getByRole("button", { name: "Seriyi kaydet" }));
     const savedSeries = site.series.at(-1)!;
     expect(savedSeries).toMatchObject({ title: "Yeni ufuklar", slug: "yeni-ufuklar", status: "draft" });
-    expect((screen.getByLabelText("Yazının serisi") as HTMLSelectElement).value).toBe(savedSeries.id);
+    expect(screen.getByRole("button", {name:"Yazının serisi"}).textContent).toContain(savedSeries.title);
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Metin ve paragraflar" }));
-    fireEvent.change(screen.getByLabelText("Paragraf 1"), { target: { value: "İlk yazı." } });
+    writeCanvas("paragraph-0", "İlk yazı.");
     await action("Yayına al");
     // The series stays a draft: publishing a series is an explicit, separate owner action (Ü6).
     expect(site.series.at(-1)).toMatchObject({ status: "draft", articleSlugs: [site.articles[0].slug] });
@@ -132,24 +135,25 @@ describe("standalone series creation on the live canvas", () => {
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
     expect(site.series).toHaveLength(seriesCount);
     // Same start as “Yeni yazı”: a valid template named on the canvas and in the page switcher.
-    expect((screen.getByLabelText("Seri başlığı") as HTMLInputElement).value).toBe("Yeni seri");
+    expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"series"}>).series.title).toBe("Yeni seri");
     expect(screen.getByRole("button", { name: "Sayfalar: Yeni seri" })).toBeTruthy();
     expect(screen.queryByText(/Eksik veya geçersiz alan var/)).toBeNull();
     expect(screen.getByRole("region", { name: "Canlı sayfa tuvali" }).querySelector("iframe")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Mevsim defteri" } });
+    writeCanvas("title", "Mevsim defteri");
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     const created = site.series.at(-1)!;
     expect(site.series).toHaveLength(seriesCount + 1);
     expect(created).toMatchObject({ title: "Mevsim defteri", slug: "mevsim-defteri", status: "draft", articleSlugs: [] });
     expect(screen.getByText("Taslak kaydedildi; ziyaretçilerden gizli.")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Mevsim defteri 2" } });
+    fireEvent.click(screen.getByRole("button", {name:"Seri başlığı"}));
+    writeCanvas("title", "Mevsim defteri 2");
     expect(screen.queryByText("Taslak kaydedildi; ziyaretçilerden gizli.")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Mevsim defteri" } });
+    writeCanvas("title", "Mevsim defteri");
     expect(site.articles).toHaveLength(count);
     expect(screen.getByRole("button", { name: "Sayfalar: Mevsim defteri" })).toBeTruthy();
     newWriting();
-    expect((screen.getByLabelText("Yazının serisi") as HTMLSelectElement).value).toBe(created.id);
-    fireEvent.change(screen.getByLabelText("Yazı başlığı"), { target: { value: "İlk bölüm" } });
+    expect(screen.getByRole("button", {name:"Yazının serisi"}).textContent).toContain(created.title);
+    writeCanvas("title", "İlk bölüm");
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(site.series.at(-1)!.articleSlugs).toEqual(["ilk-bolum"]);
   });
@@ -157,7 +161,7 @@ describe("standalone series creation on the live canvas", () => {
     const site = studio(new MemorySite({ series: [] })); const seriesCount = site.series.length;
     const free = site.articles.find((a) => !site.series.some((s) => s.articleSlugs.includes(a.slug)) && a.status === "published")!;
     openSeries();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Tek adım" } });
+    writeCanvas("title", "Tek adım");
     fireEvent.click(screen.getByRole("button", { name: "Bölümler" }));
     fireEvent.change(screen.getByLabelText("Bölüm ekle"), { target: { value: free.slug } });
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
@@ -168,7 +172,7 @@ describe("standalone series creation on the live canvas", () => {
     const other = site.articles.find((a) => !site.series.some((s) => s.articleSlugs.includes(a.slug)) && a.status === "published")!;
     vi.spyOn(site.studio, "saveSeries").mockRejectedValueOnce(new Error("offline"));
     openSeries();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Yarım kalan" } });
+    writeCanvas("title", "Yarım kalan");
     fireEvent.click(screen.getByRole("button", { name: "Bölümler" }));
     fireEvent.change(screen.getByLabelText("Bölüm ekle"), { target: { value: other.slug } });
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
@@ -202,10 +206,10 @@ describe("standalone series creation on the live canvas", () => {
     const site = studio(); const seriesCount = site.series.length;
     vi.spyOn(site.studio, "createSeries").mockRejectedValueOnce(new Error("offline"));
     openSeries();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Yeniden dene" } });
+    writeCanvas("title", "Yeniden dene");
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(screen.getByRole("alert").textContent).toContain("Kaydedilemedi");
-    expect((screen.getByLabelText("Seri başlığı") as HTMLInputElement).value).toBe("Yeniden dene");
+    expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"series"}>).series.title).toBe("Yeniden dene");
     expect(site.series).toHaveLength(seriesCount);
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(site.series).toHaveLength(seriesCount + 1);
@@ -214,11 +218,11 @@ describe("standalone series creation on the live canvas", () => {
   it("keeps unsaved series edits when leaving is declined and discards an untouched draft", () => {
     const site = studio(); const count = site.series.length;
     openSeries();
-    fireEvent.change(screen.getByLabelText("Seri başlığı"), { target: { value: "Kaybolmasın" } });
+    writeCanvas("title", "Kaybolmasın");
     vi.spyOn(window, "confirm").mockReturnValue(false);
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: site.series[0].title }));
-    expect((screen.getByLabelText("Seri başlığı") as HTMLInputElement).value).toBe("Kaybolmasın");
+    expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"series"}>).series.title).toBe("Kaybolmasın");
     fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
     expect(screen.queryByLabelText("Seri başlığı")).toBeNull();
     expect(site.series).toHaveLength(count);

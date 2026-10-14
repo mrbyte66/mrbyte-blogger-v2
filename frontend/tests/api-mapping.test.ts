@@ -44,3 +44,14 @@ describe("dynamic category identities (#44)", () => {
     expect(restored.blocks.find((b) => b.id === "feed")).toMatchObject({ category: "Astronomi", categoryId: category.id });
   });
 });
+
+import { toDocument } from "../lib/api/mapping";
+it("round-trips headings and attributed quotes without flattening their type or anchor",()=>{
+  const document={schemaVersion:1 as const,blocks:[
+    {id:"10000000-0000-4000-8000-000000000001",type:"heading" as const,text:"Bölüm",level:2 as const},
+    {id:"10000000-0000-4000-8000-000000000002",type:"quote" as const,text:"Bir alıntı",attribution:"Kaynak"},
+  ]};
+  const article=validateArticle(articleFromEdit({...edit,document},[category]));
+  expect(article).not.toBeNull();
+  expect(toDocument(article!)).toEqual(document);
+});

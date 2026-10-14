@@ -22,6 +22,11 @@ function CodeBlock({ code }: { code: string }) {
   </div>;
 }
 
+function ParagraphContent({article,index,text}: {article:Article;index:number;text:string}) {
+  const format=article.paragraphFormats?.[index];
+  const Tag=format?.kind==="heading" ? format.level===3 ? "h3" : "h2" : format?.kind==="quote" ? "blockquote" : "p";
+  return <><Tag data-edit-field={`paragraph-${index}`} data-reading-anchor={article.blockIds?.paragraphs[index] ?? `paragraph-${index}`} data-reading-legacy={`paragraph-${index}`}>{text}</Tag>{format?.kind==="quote" && format.attribution && <cite className="article-quote-attribution">{format.attribution}</cite>}</>;
+}
 export function ArticleContent({ article, fullPage = false, preview = false }: { article: Article; fullPage?: boolean; preview?: boolean }) {
   usePermalinkView(article.slug, fullPage && !preview);
   const Heading = fullPage ? "h1" : "h2";
@@ -31,7 +36,7 @@ export function ArticleContent({ article, fullPage = false, preview = false }: {
     {article.presentation?.showMeta !== false && <div className="article-meta" data-edit-field="meta"><span>{articleCategories(article).join(" · ")}</span><time dateTime={articleDate(article)}>{formatArticleDate(article)}</time><span>{article.minutes} dk okuma</span></div>}
     <p className="article-lead" data-edit-field="excerpt" data-reading-anchor="excerpt">{article.excerpt}</p>
     {article.paragraphs.map((paragraph, index) => <div key={index}>
-      <p data-edit-field={`paragraph-${index}`} data-reading-anchor={article.blockIds?.paragraphs[index] ?? `paragraph-${index}`} data-reading-legacy={`paragraph-${index}`}>{paragraph}</p>
+      <ParagraphContent article={article} index={index} text={paragraph}/>
       {index === 0 && article.figure && <figure data-edit-field="figure"><img src={article.figure.src} alt={article.figure.alt} width={article.figure.width} height={article.figure.height} loading="lazy" /><figcaption>{article.figure.caption}</figcaption></figure>}
       {index === Math.min(2, article.paragraphs.length - 1) && article.code && <CodeBlock code={article.code} />}
       {index === Math.min(2, article.paragraphs.length - 1) && article.table && <div className="article-table-scroll" data-edit-field="table" role="region" tabIndex={0} aria-label={`${article.table.caption}. Dar ekranda yatay kaydırılabilir.`}><table><caption>{article.table.caption}</caption><thead><tr>{article.table.columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr></thead><tbody>{article.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>}

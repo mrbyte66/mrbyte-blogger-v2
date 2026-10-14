@@ -20,6 +20,7 @@ type Props = {
 export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
+  const [availableHeight, setAvailableHeight] = useState(760);
   const [availableWidth, setAvailableWidth] = useState(600);
   const [loaded, setLoaded] = useState(false);
   const serialized = JSON.stringify(workspace);
@@ -56,14 +57,14 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   }, []);
   useEffect(() => {
     if (!container.current) return;
-    const observer = new ResizeObserver(([entry]) => setAvailableWidth(Math.max(1, entry.contentRect.width)));
+    const observer = new ResizeObserver(([entry]) => { setAvailableWidth(Math.max(1, entry.contentRect.width)); if (entry.contentRect.height > 100) setAvailableHeight(entry.contentRect.height); });
     observer.observe(container.current);
     return () => observer.disconnect();
   }, []);
 
   const width = mobile ? 390 : Math.max(1, Math.round(availableWidth));
-  const height = mobile ? 844 : 760;
-  const scale = Math.min(1, availableWidth / width);
+  const height = mobile ? 844 : Math.max(300, Math.round(availableHeight));
+  const scale = Math.min(1, availableWidth / width, mobile ? availableHeight / height : 1);
   return <div className="studio-canvas" ref={container}>
     <div className={`canvas-device ${mobile ? "device-mobile" : ""}`} style={{ width: width * scale, height: height * scale }}>
       {!loaded && <div className="canvas-loading" role="status">Tuval hazırlanıyor…</div>}

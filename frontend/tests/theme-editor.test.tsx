@@ -66,6 +66,7 @@ describe("visual theme authoring", () => {
     render(<ThemeEditor />);
     expect(screen.getByRole("complementary", { name: "Sayfa yapısını düzenle" })).toBeTruthy();
     expect(screen.queryByLabelText("Site adı")).toBeNull();
+    if (!screen.queryByRole("button", { name: "Blok ayarları" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Blok ayarları" }));
     await user.click(screen.getByRole("button", { name: "Blok paletini aç" }));
     expect(screen.getByRole("complementary", { name: "Sayfa yapısını düzenle" })).toBeTruthy();
@@ -78,7 +79,7 @@ describe("visual theme authoring", () => {
   it("persists a draft independently, then applies it to the homepage snapshot", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
-    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
+    await user.click(screen.getByRole("button", { name: "Site tercihleri" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     await user.clear(screen.getByLabelText("Site adı"));
     await user.type(screen.getByLabelText("Site adı"), "MRBYTE");
@@ -105,6 +106,7 @@ describe("visual theme authoring", () => {
   it("removes the last block, explains why apply is unavailable and allows undo", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
+    if (!screen.queryByRole("button", { name: "Blok ayarları" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Blok ayarları" }));
     await user.click(screen.getByRole("button", { name: /Bloğu kaldır/ }));
     expect(savedWorkspace()?.draft.blocks).toEqual([]);
@@ -116,6 +118,7 @@ describe("visual theme authoring", () => {
     expect(screen.getByRole("button", { name: "Karakter sahnesi ekle" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Son kaldırmayı geri al/ }));
     expect(savedWorkspace()?.draft).toEqual(createWorkspace().draft);
+    if (!screen.queryByRole("button", { name: "Blok ayarları" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Blok ayarları" }));
     expect(screen.getByRole("button", { name: /Bloğu kaldır/ })).toBeTruthy();
   });
@@ -124,13 +127,14 @@ describe("visual theme authoring", () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
     fireEvent.change(screen.getByLabelText("Başlık"), { target: { value: "Benim evrenim" } });
-    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
+    await user.click(screen.getByRole("button", { name: "Site tercihleri" }));
     const current = screen.getByRole("button", { name: "Karakterli evren başlangıç düzeni" });
     expect(current.getAttribute("aria-pressed")).toBe("true");
     await user.click(current);
     expect(savedWorkspace()?.draft).toEqual(createTheme("scene"));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(editorStatus()).toBe("");
+    if (!screen.queryByRole("button", { name: "Blok ayarları" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Blok ayarları" }));
     expect((screen.getByLabelText("Başlık") as HTMLInputElement).value).toBe("Kod yazarım.");
   });
@@ -138,6 +142,7 @@ describe("visual theme authoring", () => {
   it("persists custom color and appearance while keeping invalid color input out of the saved draft", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
+    if (!screen.queryByRole("button", { name: "Tema tasarımı" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Tema tasarımı" }));
     fireEvent.change(screen.getByLabelText("HEX renk kodu"), { target: { value: "#123456" } });
     await user.selectOptions(screen.getByLabelText("Tipografi"), "editorial");
@@ -158,7 +163,7 @@ describe("visual theme authoring", () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
     fireEvent.change(screen.getByLabelText("Başlık"), { target: { value: "Yeni başlık" } });
-    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
+    await user.click(screen.getByRole("button", { name: "Site tercihleri" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     expect(savedWorkspace()?.draft).toEqual(createTheme("feed"));
     expect(savedWorkspace()?.applied).toEqual(createWorkspace().applied);
@@ -175,7 +180,7 @@ describe("visual theme authoring", () => {
   it("reports failed apply without claiming or persisting a new applied snapshot", async () => {
     const user = userEvent.setup();
     render(<ThemeEditor />);
-    await user.click(screen.getByRole("button", { name: "Başlangıç düzenini değiştir" }));
+    await user.click(screen.getByRole("button", { name: "Site tercihleri" }));
     await user.click(screen.getByRole("button", { name: "Açık defter başlangıç düzeni" }));
     site.failNext = new ApiError(503, "SERVICE_UNAVAILABLE", "Sunucu şu anda yanıt veremiyor.");
     await user.click(screen.getByRole("button", { name: /Temayı uygula/ }));
@@ -197,6 +202,7 @@ describe("visual theme authoring", () => {
     expect(within(structure).getByRole("button", { name: /^Yazı akışı\s*İçerik bölümü$/ }).getAttribute("aria-pressed")).toBe("true");
     expect(within(properties).getByRole("heading", { name: "Yazı akışı" })).toBeTruthy();
     expect(within(structure).getByRole("button", { name: /Blok ekle/ })).toBeTruthy();
+    if (!screen.queryByRole("button", { name: "Tema tasarımı" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Tema tasarımı" }));
     receive(frame, { type: previewEvents.select, id: "block-quote" }, "https://foreign.example");
     receive(frame, { type: previewEvents.select, id: "block-quote" }, window.location.origin, window);

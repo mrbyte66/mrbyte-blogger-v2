@@ -26,6 +26,7 @@ import { ThemeStructure, starters } from "./ThemeStructure";
 import { StudioViewSwitch } from "./StudioViewSwitch";
 import { useStudioView } from "../../lib/studio/view";
 import { useDismiss } from "../../lib/studio/dismiss";
+import { isTopLayer, raiseLayer, useLayer } from "../../lib/studio/layers";
 
 
 export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode; onNavigate?: (target: StudioTarget) => void }) {
@@ -72,6 +73,10 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   useDismiss(structureOpen, () => setStructureOpen(false), [sidebarRef], "empty");
   // The block palette is a popover in some views: it closes the same way.
   useDismiss(paletteOpen, () => setPaletteOpen(false), [sidebarRef], "outside");
+  // Whatever opened last is drawn in front: the settings panel, the structure list or the block palette.
+  useLayer(panelOpen, properties);
+  useLayer(structureOpen, sidebarRef);
+  useLayer(paletteOpen, sidebarRef);
   const selectFromCanvas = useCallback((id: string, field?: SceneField) => {
     setPanelOpen(true); setFocused(false);
     setSceneField(field);
@@ -136,22 +141,22 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
 
     <div className="studio-workspace">
 
-      <aside ref={sidebarRef} className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
+      <aside ref={sidebarRef} className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} data-layer="" aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
       <section className="studio-preview" aria-label="Canlı önizleme" ref={canvas}>
-        <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setPanelOpen(!panelOpen); setInspector("theme"); }}><EditorIcon name="settings"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
+        <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setInspector("theme"); if (panelOpen && !isTopLayer(properties.current)) raiseLayer(properties.current); else setPanelOpen(!panelOpen); }}><EditorIcon name="design"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
         <p role="status" className="studio-status canvas-feedback">{message}</p>
         <PreviewCanvas onPointer={() => { setPanelOpen(false); setStructureOpen(false); }} onInlineEdit={canvasEdit} resetKey={resetKey} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
         <div className="canvas-bottom"><span>{editingCanvas ? "METNE TIKLA, YERİNDE DÜZENLE." : "ZİYARETÇİ ÖNİZLEMESİ"}</span><span>İçerikler tema değişince korunur.</span></div>
       </section>
-      <aside hidden={!panelOpen} className={`studio-inspector ${selectedId && inspector === "block" ? "inspector-linked" : ""}`} aria-label="Düzenleme özellikleri" ref={properties}>
+      <aside hidden={!panelOpen} className={`studio-inspector ${selectedId && inspector === "block" ? "inspector-linked" : ""}`} data-layer="" aria-label="Düzenleme özellikleri" ref={properties}>
         <div className="inspector-heading"><span className="studio-eyebrow">TASARIM ARAÇLARI</span><button aria-label="Ayar panelini kapat" onClick={() => setPanelOpen(false)}><EditorIcon name="close"/></button></div>
         <div className="inspector-switch" role="group" aria-label="Özellik türü"><button aria-pressed={inspector === "block"} onClick={() => setInspector("block")}>Blok ayarları</button><button aria-pressed={inspector === "theme"} onClick={() => setInspector("theme")}>Tema tasarımı</button></div>
         <fieldset disabled={!ready} className="inspector-fields">{inspector === "block" ? selected ? <><span className="studio-eyebrow">{selectedId ? "SEÇİLİ BLOK" : "BLOK ÖZELLİKLERİ"}</span><h2>{blockLabels[selected.kind]}</h2><details className="studio-help"><summary>Bu bölüm hakkında</summary><p>{blockDescriptions[selected.kind]} {blockPlacementNote(selected.kind)}</p></details><BlockProperties block={selected} activeSceneField={sceneField} focusRequest={focusRequest} onChange={(block) => edit(replaceBlock(workspace.draft, block))} onManageSeries={() => { if (series[0]) onNavigate?.({ kind: "series", slug: series[0].slug }); }} /><button className="studio-remove" onClick={removeSelected}>Bloğu kaldır −</button></> : <div className="inspector-empty"><span aria-hidden="true">＋</span><h2>Yeni bir bölüm ekle.</h2><p>Son bloğu da kaldırdın. “Blok ekle” ile yeniden başlayabilirsin; ana sayfadaki teman korunuyor.</p><button className="studio-secondary" onClick={() => setPaletteOpen(true)}>Blok paletini aç</button></div> : <><span className="studio-eyebrow">TEMA</span><h2>Görsel kimlik</h2><p className="property-summary">Yalnızca renk değil: yazı karakteri, atmosfer, genişlik ve ritim.</p><ThemeSettings theme={workspace.draft} onChange={edit} /></>}</fieldset>
         <div className="studio-save-state"><span className="studio-eyebrow">TASLAK & ANA SAYFA</span><p>{!ready ? "Kayıt yükleniyor…" : dirty ? "Şu an taslağı düzenliyorsun; taslak otomatik kaydedilir. Ana sayfa henüz değişmedi." : "Taslak, yayındaki ana sayfayla aynı."}</p><button disabled={!ready || !dirty} onClick={() => setConfirmation("restore")}>Taslağı uygulanan temaya döndür ↶</button>{undo && <button className="undo-removal" onClick={() => { save({ ...workspace, draft: undo }); setResetKey((n) => n + 1); setUndo(null); setMessage("Önceki taslak geri geldi."); }}>{undoKind === "remove" ? "Son kaldırmayı geri al" : "Önceki düzene dön"} ↶</button>}{storageError && <p role="alert" className="studio-error">{storageError}</p>}{errors.length > 0 && <ul className="studio-error">{errors.map((error) => <li key={error}>{error}</li>)}</ul>}</div>
       </aside>
-      {view === "odak" && <div className="studio-dock" role="toolbar" aria-label="Tasarım araçları">
-        <button type="button" aria-pressed={structureOpen} onClick={() => setStructureOpen(!structureOpen)}><EditorIcon name="layout" size={20} /><span>Yapı</span></button>
-        <button type="button" aria-pressed={panelOpen && inspector === "theme"} onClick={() => { if (panelOpen && inspector === "theme") setPanelOpen(false); else { setInspector("theme"); setPanelOpen(true); } }}><EditorIcon name="settings" size={20} /><span>Tasarım</span></button>
+      {view === "odak" && <div className="studio-dock" data-layer="" role="toolbar" aria-label="Tasarım araçları">
+        <button type="button" aria-pressed={structureOpen} onClick={() => setStructureOpen(!structureOpen)}><EditorIcon name="structure" size={20} /><span>Yapı</span></button>
+        <button type="button" aria-pressed={panelOpen && inspector === "theme"} onClick={() => { if (panelOpen && inspector === "theme" && !isTopLayer(properties.current)) raiseLayer(properties.current); else if (panelOpen && inspector === "theme") setPanelOpen(false); else { setInspector("theme"); setPanelOpen(true); } }}><EditorIcon name="design" size={20} /><span>Tasarım</span></button>
         <span className="dock-divider" aria-hidden="true" />
         <div className="dock-actions">{actionNodes}</div>
       </div>}

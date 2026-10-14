@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useSyncExternalStore } from "react";
+import { announceAppearanceChange } from "../appearance-events";
 
 /**
- * Studio "Görünüm": the same tools in four visual arrangements. The choice is a per-browser preference
- * (like the colour mode), mirrored on <html data-studio-view> so the live canvas frame can follow it too.
+ * Studio "Görünüm": the same tools in four visual arrangements. The choice is kept per browser and, when
+ * signed in, on the account (like the colour mode); <html data-studio-view> lets the canvas frame follow it.
  */
 export const studioViews = [
   { id: "marjinalya", label: "Marjinalya", detail: "Satır numaralı sayfa, kenarda notlar ve adres" },
@@ -70,7 +71,7 @@ function subscribe(notify: () => void) {
 /** The active Studio view and a setter. Server rendering and tests start from the default. */
 export function useStudioView(): [StudioView, (view: StudioView) => void] {
   const view = useSyncExternalStore(subscribe, current, () => defaultStudioView);
-  const set = useCallback((next: StudioView) => { ensureStudioFonts(next); writeStudioView(next); }, []);
+  const set = useCallback((next: StudioView) => { ensureStudioFonts(next); writeStudioView(next); announceAppearanceChange(); }, []);
   ensureStudioFonts(view);
   return [view, set];
 }

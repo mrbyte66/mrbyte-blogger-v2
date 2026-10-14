@@ -14,7 +14,7 @@ const excerptLimit = 4000;
 export function MarginColumn({ draft, saved, field, isNew, slugEdited, onOpenField }: { draft: DocumentDraft; saved: DocumentDraft | null; field: string; isNew: boolean; slugEdited: boolean; onOpenField: (id: string) => void }) {
   if (draft.kind === "series") {
     const { series } = draft;
-    return <aside className="studio-margin" aria-label="Kenar notları">
+    return <aside className="studio-margin" data-layer="" aria-label="Kenar notları">
       <section className="margin-card"><h3 className="margin-label">ADRES</h3><p className="margin-address">/seriler/{series.slug}</p><p className="margin-hint">Kalıcı adres · bölüm sayısı {series.articleSlugs.length}</p></section>
       <section className="margin-card"><div className="margin-row"><h3 className="margin-label">AÇIKLAMA</h3><span className="margin-count">{series.summary.length} / 1000</span></div><Bar value={series.summary.length / 1000} /><p className="margin-hint">Seri sayfasında ve listelerde bu metin görünür.</p><button type="button" className="margin-link" onClick={() => onOpenField("summary")}>Açıklamayı düzenle</button></section>
     </aside>;
@@ -22,7 +22,7 @@ export function MarginColumn({ draft, saved, field, isNew, slugEdited, onOpenFie
   const article: Article = draft.article;
   const savedArticle = saved?.kind === "article" ? saved.article : undefined;
   const words = articleWords(article);
-  return <aside className="studio-margin" aria-label="Kenar notları">
+  return <aside className="studio-margin" data-layer="" aria-label="Kenar notları">
     <section className="margin-card margin-goal"><WordGoal current={article} saved={savedArticle ?? article} line /></section>
     <section className="margin-card">
       <h3 className="margin-label">ADRES</h3>

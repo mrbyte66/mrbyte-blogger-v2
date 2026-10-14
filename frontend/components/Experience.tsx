@@ -29,6 +29,11 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
   const [navigation, dispatch] = useReducer((state: Navigation, action: NavigationAction) => navigateArticles(state, action, articles), initialNavigation);
   const { colorMode: preference, setColorMode, motionEnabled, setMotionEnabled } = useSitePreferences();
   const dark = preference ? preference === "dark" : colorMode === "dark";
+  // The scene's light switch walks through the three modes: lights on → reading lamp → lights off.
+  const mode = preference ?? (dark ? "dark" : "light");
+  const nextMode = mode === "light" ? "reading" : mode === "reading" ? "dark" : "light";
+  const lightLabel = mode === "reading" ? "Okuma ışığı" : dark ? "Işıklar kapalı" : "Işıklar açık";
+  const nextLabel = nextMode === "reading" ? "Okuma" : nextMode === "dark" ? "Gece" : "Gündüz";
 
   return <section aria-label="Karakterli evren" className={`experience ${dark ? "theme-dark" : "theme-light"} ${motionEnabled ? "motion-on" : "motion-off"} ${navigation.section ? "panel-open" : ""}`}>
     <a tabIndex={editing ? -1 : undefined} aria-disabled={editing || undefined} className="skip-link" href="#scene-navigation">İçeriklere geç</a>
@@ -49,7 +54,7 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
       <div className={`character-caption ${showFeaturedSeries && featuredSeries ? "caption-with-featured-series" : ""}`} aria-hidden="true"><span className="caption-line" /><span>Kıvırcık düşünceler.<br />Düzenli satırlar.</span></div>
     </div>
 
-    <footer className="site-footer"><span className="footer-signature">HER ŞEY BİR MERAKLA BAŞLAR.</span><span className="scene-indicator"><span aria-hidden="true">✳</span> BURADASIN</span><div className="scene-controls" inert={editing}><button aria-label={dark ? "Açık temaya geç" : "Koyu temaya geç"} aria-pressed={dark} onClick={() => setColorMode(dark ? "light" : "dark")}><span className="sun-icon" aria-hidden="true">☼</span><span>Işıklar {dark ? "kapalı" : "açık"}</span></button><span className="control-divider" /><button aria-label="Sahne hareketi" aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span><span className="motion-label">{motionEnabled ? "Hareket açık" : "Hareket kapalı"}</span></button><span className="control-divider" /><AmbientAudioToggle scene /></div></footer>
+    <footer className="site-footer"><span className="footer-signature">HER ŞEY BİR MERAKLA BAŞLAR.</span><span className="scene-indicator"><span aria-hidden="true">✳</span> BURADASIN</span><div className="scene-controls" inert={editing}><button aria-label={`Renk modu: ${lightLabel}. ${nextLabel} moduna geç`} onClick={() => setColorMode(nextMode)}><span className="sun-icon" aria-hidden="true">{mode === "reading" ? "◐" : "☼"}</span><span className="light-label">{lightLabel}</span></button><span className="control-divider" /><button aria-label="Sahne hareketi" aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span><span className="motion-label">{motionEnabled ? "Hareket açık" : "Hareket kapalı"}</span></button><span className="control-divider" /><AmbientAudioToggle scene /></div></footer>
     <ContentPanel navigation={navigation} dispatch={dispatch} siteName={siteName} />
   </section>;
 }

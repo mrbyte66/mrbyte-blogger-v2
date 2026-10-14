@@ -1,0 +1,41 @@
+/*
+ * Colour mode switch (Gündüz · Okuma · Gece) and the reading mode palette.
+ * Reading mode = the light rules (`data-theme="light"`) plus warm paper tones (`data-tone="reading"`).
+ */
+:root { --spring:cubic-bezier(.34,1.32,.5,1); --press:cubic-bezier(.2,.8,.2,1); }
+
+.color-mode-switch { --cm-size:36px; position:relative; display:inline-grid; grid-auto-flow:column; grid-auto-columns:var(--cm-size); align-items:center; flex:none; padding:3px; border:1px solid var(--line,#24302a22); border-radius:999px; background:color-mix(in srgb,var(--surface,#e7eae3) 72%,transparent); isolation:isolate; }
+.color-mode-switch button { position:relative; z-index:1; display:grid; place-items:center; width:var(--cm-size); height:var(--cm-size); padding:0; border:0; border-radius:50%; background:transparent; color:var(--muted,#5a625c); cursor:pointer; transition:color 220ms var(--press),transform 160ms var(--press); }
+.color-mode-switch button:hover { color:var(--ink,#242a27); }
+.color-mode-switch button:active { transform:scale(.88); }
+.color-mode-switch button[aria-pressed=true] { color:var(--ink,#242a27); }
+.color-mode-switch button[aria-pressed=true] svg { animation:mode-arrive 520ms var(--spring) both; }
+.color-mode-switch button:focus-visible { outline:2px solid var(--ink,#242a27); outline-offset:1px; }
+.color-mode-thumb { position:absolute; z-index:0; top:3px; left:3px; width:var(--cm-size); height:var(--cm-size); border-radius:50%; background:var(--panel,#f4f4ee); box-shadow:0 1px 2px #0000001a,0 6px 14px -6px #00000038; transform:translateX(calc(var(--mode-index,0) * var(--cm-size))); transition:transform 460ms var(--spring),background-color 300ms var(--press); will-change:transform; }
+.color-mode-switch[data-mode=reading] .color-mode-thumb { background:#fbf1df; }
+html[data-theme=dark] .color-mode-switch .color-mode-thumb { background:#33403a; box-shadow:0 1px 2px #0006,0 6px 14px -6px #000a; }
+@keyframes mode-arrive { 0% { transform:scale(.6) rotate(-35deg); opacity:.4; } 100% { transform:none; opacity:1; } }
+.reading-header>.color-mode-switch { margin-left:auto; }
+
+/* Okuma: warm paper, softer ink, less blue light. Every surface that names its palette is warmed here. */
+html[data-tone=reading] { background:#f3e9d8; --selection-ink:#8a4a1c; }
+html[data-tone=reading] :is(.theme-site,.experience,.ambient-global,.content-dialog,.site-header .account-dropdown),
+html[data-tone=reading] .surface-night { --ink:#3a2e25; --muted:#76675a; --line:#4b372c29; --panel:#f3e9d8; --surface:#e8dac5; color-scheme:light; }
+html[data-tone=reading] .theme-site { background:#f3e9d8; }
+html[data-tone=reading] .experience,
+html[data-tone=reading] .experience.theme-light { background:radial-gradient(ellipse at 49% 38%,#f6ecdb 0%,#e2d3bc 44%,#b9a891 100%); }
+html[data-tone=reading] .studio[data-view] {
+  --sv-bg:#f1e6d4; --sv-card:#fbf4e8; --sv-sunk:#ebdfcb; --sv-ink:#33291f; --sv-sub:#6d5e4f; --sv-faint:#9b8a76; --sv-line:#e1d1b9;
+  --sv-glass:rgba(251,244,232,.84); --sv-glass-line:rgba(70,48,24,.1);
+  --sv-shadow:0 1px 2px rgba(70,48,24,.06),0 18px 40px -16px rgba(70,48,24,.22);
+  --art-card:#fffaf1;
+}
+html[data-tone=reading] .studio[data-view="sahne"] { --sv-stage:#e7d9c2; }
+
+/* The scene's own light switch has room for its longest label, so the controls never shift. */
+.scene-controls .light-label { display:inline-block; min-width:12.5ch; text-align:left; }
+@media(max-width:600px) { .scene-controls .light-label { min-width:0; } }
+html[data-tone=reading] .scene-controls .sun-icon { color:#a8642c; }
+
+@media(prefers-reduced-motion:reduce) { .color-mode-thumb,.color-mode-switch button { transition:none; } .color-mode-switch button[aria-pressed=true] svg { animation:none; } }
+html[data-motion=off] .color-mode-thumb { transition:none; }

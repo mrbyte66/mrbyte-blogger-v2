@@ -12,6 +12,8 @@ export type StudioShell = {
   /** False outside the editor, where navigation falls back to plain links. */
   active: boolean;
   target: StudioTarget;
+  /** Pages opened lately, newest first (the current one included), for one-click switching. */
+  recent: readonly StudioTarget[];
   articles: readonly Article[];
   series: readonly BlogSeries[];
   ready: boolean;
@@ -23,7 +25,7 @@ export type StudioShell = {
   onReload: () => void;
 };
 
-const detached: StudioShell = { active: false, target: { kind: "home" }, articles: [], series: [], ready: false, error: null, onNavigate: () => {}, onCreateArticle: () => {}, onCreateSeries: () => {}, onReload: () => {} };
+const detached: StudioShell = { active: false, target: { kind: "home" }, recent: [], articles: [], series: [], ready: false, error: null, onNavigate: () => {}, onCreateArticle: () => {}, onCreateSeries: () => {}, onReload: () => {} };
 const Context = createContext<StudioShell>(detached);
 export const StudioShellProvider = Context.Provider;
 export function useStudioShell(): StudioShell { return useContext(Context); }

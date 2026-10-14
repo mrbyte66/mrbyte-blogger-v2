@@ -30,7 +30,7 @@ function canvasMessage(data: unknown) {
   act(() => { window.dispatchEvent(new MessageEvent("message", { data, source: frame().contentWindow, origin: window.location.origin })); });
 }
 function chooseView(name: string) {
-  fireEvent.click(screen.getByLabelText("Görünüm ve hesap"));
+  fireEvent.click(screen.getByRole("button", { name: "Studio görünümü" }));
   fireEvent.click(within(screen.getByRole("group", { name: "Studio görünümü" })).getByRole("button", { name: new RegExp(`^${name}`) }));
 }
 
@@ -45,7 +45,7 @@ describe("Studio views", () => {
     expect(screen.getByRole("group", { name: "Blok ekle" })).toBeTruthy();
   });
 
-  it("switches the view from the personal menu, remembers it and tells the canvas frame", () => {
+  it("switches the view from its own menu, remembers it and tells the canvas frame", () => {
     studio();
     selectPage(articles[0].title);
     chooseView("Odak");
@@ -65,20 +65,47 @@ describe("Studio views", () => {
     expect(parseStudioView("klasik")).toBeNull();
   });
 
-  it("closes the personal menu on Escape and on a press outside it", async () => {
+  it("keeps the view menu apart from the account and closes it on Escape and on a press outside it", () => {
     studio();
-    const summary = screen.getByLabelText("Görünüm ve hesap");
-    const menu = summary.closest("details") as HTMLDetailsElement;
-    // <details> reports its state with an asynchronous toggle event.
-    const toggled = async () => { await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); }); };
-    fireEvent.click(summary); await toggled();
-    expect(menu.open).toBe(true);
+    const trigger = screen.getByRole("button", { name: "Studio görünümü" });
+    const menu = () => screen.queryByRole("dialog", { name: "Studio görünümü" });
+    fireEvent.click(trigger);
+    expect(menu()).toBeTruthy();
+    expect(within(menu()!).queryByRole("button", { name: /Hesap menüsü/ })).toBeNull();
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(menu.open).toBe(false); await toggled();
-    fireEvent.click(summary); await toggled();
-    expect(menu.open).toBe(true);
+    expect(menu()).toBeNull();
+    fireEvent.click(trigger);
     fireEvent.pointerDown(document.body);
-    expect(menu.open).toBe(false);
+    expect(menu()).toBeNull();
+    // Colour mode is one press away, outside any menu.
+    expect(screen.getByRole("group", { name: "Renk modu" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Siteye dön" })).toBeNull();
+  });
+
+  it("brings the last opened panel to the front", () => {
+    document.documentElement.dataset.studioView = "sahne";
+    studio();
+    const panel = screen.getByLabelText("Düzenleme özellikleri");
+    const strip = screen.getByLabelText("Sayfa yapısını düzenle");
+    fireEvent.click(screen.getByRole("button", { name: /Tasarım/ }));
+    expect(panel.hidden).toBe(false);
+    const front = () => Number(panel.style.zIndex) > Number(strip.style.zIndex || 0) ? "panel" : "strip";
+    expect(front()).toBe("panel");
+    fireEvent.pointerDown(screen.getByRole("button", { name: /Blok ekle/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Blok ekle/ }));
+    expect(front()).toBe("strip");
+    fireEvent.click(screen.getByRole("button", { name: /Tasarım/ }));
+    expect(panel.hidden).toBe(false);
+    expect(front()).toBe("panel");
+  });
+
+  it("switches back to a recently opened page from the Marjinalya rail in one press", () => {
+    studio();
+    selectPage(articles[0].title);
+    fireEvent.click(screen.getByRole("button", { name: "Site tasarımı" }));
+    expect(screen.queryByLabelText("Kenar notları")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: `Son açılan yazı: ${articles[0].title}` }));
+    expect(screen.getByRole("complementary", { name: "Kenar notları" })).toBeTruthy();
   });
 
   it("closes the settings panel on Escape, on empty space and on a canvas press, but not on tool buttons", () => {

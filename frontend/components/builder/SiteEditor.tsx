@@ -1,17 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Article } from "../../lib/content";
 import { createArticle } from "../../lib/articles/model";
 import { describe } from "../../lib/api/http";
 import { useContentWorkspace } from "../../lib/editorial/use-content-workspace";
 import { createSeries, type BlogSeries } from "../../lib/series/model";
-import type { DocumentDraft, StudioTarget } from "../../lib/builder/document-protocol";
+import { parseStudioTarget, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 import { PageNavigator } from "./PageNavigator";
 import { ThemeEditor } from "./ThemeEditor";
 import { DocumentEditor } from "./DocumentEditor";
 import { announceContentChange } from "../data/PublicContentRefresh";
 import { StudioShellProvider } from "../../lib/studio/shell";
 
+const recentKey = "satir:studio-recent";
 const leaveMessage = "Kaydedilmemiş değişiklikler var. Kaydetmeden bu sayfadan çıkmak istiyor musun?";
 /** Asks before discarding unsaved edits; environments without dialogs keep the edits. */
 function confirmLeave(): boolean { try { return window.confirm(leaveMessage) === true; } catch { return false; } }
@@ -24,6 +25,19 @@ function savedNotice(status: string) {
 export function SiteEditor() {
   const content = useContentWorkspace();
   const [target, setTarget] = useState<StudioTarget>({ kind: "home" });
+  // Pages opened lately (this browser), so switching back from the site design is one press.
+  const [recent, setRecent] = useState<StudioTarget[]>([]);
+  useEffect(() => {
+    try { const stored: unknown = JSON.parse(sessionStorage.getItem(recentKey) ?? "[]"); if (Array.isArray(stored)) setRecent(stored.map(parseStudioTarget).filter((item): item is StudioTarget => !!item).slice(0, 6)); } catch { /* starts empty */ }
+  }, []);
+  useEffect(() => {
+    if (target.kind === "home") return;
+    setRecent((list) => {
+      const next = [target, ...list.filter((item) => JSON.stringify(item) !== JSON.stringify(target))].slice(0, 6);
+      try { sessionStorage.setItem(recentKey, JSON.stringify(next)); } catch { /* still works for this page */ }
+      return next;
+    });
+  }, [target]);
   const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -106,7 +120,8 @@ export function SiteEditor() {
   }
   const navigation = <PageNavigator target={target} articles={availableArticles} series={availableSeries} ready={content.ready} onNavigate={navigate} onCreateArticle={addArticle} onCreateSeries={addSeries} />;
   const error = saveError ?? content.error;
-  const shell = { active: true, target, articles: availableArticles, series: availableSeries, ready: content.ready, error, onNavigate: navigate, onCreateArticle: addArticle, onCreateSeries: addSeries, onReload: () => { void content.studio?.reload(); } };
+  const known = recent.filter((item) => item.kind === "article" ? availableArticles.some((a) => a.slug === item.slug) : item.kind === "series" ? availableSeries.some((s) => s.slug === item.slug) : false);
+  const shell = { active: true, target, recent: known, articles: availableArticles, series: availableSeries, ready: content.ready, error, onNavigate: navigate, onCreateArticle: addArticle, onCreateSeries: addSeries, onReload: () => { void content.studio?.reload(); } };
   return <StudioShellProvider value={shell}><div className="studio-site-editor">
     {target.kind === "home" && error && <p role="alert" className="studio-navigation-notice">{error}</p>}
     {notice && <p className="studio-navigation-notice" role="status">{notice}</p>}

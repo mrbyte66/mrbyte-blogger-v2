@@ -15,7 +15,7 @@ export function FocusExtras({ draft, saved, field, caret, onSelect }: { draft: D
   const paragraphs = article?.paragraphs ?? [];
   const active = field.startsWith("paragraph-") ? Number(field.slice(10)) : -1;
   return <>
-    <div className="focus-goal"><WordGoal current={article} saved={savedArticle ?? article} line /></div>
+    <div className="focus-goal" data-layer=""><WordGoal current={article} saved={savedArticle ?? article} line /></div>
     {paragraphs.length > 1 && <nav className="focus-minimap" aria-label="Paragraf haritası">
       {paragraphs.map((text, index) => <button key={index} type="button" className={index === active ? "is-active" : undefined} aria-label={`Paragraf ${index + 1}`} aria-current={index === active ? "true" : undefined} style={{ width: Math.min(30, Math.max(14, 12 + Math.round(text.length / 40))) }} onClick={() => onSelect(`paragraph-${index}`)} />)}
     </nav>}

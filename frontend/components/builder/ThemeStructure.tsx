@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { CrtIcon } from "./StudioIcons";
 import { BlockArt } from "./BlockArt";
 import { addBlock, blockDescriptions, blockKinds, blockLabels, canMoveBlock, inferStarter, moveBlock, type Starter, type Theme } from "../../lib/builder/model";
@@ -25,6 +25,17 @@ type Props = {
 
 export function ThemeStructure({ sections = "all", theme, ready, selectedId, paletteOpen, onPaletteChange, onChooseStarter, onChange, onSelect }: Props) {
   const selectedStarter = inferStarter(theme);
+  const addButton = useRef<HTMLButtonElement>(null);
+  const palette = useRef<HTMLDivElement>(null);
+  // Where the palette floats (Sahne's strip), it opens over its own "Blok ekle" button, kept inside the strip.
+  useLayoutEffect(() => {
+    const node = palette.current, add = addButton.current, frame = node?.offsetParent;
+    if (!paletteOpen || !node || !add || !frame || !node.closest('[data-view="sahne"]') || !matchMedia("(min-width: 1100px)").matches) return;
+    const room = frame.getBoundingClientRect(), anchor = add.getBoundingClientRect();
+    const left = Math.max(12, Math.min(anchor.left - room.left, room.width - node.offsetWidth - 12));
+    node.style.left = `${left}px`; node.style.right = "auto";
+    node.style.transformOrigin = `${Math.round(anchor.left - room.left - left + anchor.width / 2)}px 100%`;
+  }, [paletteOpen]);
   const [showStarters, setShowStarters] = useState(false);
   return (
       <section className="studio-structure" aria-label="Tema yapısı">
@@ -39,8 +50,8 @@ export function ThemeStructure({ sections = "all", theme, ready, selectedId, pal
           <button disabled={!ready} className="block-select" aria-pressed={block.id === selectedId} onClick={() => onSelect(block.id)}><span className="block-art-frame" aria-hidden="true"><BlockArt kind={block.kind} /></span><span className="block-symbol" aria-hidden="true">{symbols[block.kind]}</span><span>{blockLabels[block.kind]}<small>{block.kind === "header" ? "Başta sabit" : block.kind === "footer" ? "Sonda sabit" : ["intro", "scene"].includes(block.kind) ? "Giriş · sabit" : "İçerik bölümü"}</small></span></button>
           <div className="block-order"><button disabled={!ready || !canMoveBlock(theme, block.id, -1)} title={canMoveBlock(theme, block.id, -1) ? "Bir sıra yukarı" : "Bu konum yerleşim kuralıyla korunuyor"} aria-label={`${blockLabels[block.kind]} yukarı taşı`} onClick={() => { onChange(moveBlock(theme, block.id, -1)); onSelect(block.id); }}>↑</button><button disabled={!ready || !canMoveBlock(theme, block.id, 1)} title={canMoveBlock(theme, block.id, 1) ? "Bir sıra aşağı" : "Bu konum yerleşim kuralıyla korunuyor"} aria-label={`${blockLabels[block.kind]} aşağı taşı`} onClick={() => { onChange(moveBlock(theme, block.id, 1)); onSelect(block.id); }}>↓</button></div>
         </li>)}</ol>
-        <button className="studio-add" disabled={!ready} aria-expanded={paletteOpen} aria-controls="block-palette" onClick={() => onPaletteChange(!paletteOpen)}><span aria-hidden="true">{paletteOpen ? "−" : "+"}</span> Blok ekle</button>
-        {paletteOpen && <div id="block-palette" className="studio-palette">{blockKinds.map((kind) => {
+        <button ref={addButton} className="studio-add" disabled={!ready} aria-expanded={paletteOpen} aria-controls="block-palette" onClick={() => onPaletteChange(!paletteOpen)}><span aria-hidden="true">{paletteOpen ? "−" : "+"}</span> Blok ekle</button>
+        {paletteOpen && <div ref={palette} id="block-palette" className="studio-palette">{blockKinds.map((kind) => {
           const exists = theme.blocks.some((block) => block.kind === kind);
           const otherLead = ["intro", "scene"].includes(kind) && theme.blocks.some((block) => ["intro", "scene"].includes(block.kind) && block.kind !== kind);
           const disabled = exists || otherLead;

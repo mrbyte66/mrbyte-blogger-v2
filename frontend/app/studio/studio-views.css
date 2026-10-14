@@ -890,3 +890,28 @@ html .studio[data-view],
 html .studio[data-view] > .studio-workspace,
 html .studio[data-view] .studio-preview,
 html .studio[data-view] .studio-canvas { overflow:clip; }
+
+/*
+ * Grid placement is spelled out for the two-column views at every width: the older rules re-placed
+ * the tool list under the page between 861 and 1100 px, which squeezed the page into the tool column.
+ */
+html .studio[data-view="marjinalya"]:not(.document-studio) > .studio-workspace,
+html .studio[data-view="kontakt"] > .studio-workspace { display:grid; grid-template-rows:minmax(0,1fr); }
+html .studio[data-view="marjinalya"]:not(.document-studio) .studio-sidebar,
+html .studio[data-view="kontakt"] .studio-sidebar { grid-column:1; grid-row:1; }
+html .studio[data-view="marjinalya"]:not(.document-studio) .studio-preview,
+html .studio[data-view="kontakt"] .studio-preview { grid-column:2; grid-row:1; }
+@media (max-width:1099px) and (min-width:700px) {
+  html .studio[data-view="marjinalya"]:not(.document-studio) > .studio-workspace,
+  html .studio[data-view="kontakt"]:not(.document-studio) > .studio-workspace { grid-template-columns:minmax(176px,224px) minmax(0,1fr); }
+  html .studio[data-view="kontakt"].document-studio > .studio-workspace { grid-template-columns:84px minmax(0,1fr); }
+  html .studio[data-view="sahne"] > .studio-workspace { display:grid; grid-template-columns:minmax(176px,224px) minmax(0,1fr); grid-template-rows:minmax(0,1fr); align-items:stretch; }
+  html .studio[data-view="sahne"].document-studio > .studio-workspace { grid-template-columns:84px minmax(0,1fr); }
+  html .studio[data-view="sahne"] .studio-sidebar { grid-column:1; grid-row:1; }
+  html .studio[data-view="sahne"] .studio-preview { grid-column:2; grid-row:1; }
+}
+@media (max-width:699px) {
+  html .studio[data-view="marjinalya"]:not(.document-studio) > .studio-workspace,
+  html .studio[data-view="kontakt"] > .studio-workspace,
+  html .studio[data-view="sahne"] > .studio-workspace { display:flex; flex-direction:column; align-items:stretch; }
+}

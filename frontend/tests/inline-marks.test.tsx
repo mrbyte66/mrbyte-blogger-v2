@@ -135,6 +135,37 @@ describe("formatting in the canvas", () => {
   });
 });
 
+describe("writing shortcuts in the canvas", () => {
+  it("turns \"## \" at the start of a paragraph into a heading", () => {
+    const post = mount();
+    const node = open();
+    node.innerHTML = "## Bölüm";
+    fireEvent.input(node);
+    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", value: "Bölüm", action: "heading2" });
+  });
+  it("opens the block menu with \"/\", filters it and picks with Enter", () => {
+    const post = mount();
+    const node = open();
+    node.innerHTML = "/baş";
+    fireEvent.input(node);
+    const menu = screen.getByRole("listbox", { name: "Blok ekle" });
+    expect(menu.textContent).toContain("Başlık");
+    expect(menu.textContent).not.toContain("Tablo");
+    fireEvent.keyDown(node, { key: "Enter" });
+    expect(lastEdit(post)).toMatchObject({ value: "Başlık", action: "heading2" });
+  });
+  it("asks the Studio to open the figure settings beside the line", () => {
+    const post = mount({ ...base, paragraphs: ["", "Başlık satırı"] });
+    const node = open();
+    fireEvent.click(screen.getByRole("button", { name: "Blok ekle" }));
+    fireEvent.click(screen.getByRole("option", { name: /Görsel/ }));
+    const select = (post.mock.calls as unknown[][]).map((call) => call[0] as { type: string; id?: string; rect?: unknown }).find((message) => message.type === "mrbyte:select-block");
+    expect(select).toMatchObject({ id: "figure" });
+    expect(select?.rect).toBeTruthy();
+    expect(node).toBeTruthy();
+  });
+});
+
 describe("removing a block", () => {
   const draft = { kind: "article" as const, article: base };
   const edit = (field: string, value: string): InlineEdit => ({ scope: "document", id: base.slug, field, value, previous: value, action: "remove" });

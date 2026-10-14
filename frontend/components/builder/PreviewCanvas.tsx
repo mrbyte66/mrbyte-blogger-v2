@@ -3,7 +3,7 @@
 import { inlineEditEvent, parseInlineEdit, type InlineEdit } from "../../lib/builder/inline-edit";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
-import { isBlockId, isSceneField, parseCaret, type CaretPosition, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
+import { isBlockId, isSceneField, parseCanvasRect, parseCaret, type CaretPosition, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
 
 import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 
@@ -21,9 +21,11 @@ type Props = {
   onPointer?: () => void;
   /** Changes whenever the Studio replaces the draft from outside the canvas. */
   resetKey?: number;
+  /** Where the block chosen in the frame sits on screen (page coordinates), for a settings card beside it. */
+  onAnchor?: (rect: DOMRect) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0 }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableHeight, setAvailableHeight] = useState(760);
@@ -38,8 +40,8 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   }, []);
   const [loaded, setLoaded] = useState(false);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer });
-  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer };
+  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor });
+  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -63,6 +65,14 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
       if (event.data?.type === navigateEvent && !current.current.selection.editing) { const target = parseStudioTarget(event.data.target); if (target) current.current.onNavigate?.(target); }
       if (event.data?.type === previewEvents.ready) { setLoaded(true); synchronize(); }
       if (event.data?.type === previewEvents.pointer) current.current.onPointer?.();
+      if (event.data?.type === previewEvents.select || event.data?.type === previewEvents.anchor) {
+        const rect = parseCanvasRect(event.data.rect);
+        const box = frame.current?.getBoundingClientRect();
+        if (rect && box && frame.current) {
+          const scale = frame.current.offsetWidth ? box.width / frame.current.offsetWidth : 1;
+          current.current.onAnchor?.(new DOMRect(box.left + rect.x * scale, box.top + rect.y * scale, rect.width * scale, rect.height * scale));
+        }
+      }
       const caret = parseCaret(event.data);
       if (caret !== undefined) current.current.onCaret?.(caret);
       if (event.data?.type === previewEvents.select && isBlockId(event.data.id) && (current.current.document ? isDocumentField(event.data.id) : current.current.workspace.draft.blocks.some((block) => block.id === event.data.id))) {

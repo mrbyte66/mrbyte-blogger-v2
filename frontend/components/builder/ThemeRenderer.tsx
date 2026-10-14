@@ -11,7 +11,7 @@ import { articleCategories, articleDate, formatArticleDate } from "../../lib/art
 import { useArticles } from "../../lib/articles/use-articles";
 import { blockLabels, parseWorkspace, type Workspace, type PageBlock, type Theme } from "../../lib/builder/model";
 import { themeAppearance } from "../../lib/builder/appearance";
-import { isSceneField, type SceneField, parseCanvasSelection, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
+import { isSceneField, type SceneField, parseCanvasSelection, previewEvents, type CanvasRect, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { useWorkspace } from "../../lib/builder/use-workspace";
 import { ThemeToggle } from "../SitePreferences";
 import { Experience } from "../Experience";
@@ -151,7 +151,7 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
     window.parent.postMessage({ type: previewEvents.ready }, window.location.origin);
     return () => window.removeEventListener("message", receive);
   }, [embedded]);
-  function select(id: string, field?: SceneField) { window.parent.postMessage({ type: previewEvents.select, id, ...(field ? { field } : {}) }, window.location.origin); }
+  function select(id: string, field?: SceneField, rect?: CanvasRect) { window.parent.postMessage({ type: previewEvents.select, id, ...(field ? { field } : {}), ...(rect ? { rect } : {}) }, window.location.origin); }
   return <div onPointerDownCapture={embedded ? (event) => {
     // Presses on text, blocks, links or controls are the canvas' own business; empty space closes Studio panels.
     const target = event.target as HTMLElement;
@@ -168,6 +168,6 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
     {embedded && <StudioViewSync />}
     {!embedded && <div className="preview-bar"><Link href="/studio">← Stüdyoya dön</Link><span>TASLAK ÖNİZLEME · {workspace.draft.name}</span><span>Henüz uygulanmadı</span></div>}
     {storageError && <p role="alert" className="preview-warning">{storageError}</p>}
-    <InlineCanvasEditor reset={reset} selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={select} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
+    <InlineCanvasEditor reset={reset} selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={(id, rect) => select(id, undefined, rect)} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
   </div>;
 }

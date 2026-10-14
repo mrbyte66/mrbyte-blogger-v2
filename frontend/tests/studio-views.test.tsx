@@ -42,7 +42,7 @@ describe("Studio views", () => {
     expect(screen.getByRole("navigation", { name: "Studio bölümleri" })).toBeTruthy();
     const margin = screen.getByRole("complementary", { name: "Kenar notları" });
     expect(within(margin).getByText(`/yazilar/${articles[0].slug}`)).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Blok ekle" })).toBeTruthy();
+    expect(document.querySelector(".block-bar")?.textContent).toMatch(/ile blok ekle/);
   });
 
   it("switches the view from its own menu, remembers it and tells the canvas frame", () => {
@@ -127,15 +127,18 @@ describe("Studio views", () => {
     expect(panel().hidden).toBe(true);
   });
 
-  it("inserts a heading after the selected paragraph from the block bar", () => {
+  it("opens settings pressed on the canvas as a card beside the block, and from the dock in the column", () => {
     studio();
     selectPage(articles[0].title);
-    const before = readCanvas();
-    const count = before.kind === "article" ? before.article.paragraphs.length : 0;
-    fireEvent.click(within(screen.getByRole("group", { name: "Blok ekle" })).getByRole("button", { name: "Başlık" }));
-    const after = readCanvas();
-    expect(after.kind === "article" && after.article.paragraphs.length).toBe(count + 1);
-    expect(after.kind === "article" && after.article.paragraphFormats?.[count]).toMatchObject({ kind: "heading", level: 2 });
+    const panel = () => screen.getByLabelText("Seçili alanın ayarları");
+    canvasMessage({ type: previewEvents.select, id: "meta", rect: { x: 40, y: 200, width: 300, height: 24 } });
+    expect(panel().hidden).toBe(false);
+    expect(panel().classList.contains("is-anchored")).toBe(true);
+    expect(panel().style.position).toBe("fixed");
+    expect(root().classList.contains("has-inspector")).toBe(false);
+    fireEvent.keyDown(document, { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Kapak görseli" }));
+    expect(panel().classList.contains("is-anchored")).toBe(false);
   });
 
   it("offers the library as cover cards with a detail drawer in Kontakt", async () => {

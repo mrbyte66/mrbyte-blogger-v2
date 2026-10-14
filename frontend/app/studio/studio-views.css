@@ -1004,3 +1004,8 @@ html .studio[data-view] :is(.document-actions>div,.account-dropdown) { transform
 /* a page arriving in the canvas rises into place */
 html .studio[data-view] .canvas-device { animation:sv-rise 420ms var(--sv-spring) both; }
 html .studio[data-view] .rail-recent-item { animation:sv-unfold 320ms var(--sv-spring) both; }
+
+/* Settings opened from the canvas: a card beside the block that was pressed, not a column */
+html .studio[data-view] .studio-inspector.is-anchored { z-index:45; padding:18px; overflow:auto; border:1px solid var(--sv-glass-line); border-left:1px solid var(--sv-glass-line); border-radius:24px; background:var(--sv-glass); box-shadow:var(--sv-shadow),0 30px 60px -30px rgba(0,0,0,.35); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); transform-origin:top left; transition:opacity 200ms var(--sv-ease),transform 320ms var(--sv-spring),display 320ms allow-discrete; }
+html .studio[data-view] .studio-inspector.is-anchored .inspector-heading { margin-bottom:10px; }
+html .studio .block-bar kbd { display:inline-grid; place-items:center; min-width:22px; height:22px; padding:0 5px; margin:0 2px; border-radius:7px; background:var(--sv-sunk); font:600 11px/1 var(--sv-mono); color:var(--sv-ink); }

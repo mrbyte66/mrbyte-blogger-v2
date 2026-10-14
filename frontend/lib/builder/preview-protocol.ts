@@ -9,7 +9,19 @@ export const previewEvents = {
   pointer: "mrbyte:canvas-pointer",
   /** The Studio replaced the text from outside the canvas (undo, server copy): writing in the canvas ends. */
   reset: "mrbyte:canvas-reset",
+  /** Where the selected block now is inside the frame (it moved: scroll, resize), so its settings card follows. */
+  anchor: "mrbyte:canvas-anchor",
 } as const;
+
+/** A box in the frame's own viewport coordinates. */
+export type CanvasRect = { x: number; y: number; width: number; height: number };
+export function parseCanvasRect(value: unknown): CanvasRect | null {
+  if (!value || typeof value !== "object") return null;
+  const r = value as Record<string, unknown>;
+  const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n) && Math.abs(n) < 1e6;
+  return ok(r.x) && ok(r.y) && ok(r.width) && ok(r.height) ? { x: r.x as number, y: r.y as number, width: r.width as number, height: r.height as number } : null;
+}
+export function rectOf(node: Element): CanvasRect { const r = node.getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; }
 
 export type CaretPosition = { row: number; column: number } | null;
 export function parseCaret(data: unknown): CaretPosition | undefined {

@@ -30,13 +30,14 @@ export function insertBlock(draft: DocumentDraft, field: string, kind: BlockKind
   return converted ? { draft: converted, field: `paragraph-${at}` } : null;
 }
 
-export function BlockBar({ draft, field, disabled, caret, onInsert }: { draft: DocumentDraft; field: string; disabled: boolean; caret?: { row: number; column: number } | null; onInsert: (kind: BlockKind) => void }) {
+/**
+ * Marjinalya's bar under the sheet: blocks are added on the canvas itself (＋ beside an empty line or "/"),
+ * so the bar only says how and where the caret is.
+ */
+export function BlockBar({ draft, caret }: { draft: DocumentDraft; caret?: { row: number; column: number } | null }) {
   if (draft.kind !== "article") return null;
-  const full = draft.article.paragraphs.length >= 200;
-  return <div className="block-bar" role="group" aria-label="Blok ekle">
-    <span className="block-bar-title">＋ Blok ekle</span>
-    {blockKinds.map((item) => <button key={item.kind} type="button" disabled={disabled || full} onClick={() => onInsert(item.kind)}>{item.label}</button>)}
-    <span className="block-bar-hint">{field.startsWith("paragraph-") ? `Paragraf ${Number(field.slice(10)) + 1} sonrasına eklenir` : "Yazının sonuna eklenir"}</span>
+  return <div className="block-bar">
+    <span className="block-bar-hint">Boş satırda <kbd>＋</kbd> ya da <kbd>/</kbd> ile blok ekle · <kbd>##</kbd> başlık · <kbd>&gt;</kbd> alıntı</span>
     {caret && <span className="block-bar-position" aria-live="off">SATIR {caret.row} · SÜTUN {caret.column}</span>}
   </div>;
 }

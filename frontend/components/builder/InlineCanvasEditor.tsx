@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import type { Theme } from "../../lib/builder/model";
 import type { DocumentDraft } from "../../lib/builder/document-protocol";
 import { documentText, inlineEditEvent, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
-import { previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
+import { previewEvents, rectOf, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { adjustMarks, clearMark, covers, isSafeHref, markAt, safeMarks, toggleMark, type MarkType, type TextMark } from "../../lib/articles/marks";
 import { markedHtml } from "../../lib/articles/marked-html";
 import { readMarked, selectOffsets, selectionOffsets } from "../../lib/builder/rich-text";
@@ -22,6 +22,18 @@ const toggles: { type: Exclude<MarkType, "link">; label: string; keys: string; i
   { type: "highlight", label: "Vurgula", keys: "⇧⌘H", icon: "highlight" },
   { type: "code", label: "Satır içi kod", keys: "⌘E", icon: "code" },
 ];
+/** What the ＋ button and the "/" menu offer. Text kinds turn the line into that block; the rest open their settings. */
+type BlockChoice = { id: "paragraph" | "heading2" | "heading3" | "quote" | "figure" | "code" | "table"; label: string; hint: string; glyph: string; keys?: string; words: string };
+const blockChoices: BlockChoice[] = [
+  { id: "paragraph", label: "Metin", hint: "Düz paragraf", glyph: "¶", words: "metin paragraf yazı text" },
+  { id: "heading2", label: "Başlık", hint: "Bölüm başlığı", glyph: "H2", keys: "##", words: "başlık baslik heading h2" },
+  { id: "heading3", label: "Alt başlık", hint: "Küçük başlık", glyph: "H3", keys: "###", words: "alt başlık altbaslik h3 subheading" },
+  { id: "quote", label: "Alıntı", hint: "Öne çıkan söz", glyph: "“", keys: ">", words: "alıntı alinti quote söz" },
+  { id: "figure", label: "Görsel", hint: "Fotoğraf ve açıklama", glyph: "▣", words: "görsel gorsel resim fotoğraf image" },
+  { id: "code", label: "Kod", hint: "Kod örneği", glyph: "{ }", words: "kod code" },
+  { id: "table", label: "Tablo", hint: "Satır ve sütun", glyph: "▦", words: "tablo table" },
+];
+const starterText: Partial<Record<BlockChoice["id"], string>> = { heading2: "Başlık", heading3: "Alt başlık", quote: "Alıntı" };
 const blockTypes: { action: "paragraph" | "heading2" | "heading3" | "quote"; label: string; glyph: string }[] = [
   { action: "paragraph", label: "Metin", glyph: "¶" },
   { action: "heading2", label: "Başlık", glyph: "H2" },
@@ -56,6 +68,16 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   const [position, setPosition] = useState<CSSProperties>({});
   const [value, setValue] = useState("");
   const [selectionText, setSelectionText] = useState(false);
+  // Medium-like insertion: a ＋ beside an empty line and a "/" menu, both keyboard friendly.
+  const [menu, setMenu] = useState<{ query: string } | null>(null);
+  const [menuIndex, setMenuIndex] = useState(0);
+  const [lineBox, setLineBox] = useState<{ left: number; top: number; bottom: number; height: number } | null>(null);
+  const menuRef = useRef(menu); menuRef.current = menu;
+  const kindRef = useRef<string | null>(null);
+  const selectAllNext = useRef(false);
+  // A block turned into a heading or quote is reopened only once the Studio's draft has the new kind.
+  const pendingKind = useRef<string | null>(null);
+  useEffect(() => { if (!active) setMenu(null); }, [active]);
   const [formats, setFormats] = useState<Formats>(noFormats);
   const [linkEditor, setLinkEditor] = useState<{ href: string; error: string } | null>(null);
   const history = useRef<Snapshot[]>([]);
@@ -132,6 +154,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     // Above the text when there is room, otherwise just below it; never over the line being written.
     setPosition({ left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)), top: rect.top > height + 18 ? rect.top - height - 10 : Math.max(8, Math.min(rect.bottom + 10, window.innerHeight - height - 8)), "--inline-paper": css.getPropertyValue("--panel") || "#fff", "--inline-ink": css.color } as CSSProperties);
     setSelectionText(selected);
+    const line = item.node.getBoundingClientRect();
+    setLineBox({ left: line.left, top: line.top, bottom: line.bottom, height: Math.min(line.height, 40) });
     setFormats(readFormats(item));
     reportCaret(item);
   }
@@ -206,6 +230,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
         item.edit = { ...item.edit, value: next, previous: next, ...(item.rich ? { marks: nextMarks } : {}) };
       }
       setValue(next); reposition();
+      shortcuts(item, next);
     }
     function paste(event: ClipboardEvent) {
       // Rich content is never pasted: only the text, so marks always come from the toolbar.
@@ -249,7 +274,16 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if (!pendingField.current || active) return;
     if (Date.now() > pendingUntil.current) { pendingField.current = null; return; }
     const node = root.current?.querySelector<HTMLElement>(`[data-edit-field="${pendingField.current}"]`);
-    if (node && locate(node)) { pendingField.current = null; node.scrollIntoView({ block: "nearest" }); activate(node); }
+    if (pendingKind.current && draft?.kind === "article") {
+      const at = Number(pendingField.current.slice(10)), format = draft.article.paragraphFormats?.[at];
+      const now = format?.kind === "heading" ? `heading${format.level ?? 2}` : format?.kind ?? "paragraph";
+      if (now !== pendingKind.current) return;
+    }
+    if (node && locate(node)) {
+      pendingField.current = null; pendingKind.current = null; node.scrollIntoView({ block: "nearest" }); activate(node);
+      // A block made from the menu arrives with its starter text selected, so typing replaces it.
+      if (selectAllNext.current) { selectAllNext.current = false; requestAnimationFrame(() => { window.getSelection()?.selectAllChildren(node); }); }
+    }
     // The new paragraph must first arrive from the parent.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, active]);
@@ -318,6 +352,40 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     range.deleteContents(); const node = document.createTextNode(upper ? piece.toLocaleUpperCase("tr") : piece.toLocaleLowerCase("tr")); range.insertNode(node); range.selectNodeContents(node); selection.removeAllRanges(); selection.addRange(range);
     item.node.dispatchEvent(new Event("input", { bubbles: true }));
   }
+  /** Markdown-like starts ("## ", "### ", "> ") and the "/" menu, read after every keystroke in a paragraph. */
+  function shortcuts(item: Active, text: string) {
+    if (!item.edit.field.startsWith("paragraph-") || kindRef.current !== "paragraph") { if (menuRef.current) setMenu(null); return; }
+    const mark = /^(#{2,3}|>) /.exec(text);
+    if (mark) {
+      const action = mark[1] === "##" ? "heading2" : mark[1] === "###" ? "heading3" : "quote";
+      turnInto(item, action, text.slice(mark[0].length));
+      return;
+    }
+    if (text.startsWith("/") && !/\s/.test(text)) { if (!menuRef.current) setMenuIndex(0); setMenu({ query: text.slice(1) }); }
+    else if (menuRef.current) setMenu(null);
+  }
+  /** Turns the paragraph being written into another text block; an empty one gets a selected starter text. */
+  function turnInto(item: Active, action: "heading2" | "heading3" | "quote", text: string) {
+    const value = text.trim() ? text : starterText[action] ?? "";
+    item.node.textContent = value;
+    if (!text.trim()) selectAllNext.current = true;
+    pendingField.current = item.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = action;
+    setMenu(null);
+    finish(true, action);
+  }
+  function choose(choice: BlockChoice) {
+    const item = live.current;
+    if (!item) return;
+    const clearSlash = () => { if (menuRef.current && readMarked(item.node).text.startsWith("/")) { item.node.textContent = ""; item.node.dispatchEvent(new Event("input", { bubbles: true })); } };
+    if (choice.id === "paragraph") { clearSlash(); setMenu(null); item.node.focus(); return; }
+    if (choice.id === "heading2" || choice.id === "heading3" || choice.id === "quote") { turnInto(item, choice.id, ""); return; }
+    // Figure, code and table have their own settings: the Studio opens them as a card beside this line.
+    const rect = rectOf(item.node);
+    clearSlash(); setMenu(null);
+    finish(true);
+    window.parent.postMessage({ type: previewEvents.select, id: choice.id, rect }, window.location.origin);
+  }
+
   /** Removes every mark (links too) from the selection; with only a caret, from the word under it. */
   function clearFormatting() {
     const item = live.current;
@@ -376,9 +444,20 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   // The case button offers the other case: lower when the selection is already all upper case.
   const selected = selectionText && typeof window !== "undefined" ? window.getSelection()?.toString() ?? "" : "";
   const upperSelection = !!selected && selected === selected.toLocaleUpperCase("tr") && selected !== selected.toLocaleLowerCase("tr");
+  const query = (menu?.query ?? "").toLocaleLowerCase("tr");
+  const matches = blockChoices.filter((choice) => !query || choice.words.split(" ").some((word) => word.startsWith(query)) || choice.label.toLocaleLowerCase("tr").startsWith(query));
   const kind = draft?.kind === "article" && index >= 0 ? (draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph") : null;
+  kindRef.current = kind;
+  const showPlus = !!active?.rich && index >= 0 && draft?.kind === "article" && kind === "paragraph" && !value.trim() && !menu && !!lineBox;
+  const menuStyle: CSSProperties | undefined = lineBox ? { left: Math.max(8, Math.min(lineBox.left, window.innerWidth - 300)), ...(lineBox.bottom + 360 < window.innerHeight ? { top: lineBox.bottom + 8 } : { bottom: window.innerHeight - lineBox.top + 8 }) } : undefined;
   return <div ref={root} className="inline-canvas-root" onKeyDownCapture={(event) => {
     if (!enabled) return;
+    if (active && menu && active.node.contains(event.target as Node)) {
+      const count = Math.max(1, matches.length);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMenuIndex((i) => (i + (event.key === "ArrowDown" ? 1 : -1) + count) % count); return; }
+      if (event.key === "Enter" && matches.length) { event.preventDefault(); event.stopPropagation(); choose(matches[Math.min(menuIndex, matches.length - 1)]); return; }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setMenu(null); return; }
+    }
     if (active && (active.node.contains(event.target as Node) || toolbar.current?.contains(event.target as Node))) {
       const insideNode = active.node.contains(event.target as Node);
       if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && active.edit.field.startsWith("paragraph-") && insideNode) {
@@ -406,7 +485,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     }
     if (event.key === "Enter" && (event.target as HTMLElement).matches(".canvas-text-target")) { event.preventDefault(); event.stopPropagation(); activate(event.target as HTMLElement); }
   }} onClickCapture={(event) => {
-    if (!enabled || (event.target as HTMLElement).closest(".inline-edit-toolbar")) return;
+    if (!enabled || (event.target as HTMLElement).closest(".inline-edit-toolbar, .inline-plus, .inline-block-menu")) return;
     const node = (event.target as HTMLElement).closest<HTMLElement>(draft ? "[data-edit-field]" : "[data-inline-field]");
     // A link inside the paragraph being written must not navigate.
     if (active && node === active.node) { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); return; }
@@ -418,7 +497,14 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if (target && !toolbar.current?.contains(target) && !active.node.contains(target)) finish(true);
   }}>
     {active ? frozen.current : children}
-    {active && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" data-rich={active.rich ? "" : undefined} style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
+    {showPlus && <button type="button" className="inline-plus" aria-label="Blok ekle" title="Blok ekle · ya da / yaz" style={{ left: Math.max(4, lineBox!.left - 44), top: lineBox!.top + (lineBox!.height - 32) / 2 }} onMouseDown={(event) => event.preventDefault()} onClick={() => { setMenuIndex(0); setMenu({ query: "" }); }}><EditorIcon name="plus" size={18} /></button>}
+    {active && menu && <div className="inline-block-menu" role="listbox" aria-label="Blok ekle" style={menuStyle} onMouseDown={(event) => event.preventDefault()}>
+      <span className="inline-block-menu-title">{menu.query ? `“${menu.query}”` : "BLOK EKLE"}</span>
+      {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true">{choice.glyph}</span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span>{choice.keys && <kbd>{choice.keys}</kbd>}</button>)}
+      {!matches.length && <p className="inline-block-empty">Eşleşen blok yok · Esc</p>}
+    </div>}
+    {/* An empty line only shows its ＋ (like Medium); the formatting bar comes with the first character. */}
+    {active && !showPlus && !menu && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar" data-rich={active.rich ? "" : undefined} style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={(event) => event.preventDefault()}>
       {index >= 0 && draft?.kind === "article" && <><div className="inline-group inline-kinds" role="group" aria-label="Blok türü">{blockTypes.map((item) => <button key={item.action} type="button" className="inline-kind" aria-label={item.label} title={item.label} aria-pressed={kind === item.action} disabled={kind !== item.action && ((item.action !== "paragraph" && !value.trim()) || (item.action.startsWith("heading") && value.length > 300) || (item.action === "quote" && value.length > 4000))} onClick={() => { if (kind !== item.action) finish(true, item.action); }}>{item.glyph}</button>)}</div><i /></>}
       {active.rich && <><div className="inline-group" role="group" aria-label="Biçim">{toggles.map((item) => <button key={item.type} type="button" aria-label={item.label} title={`${item.label} · ${item.keys}`} aria-pressed={formats[item.type]} disabled={kind?.startsWith("heading")} onClick={() => format(item.type)}><EditorIcon name={item.icon} size={17} /></button>)}<button type="button" aria-label="Bağlantı" title="Bağlantı · ⌘K" aria-pressed={formats.link} disabled={kind?.startsWith("heading")} onClick={openLink}><EditorIcon name="link" size={17} /></button><button type="button" aria-label="Biçimi temizle" title="Biçimi temizle" disabled={!Object.values(formats).some(Boolean)} onClick={clearFormatting}><EditorIcon name="clear" size={17} /></button></div><i /></>}
       {selectionText && <><button type="button" className="inline-text" aria-label={upperSelection ? "Seçimi küçük harfe çevir" : "Seçimi büyük harfe çevir"} title={upperSelection ? "Küçük harf" : "Büyük harf"} onClick={() => changeCase(!upperSelection)}>{upperSelection ? "ab" : "AB"}</button><i /></>}

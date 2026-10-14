@@ -7,6 +7,8 @@ export const previewEvents = {
   caret: "mrbyte:caret",
   /** A press on empty canvas space: the Studio closes floating panels. */
   pointer: "mrbyte:canvas-pointer",
+  /** The Studio replaced the text from outside the canvas (undo, server copy): writing in the canvas ends. */
+  reset: "mrbyte:canvas-reset",
 } as const;
 
 export type CaretPosition = { row: number; column: number } | null;

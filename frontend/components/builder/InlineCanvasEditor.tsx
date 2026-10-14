@@ -20,7 +20,7 @@ const noFormats: Formats = { bold: false, italic: false, code: false, link: fals
  * "rich": their DOM is only a view of text + marks (see lib/builder/rich-text) and every change is posted
  * to the Studio as one inline-edit message carrying the full mark list.
  */
-export function InlineCanvasEditor({ theme, draft, enabled, selection, children }: { selection?: CanvasSelection; theme: Theme; draft: DocumentDraft | null; enabled: boolean; children: ReactNode }) {
+export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0, children }: { selection?: CanvasSelection; theme: Theme; draft: DocumentDraft | null; enabled: boolean; reset?: number; children: ReactNode }) {
   const [active, setActive] = useState<Active | null>(null);
   const live = useRef<Active | null>(null);
   live.current = active;
@@ -43,6 +43,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
   const toolbar = useRef<HTMLDivElement>(null);
   const identity = draft ? `${draft.kind}:${draft.kind === "article" ? draft.article.id ?? "new" : draft.series.id}` : "home";
   useEffect(() => { setActive(null); }, [identity, enabled]);
+  // The Studio replaced the text (undo, a server copy): stop writing without sending anything back.
+  useEffect(() => { if (reset) { setLinkEditor(null); setActive(null); } }, [reset]);
   useEffect(() => { if (!active) reportCaret(null); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
@@ -63,6 +65,21 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, children 
     // Values are resolved anew on activation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled, identity, theme, draft]);
+
+  // While a field is written the browser owns its DOM, which React no longer sees. Once writing ends, every
+  // writable field shows the draft again (an edit the Studio refused, an undo, a server echo).
+  useEffect(() => {
+    if (active || !draft) return;
+    root.current?.querySelectorAll<HTMLElement>("[data-edit-field]").forEach((node) => {
+      const text = documentText(draft, node.getAttribute("data-edit-field")!);
+      if (!text) return;
+      if (text.marks !== undefined) {
+        const wanted = safeMarks(text.value, text.marks);
+        const shown = readMarked(node);
+        if (shown.text !== text.value || JSON.stringify(shown.marks) !== JSON.stringify(wanted)) node.innerHTML = markedHtml(text.value, wanted);
+      } else if (node.childElementCount === 0 && node.textContent !== text.value) node.textContent = text.value;
+    });
+  }, [draft, active]);
 
   /** Which formats apply to the caret or selection; also remembers the selection for toolbar clicks. */
   function readFormats(item: Active) {

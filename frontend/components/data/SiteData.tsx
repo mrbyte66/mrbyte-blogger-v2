@@ -120,6 +120,8 @@ export function StudioDataProvider({ children }: { children: ReactNode }) {
   }, []);
   const saveTheme = useCallback((next: Workspace) => {
     const current = latest.current.workspace;
+    // The autosave below reads the newest workspace even before React renders it.
+    latest.current = { ...latest.current, workspace: next };
     setWorkspace(next);
     const applying = JSON.stringify(next.applied) !== JSON.stringify(current.applied);
     if (timer.current) { clearTimeout(timer.current); timer.current = null; }

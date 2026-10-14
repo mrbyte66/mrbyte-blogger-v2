@@ -1,6 +1,6 @@
 "use client";
 import { EditorIcon } from "./EditorIcon";
-import { editDocumentText } from "../../lib/builder/inline-edit";
+import { documentText, editDocumentText, type InlineEdit } from "../../lib/builder/inline-edit";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArticleSeriesContext } from "./ArticleSeriesContext";
@@ -31,6 +31,12 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   const inspectorRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLElement>(null);
   const [draft, setDraft] = useState<DocumentDraft>(() => structuredClone(initial));
+  // Canvas edits can arrive faster than React renders: each one is applied to the newest draft, never to a render's copy.
+  const latest = useRef(draft);
+  latest.current = draft;
+  function commit(next: DocumentDraft) { latest.current = next; setDraft(next); }
+  // Bumped when the draft is replaced from outside the canvas, so writing there ends and shows the new text.
+  const [resetKey, setResetKey] = useState(0);
   const [baseline, setBaseline] = useState<DocumentDraft | null>(isNew ? null : initial);
   const [slugEdited, setSlugEdited] = useState(false);
   const [field, setField] = useState("title");
@@ -72,7 +78,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   const serverVersion = initial.kind === "article" ? `${initial.article.id}:${initial.article.version}` : `${initial.series.id}:${initial.series.version}`;
   useEffect(() => {
     if (dirty || isNew) return;
-    setDraft(structuredClone(initial)); setBaseline(initial); setSeriesId(initialSeriesId); setSavedSeriesId(initialSeriesId);
+    commit(structuredClone(initial)); setBaseline(initial); setSeriesId(initialSeriesId); setSavedSeriesId(initialSeriesId); setResetKey((n) => n + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serverVersion]);
   useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
@@ -102,12 +108,13 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   }, [fieldRequest]);
   function insert(kind: BlockKind) {
     if (!ready || saving) return;
-    const result = insertBlock(draft, field, kind);
+    const result = insertBlock(latest.current, field, kind);
     if (!result) return;
     change(result.draft);
     select(result.field);
   }
   function change(next: DocumentDraft) {
+    const draft = latest.current;
     if (!baseline && draft.kind === next.kind) {
       const oldRecord = draft.kind === "article" ? draft.article : draft.series;
       const record = next.kind === "article" ? next.article : next.series;
@@ -117,10 +124,21 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
         next = next.kind === "article" ? { kind: "article", article: { ...next.article, slug } } : { kind: "series", series: { ...next.series, slug } };
       }
     }
-    setDraft(next); setMessage("");
+    commit(next); setMessage("");
     if (next.kind === "article" && field.startsWith("paragraph-") && Number(field.slice(10)) >= next.article.paragraphs.length) setField("body");
   }
+  /**
+   * The canvas is where the text is written, so its edit wins: when the draft no longer holds the text the
+   * canvas started from (an edit it could not see yet), the canvas value is applied over the current text.
+   */
+  function canvasEdit(patch: InlineEdit) {
+    if (!ready) return;
+    const current = latest.current;
+    const next = editDocumentText(current, patch) ?? editDocumentText(current, { ...patch, previous: documentText(current, patch.field)?.value ?? patch.previous });
+    if (next) change(next);
+  }
   async function save(requested: ContentStatus = status) {
+    const draft = latest.current;
     if (saving || (draft.kind === "series" && requested === "scheduled")) return;
     // Private writing is never live or planned: saving it takes the article off the site.
     const nextStatus: ContentStatus = draft.kind === "article" && draft.article.visibility === "private" && (requested === "published" || requested === "scheduled") ? "draft" : requested;
@@ -130,7 +148,11 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
     const saved = await onSave(next, draft.kind === "article" ? seriesId : undefined);
     setSaving(false);
     if (saved) {
-      setDraft(next); setBaseline(structuredClone(next)); setSavedSeriesId(seriesId); setSavedAt(new Date()); onDirty(false);
+      // Writing goes on while the save runs: those newer edits stay and keep the page marked as changed.
+      const edited = latest.current !== draft;
+      const current = latest.current;
+      commit(!edited ? next : current.kind === "article" && next.kind === "article" ? { kind: "article", article: { ...current.article, status: next.article.status, scheduledAt: next.article.scheduledAt } } : current.kind === "series" && next.kind === "series" ? { kind: "series", series: { ...current.series, status: next.series.status } } : current);
+      setBaseline(structuredClone(next)); setSavedSeriesId(seriesId); setSavedAt(new Date()); if (!edited) onDirty(false);
       const privateNote = next.kind === "article" && next.article.visibility === "private" ? " Yazı özel: yalnız sen görebilirsin." : "";
       setMessage((nextStatus === "scheduled" ? "Yayın planı kaydedildi. Sunucu yazıyı planlanan zamanda yayımlayacak." : nextStatus === "trashed" ? "Çöp kutusuna taşındı. İçerik işlemlerinden geri yükleyebilirsin." : nextStatus === "archived" ? "Arşivlendi; ziyaretçilerden gizlendi." : nextStatus === "draft" ? "Taslak kaydedildi; ziyaretçilerden gizli." : "Kaydedildi ve yayında.") + privateNote + (publishedSeriesNote ? ` ${selectedSeries?.title} serisi de yayınlandı.` : ""));
     } else setMessage("");
@@ -141,7 +163,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   }
   function revert() {
     if (!baseline) { onDiscard(); return; }
-    setDraft(structuredClone(baseline)); setSeriesId(savedSeriesId); setCreatingSeries(false); setSeriesFormDirty(false); setMessage("Düzenlemeler geri alındı.");
+    commit(structuredClone(baseline)); setResetKey((n) => n + 1); setSeriesId(savedSeriesId); setCreatingSeries(false); setSeriesFormDirty(false); setMessage("Düzenlemeler geri alındı.");
   }
   const clock = savedAt ? new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(savedAt) : null;
   const showPublish = (view === "marjinalya" || view === "odak") && status !== "published" && !(draft.kind === "article" && draft.article.visibility === "private");
@@ -157,7 +179,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
 
     <div className="studio-workspace">
       <aside ref={dockRef} className="studio-sidebar document-dock" aria-label="Sayfa alanları">{view === "marjinalya" && <BlockBar draft={draft} field={field} disabled={!ready || saving} caret={caret} onInsert={insert} />}<nav className="document-field-list">{fields.map(([id, name]) => <button key={id} data-field={id} title={name} aria-label={name} aria-pressed={panelOpen && (field === id || (id === "body" && field.startsWith("paragraph-")))} onClick={() => { if (panelOpen && field === id) setPanelOpen(false); else select(id); }}><EditorIcon name={id}/><span>{({title:"Başlık",excerpt:"Özet",body:"Metin",cover:"Kapak",figure:"Görsel",code:"Kod",table:"Tablo",meta:"Bilgiler",publication:"Yayın",layout:"Düzen",summary:"Açıklama",chapters:"Bölümler",notes:"Notlar"} as Record<string,string>)[id]}</span></button>)}</nav>{view === "odak" && draft.kind === "article" && <DockBlockMenu draft={draft} field={field} disabled={!ready || saving} onInsert={insert} onOpenField={(id) => select(id)} />}{view === "odak" && <><span className="dock-divider" aria-hidden="true" /><div className="dock-actions">{actionNodes}</div></>}</aside>
-      <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali"><CanvasToolbar focused={focused} onFocus={setFocused} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>{draft.kind === "article" && <ArticleSeriesContext series={series} selectedId={seriesId} creating={creatingSeries} onSelect={(id) => { setSeriesId(id); setCreatingSeries(false); setSeriesFormDirty(false); }} onCreate={() => { setCreatingSeries(true); setPanelOpen(true); }} />}</CanvasToolbar><p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>{!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}<PreviewCanvas onCaret={setCaret} onPointer={() => { if (panelOpen && !creatingSeries) setPanelOpen(false); }} onInlineEdit={(patch) => { if (!ready || saving) return; const next = editDocumentText(draft, patch); if (next) change(next); }} workspace={workspace} document={preview} mobile={mobile} selection={{ id: field, request, editing }} onSelect={(id) => select(id, true)} onNavigate={onNavigate} /></section>
+      <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali"><CanvasToolbar focused={focused} onFocus={setFocused} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>{draft.kind === "article" && <ArticleSeriesContext series={series} selectedId={seriesId} creating={creatingSeries} onSelect={(id) => { setSeriesId(id); setCreatingSeries(false); setSeriesFormDirty(false); }} onCreate={() => { setCreatingSeries(true); setPanelOpen(true); }} />}</CanvasToolbar><p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>{!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}<PreviewCanvas onCaret={setCaret} onPointer={() => { if (panelOpen && !creatingSeries) setPanelOpen(false); }} onInlineEdit={canvasEdit} resetKey={resetKey} workspace={workspace} document={preview} mobile={mobile} selection={{ id: field, request, editing }} onSelect={(id) => select(id, true)} onNavigate={onNavigate} /></section>
       <aside ref={inspectorRef} hidden={!panelOpen} className="studio-inspector inspector-linked" aria-label="Seçili alanın ayarları"><div className="inspector-heading"><div><span className="studio-eyebrow">DÜZENLE</span><h2>{label}</h2></div><button aria-label="Ayar panelini kapat" onClick={() => setPanelOpen(false)}><EditorIcon name="close"/></button></div>{creatingSeries && <div ref={seriesFormRef} className="inline-series-anchor"><InlineSeriesForm onDirty={setSeriesFormDirty} onCancel={closeSeriesForm} onSave={async (record) => { const created = await onCreateSeries(record); if (!created) return false; setSeriesId(created.id); closeSeriesForm(); setMessage("Seri taslak olarak oluşturuldu ve seçildi. Yazını kaydettiğinde ilk bölümü olacak."); return true; }} />{error && <p role="alert" className="studio-error">{error}</p>}</div>}<fieldset className="inspector-fields" disabled={!ready}>{panelOpen && (draft.kind === "article" && field === "notes" ? <><div className="margin-card"><WordGoal current={draft.article} saved={baseline?.kind === "article" ? baseline.article : draft.article} line /></div><NotesPanel article={draft.article} field={anchorField} /></> : draft.kind === "article" ? <ArticleProperties onSchedule={() => save("scheduled")} onCancelSchedule={() => save("draft")} scheduleDisabled={!ready || !valid || !canPublish || creatingSeries || saving} allowSlugEdit={!baseline} article={draft.article} field={field} onChange={(article) => change({ kind: "article", article })} /> : <SeriesProperties series={draft.series} collection={series} articles={articles} field={field} onChange={(item) => change({ kind: "series", series: item })} />)}</fieldset></aside>
       {view === "marjinalya" && <MarginColumn draft={draft} saved={baseline} field={field} isNew={!baseline} slugEdited={slugEdited} onOpenField={(id) => select(id)} />}
       {view === "odak" && <FocusExtras draft={draft} saved={baseline} field={field} caret={caret} onSelect={(id) => select(id)} />}

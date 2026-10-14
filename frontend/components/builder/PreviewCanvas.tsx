@@ -19,9 +19,11 @@ type Props = {
   onCaret?: (caret: CaretPosition) => void;
   /** The author pressed empty space inside the frame. */
   onPointer?: () => void;
+  /** Changes whenever the Studio replaces the draft from outside the canvas. */
+  resetKey?: number;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0 }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableHeight, setAvailableHeight] = useState(760);
@@ -48,6 +50,9 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   }
 
   useEffect(() => { synchronize(); }, [serialized, document]);
+  useEffect(() => {
+    if (resetKey) frame.current?.contentWindow?.postMessage({ type: previewEvents.reset }, window.location.origin);
+  }, [resetKey]);
   useEffect(() => {
     frame.current?.contentWindow?.postMessage({ type: previewEvents.selection, ...selection }, window.location.origin);
   }, [selection.id, selection.request, selection.editing]);

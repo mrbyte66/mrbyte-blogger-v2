@@ -1,7 +1,7 @@
 "use client";
 
 import { inlineEditEvent, parseInlineEdit, type InlineEdit } from "../../lib/builder/inline-edit";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
 import { isBlockId, isSceneField, parseCaret, type CaretPosition, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
 
@@ -17,17 +17,27 @@ type Props = {
   onSelect: (id: string, field?: SceneField) => void;
   /** Where the writing caret sits in the frame (document editing only). */
   onCaret?: (caret: CaretPosition) => void;
+  /** The author pressed empty space inside the frame. */
+  onPointer?: () => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const [availableHeight, setAvailableHeight] = useState(760);
   const [availableWidth, setAvailableWidth] = useState(600);
+  // The frame is laid out at its real size from the first paint; otherwise the page inside jumps once measured.
+  const [measured, setMeasured] = useState(false);
+  useLayoutEffect(() => {
+    const rect = container.current?.getBoundingClientRect();
+    if (rect && rect.width > 0) setAvailableWidth(Math.max(1, rect.width));
+    if (rect && rect.height > 100) setAvailableHeight(rect.height);
+    setMeasured(true);
+  }, []);
   const [loaded, setLoaded] = useState(false);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret });
-  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret };
+  const current = useRef({ serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer });
+  current.current = { serialized, selection, workspace, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -47,6 +57,7 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
       if (event.data?.type === inlineEditEvent && current.current.selection.editing) { const edit = parseInlineEdit(event.data.edit); if (edit) current.current.onInlineEdit?.(edit); }
       if (event.data?.type === navigateEvent && !current.current.selection.editing) { const target = parseStudioTarget(event.data.target); if (target) current.current.onNavigate?.(target); }
       if (event.data?.type === previewEvents.ready) { setLoaded(true); synchronize(); }
+      if (event.data?.type === previewEvents.pointer) current.current.onPointer?.();
       const caret = parseCaret(event.data);
       if (caret !== undefined) current.current.onCaret?.(caret);
       if (event.data?.type === previewEvents.select && isBlockId(event.data.id) && (current.current.document ? isDocumentField(event.data.id) : current.current.workspace.draft.blocks.some((block) => block.id === event.data.id))) {
@@ -72,7 +83,7 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   return <div className="studio-canvas" ref={container}>
     <div className={`canvas-device ${mobile ? "device-mobile" : ""}`} style={{ width: width * scale, height: height * scale }}>
       {!loaded && <div className="canvas-loading" role="status">Tuval hazırlanıyor…</div>}
-      <iframe ref={frame} onLoad={synchronize} title="Taslak tema canlı önizleme" src="/preview?embedded=1" style={{ width, height, transform: `scale(${scale})` }} />
+      {measured && <iframe ref={frame} onLoad={synchronize} title="Taslak tema canlı önizleme" src="/preview?embedded=1" style={{ width, height, transform: `scale(${scale})` }} />}
     </div>
   </div>;
 }

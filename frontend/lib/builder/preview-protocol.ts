@@ -5,6 +5,8 @@ export const previewEvents = {
   select: "mrbyte:select-block",
   /** Where the writing caret is: block row (as numbered in the canvas) and column. `null` row = no caret. */
   caret: "mrbyte:caret",
+  /** A press on empty canvas space: the Studio closes floating panels. */
+  pointer: "mrbyte:canvas-pointer",
 } as const;
 
 export type CaretPosition = { row: number; column: number } | null;

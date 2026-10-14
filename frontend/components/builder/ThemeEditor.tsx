@@ -25,6 +25,7 @@ import { SiteIndexing } from "./SiteIndexing";
 import { ThemeStructure, starters } from "./ThemeStructure";
 import { StudioViewSwitch } from "./StudioViewSwitch";
 import { useStudioView } from "../../lib/studio/view";
+import { useDismiss } from "../../lib/studio/dismiss";
 
 
 export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode; onNavigate?: (target: StudioTarget) => void }) {
@@ -49,6 +50,7 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
   const [preferenceTab, setPreferenceTab] = useState<"appearance" | "discovery" | "view">("appearance");
   const [view] = useStudioView();
   const [structureOpen, setStructureOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
   const properties = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLElement>(null);
   const selected = workspace.draft.blocks.find((block) => block.id === selectedId) ?? workspace.draft.blocks[0];
@@ -59,6 +61,8 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
     if (confirmation && !dialog.current?.open) dialog.current?.showModal();
     else if (!confirmation && dialog.current?.open) dialog.current.close();
   }, [confirmation]);
+  // The settings panel closes on Escape or a press on empty space (the canvas reports its own presses).
+  useDismiss(panelOpen, () => setPanelOpen(false), [properties, sidebarRef], "empty");
   const selectFromCanvas = useCallback((id: string, field?: SceneField) => {
     setPanelOpen(true); setFocused(false);
     setSceneField(field);
@@ -115,11 +119,11 @@ export function ThemeEditor({ onNavigate, navigation }: { navigation?: ReactNode
 
     <div className="studio-workspace">
 
-      <aside className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
+      <aside ref={sidebarRef} className={`studio-sidebar ${structureOpen ? "is-open" : ""}`} aria-label="Sayfa yapısını düzenle"><ThemeStructure sections="structure" theme={workspace.draft} ready={ready} selectedId={selected?.id} paletteOpen={paletteOpen} onPaletteChange={setPaletteOpen} onChooseStarter={useStarter} onChange={edit} onSelect={selectFromList} /></aside>
       <section className="studio-preview" aria-label="Canlı önizleme" ref={canvas}>
         <CanvasToolbar focused={focused} onFocus={setFocused} title={workspace.draft.name || "Adsız tema"} mobile={mobile} editing={editingCanvas} onMobile={setMobile} onEditing={setEditingCanvas}><button className="canvas-settings" aria-expanded={panelOpen} onClick={() => { setPanelOpen(!panelOpen); setInspector("theme"); }}><EditorIcon name="settings"/>Tasarım</button>{selectedId && inspector === "block" && editingCanvas && spotlight && <button className="canvas-clear" onClick={() => setSpotlight(false)}>Seçimi gizle</button>}</CanvasToolbar>
         <p role="status" className="studio-status canvas-feedback">{message}</p>
-        <PreviewCanvas onInlineEdit={(patch) => { if (!ready) return; const block = workspace.draft.blocks.find((b) => b.id === patch.id); const next = block && editThemeText(block, patch); if (next) edit(replaceBlock(workspace.draft, next)); }} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
+        <PreviewCanvas onPointer={() => setPanelOpen(false)} onInlineEdit={(patch) => { if (!ready) return; const block = workspace.draft.blocks.find((b) => b.id === patch.id); const next = block && editThemeText(block, patch); if (next) edit(replaceBlock(workspace.draft, next)); }} mobile={mobile} workspace={workspace} selection={{ id: inspector === "block" && spotlight ? selectedId : null, request: focusRequest, editing: editingCanvas }} onSelect={selectFromCanvas} onNavigate={onNavigate} />
         <div className="canvas-bottom"><span>{editingCanvas ? "METNE TIKLA, YERİNDE DÜZENLE." : "ZİYARETÇİ ÖNİZLEMESİ"}</span><span>İçerikler tema değişince korunur.</span></div>
       </section>
       <aside hidden={!panelOpen} className={`studio-inspector ${selectedId && inspector === "block" ? "inspector-linked" : ""}`} aria-label="Düzenleme özellikleri" ref={properties}>

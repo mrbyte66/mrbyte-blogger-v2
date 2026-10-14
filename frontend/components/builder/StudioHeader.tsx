@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { AccountMenu } from "../auth/AccountMenu";
 import { useAuth } from "../auth/AuthProvider";
 import { ProfileAvatar } from "../auth/ProfileAvatar";
 import { ThemeToggle } from "../SitePreferences";
 import { openStudioLibrary, useStudioShell } from "../../lib/studio/shell";
-import { useStudioView } from "../../lib/studio/view";
+import { useFocusDimming, useStudioView } from "../../lib/studio/view";
+import { useDismiss } from "../../lib/studio/dismiss";
 import { EditorIcon } from "./EditorIcon";
 import { StudioViewSwitch } from "./StudioViewSwitch";
 
@@ -50,6 +51,24 @@ function RailAccount() {
   return <Link className="rail-account" href="/hesap" aria-label={`${session.profile.name} · Hesabım`} title="Hesabım"><ProfileAvatar name={session.profile.name} avatar={session.profile.avatar} /></Link>;
 }
 
+/** •••: view, colour mode, account. Closes on Escape and on any press outside it. */
+function PersonalMenu() {
+  const [open, setOpen] = useState(false);
+  const [view] = useStudioView();
+  const [dim, setDim] = useFocusDimming();
+  const root = useRef<HTMLDetailsElement>(null);
+  useDismiss(open, () => { setOpen(false); }, [root]);
+  return <details ref={root} className="studio-personal-menu" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <summary aria-label="Görünüm ve hesap"><EditorIcon name="user" size={18} /></summary>
+    <div>
+      <div className="studio-personal-section"><span className="studio-eyebrow">GÖRÜNÜM</span><StudioViewSwitch /></div>
+      {view === "odak" && <label className="studio-personal-switch"><span>Yazılan bloğun dışını soluklaştır</span><input type="checkbox" role="switch" checked={dim} onChange={(event) => setDim(event.target.checked)} /></label>}
+      <div className="studio-personal-row"><ThemeToggle /><AccountMenu /></div>
+      <div className="studio-personal-links"><Link className="studio-personal-link" href="/">Siteye dön</Link><Link className="studio-personal-link" href="/studio/istatistikler">İstatistikler</Link></div>
+    </div>
+  </details>;
+}
+
 /**
  * The Studio command bar. Its arrangement follows the chosen view: Marjinalya puts the section
  * buttons on a left rail, Kontakt turns them into pills; every view keeps the same actions and menu.
@@ -57,9 +76,7 @@ function RailAccount() {
 export function StudioHeader({ navigation, actions, status, center, section }: { navigation?: ReactNode; actions: ReactNode; status?: ReactNode; center?: ReactNode; section?: StudioSection }) {
   const [view] = useStudioView();
   const current = useSection(section);
-  const brand = view === "marjinalya"
-    ? <Link href="/" className="studio-brand studio-brand-tile" aria-label="Ana sayfaya dön" title="Siteye dön"><span aria-hidden="true">s</span></Link>
-    : <Link href="/" className="studio-brand" aria-label="Ana sayfaya dön" title="Siteye dön"><EditorIcon name="back" size={16} /><span>studio</span></Link>;
+  const brand = <Link href="/" className="studio-brand studio-brand-tile" aria-label="Ana sayfaya dön" title="Siteye dön"><span aria-hidden="true">s</span></Link>;
   return <>
     {view === "marjinalya" && <div className="studio-rail">{brand}<SectionNav current={current} className="studio-rail-nav" labelled={false} /><RailAccount /></div>}
     <header className="studio-topbar">
@@ -68,11 +85,7 @@ export function StudioHeader({ navigation, actions, status, center, section }: {
       <div className="studio-location">{navigation}<div className="studio-header-state">{status}</div></div>
       {center}
       {view === "marjinalya" && <time className="studio-dateline" suppressHydrationWarning>{dateline()}</time>}
-      <div className="studio-top-actions">{actions}<details className="studio-personal-menu"><summary aria-label="Görünüm ve hesap">•••</summary><div>
-        <div className="studio-personal-section"><span className="studio-eyebrow">GÖRÜNÜM</span><StudioViewSwitch /></div>
-        <div className="studio-personal-row"><ThemeToggle /><AccountMenu /></div>
-        <Link className="studio-personal-link" href="/studio/istatistikler">İstatistikler</Link>
-      </div></details></div>
+      <div className="studio-top-actions">{actions}<PersonalMenu /></div>
     </header>
   </>;
 }

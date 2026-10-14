@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { allPages } from "../../lib/api/http";
 import type { Schema } from "../../lib/api/contract";
 import { articleCategories, articleDate, formatArticleDate } from "../../lib/articles/metadata";
@@ -35,6 +35,15 @@ function seriesShapes(slug: string) {
   return ["mint", "sky", "peach", "lilac"][hash % 4];
 }
 
+/** True while the media query matches; the drawer only exists on wide screens. */
+function useMediaQuery(query: string): boolean {
+  return useSyncExternalStore(
+    (notify) => { if (typeof window.matchMedia !== "function") return () => {}; const media = window.matchMedia(query); media.addEventListener("change", notify); return () => media.removeEventListener("change", notify); },
+    () => typeof window.matchMedia === "function" && window.matchMedia(query).matches,
+    () => false,
+  );
+}
+
 type Props = {
   articles: readonly Article[]; series: readonly BlogSeries[]; target: StudioTarget; ready: boolean; error: string | null;
   kind: LibraryKind; onKind: (kind: LibraryKind) => void; query: string; onQuery: (query: string) => void;
@@ -52,6 +61,8 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
   const [layout, setLayout] = useState<"gallery" | "list">("gallery");
   const [selected, setSelected] = useState<string | null>(target.kind === kind ? target.slug : null);
   const [stats, setStats] = useState<Map<string, Stats> | null>(null);
+  // Without the drawer (phones, tablets) a card opens its page right away.
+  const compact = useMediaQuery("(max-width: 1099px)");
   useEffect(() => {
     let current = true;
     allPages<Stats>("/studio/article-stats").then((rows) => { if (current) setStats(new Map(rows.map((row) => [row.articleId, row]))); }).catch(() => { if (current) setStats(null); });
@@ -119,7 +130,7 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
           : !items.length ? <div className="library-empty"><CrtIcon /><h3>{query ? "Bu aramayla eşleşen bir şey yok." : kind === "article" ? "Henüz bu durumda yazı yok." : "Henüz bu durumda seri yok."}</h3><p>{query ? "Başka bir sözcük dene ya da süzgeci kaldır." : "Yeni bir yazıyla başlayabilirsin; taslak olarak kaydedilir."}</p><button type="button" className="studio-primary" onClick={onCreateArticle}>＋ Yeni yazı</button></div>
           : <ul className="library-grid" data-layout={layout}>{kind === "article" ? visibleArticles.map((article) => {
             const tag = tagOf(article); const within = seriesOf(article.slug); const isSelected = current?.slug === article.slug;
-            return <li key={article.slug}><button type="button" className={`library-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => setSelected(article.slug)} onDoubleClick={() => open(article.slug)}>
+            return <li key={article.slug}><button type="button" className={`library-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => { if (compact) open(article.slug); else setSelected(article.slug); }} onDoubleClick={() => open(article.slug)}>
               <span className="library-cover">{article.coverUrl ? <img src={article.coverUrl} alt="" loading="lazy" /> : <span className="library-nocover"><CrtIcon /><span>Kapak ekle</span></span>}
                 <span className={`library-tag tone-${tag.tone}`}>{tag.label}</span>
                 {isSelected && <span className="library-check" aria-hidden="true"><EditorIcon name="check" size={14} /></span>}
@@ -130,7 +141,7 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
             </button></li>;
           }) : visibleSeries.map((item) => {
             const isSelected = current?.slug === item.slug;
-            return <li key={item.slug}><button type="button" className={`library-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => setSelected(item.slug)} onDoubleClick={() => open(item.slug)}>
+            return <li key={item.slug}><button type="button" className={`library-card${isSelected ? " is-selected" : ""}`} aria-pressed={isSelected} onClick={() => { if (compact) open(item.slug); else setSelected(item.slug); }} onDoubleClick={() => open(item.slug)}>
               <span className={`library-cover shapes-${seriesShapes(item.slug)}`}>{item.coverImage ? <img src={item.coverImage} alt="" loading="lazy" /> : <span className="library-shapes" aria-hidden="true"><i /><i /><i /></span>}
                 <span className={`library-tag tone-${toneOf[item.status]}`}>{statusLabels[item.status]}</span>
                 {isSelected && <span className="library-check" aria-hidden="true"><EditorIcon name="check" size={14} /></span>}

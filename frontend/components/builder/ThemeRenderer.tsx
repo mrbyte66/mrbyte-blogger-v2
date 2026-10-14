@@ -150,7 +150,11 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
     return () => window.removeEventListener("message", receive);
   }, [embedded]);
   function select(id: string, field?: SceneField) { window.parent.postMessage({ type: previewEvents.select, id, ...(field ? { field } : {}) }, window.location.origin); }
-  return <div onClickCapture={embedded ? (event) => {
+  return <div onPointerDownCapture={embedded ? (event) => {
+    // Presses on text, blocks, links or controls are the canvas' own business; empty space closes Studio panels.
+    const target = event.target as HTMLElement;
+    if (!target.closest("[data-edit-field],[data-inline-field],[data-block-id],a,button,input,select,textarea,[contenteditable]")) window.parent.postMessage({ type: previewEvents.pointer }, window.location.origin);
+  } : undefined} onClickCapture={embedded ? (event) => {
     if (selection.editing) return;
     const node = event.target as HTMLElement;
     const link = node.closest("a");

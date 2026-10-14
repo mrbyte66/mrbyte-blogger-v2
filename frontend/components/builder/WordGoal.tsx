@@ -2,21 +2,25 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Article } from "../../lib/content";
 import { articleWords, liveWords, useWritingProgress } from "../../lib/studio/writing";
+import { useDismiss } from "../../lib/studio/dismiss";
 
 const radius = 19;
 const circumference = 2 * Math.PI * radius;
 
 /** Ring and counter for the daily word goal; `current` is the open draft, `saved` its last saved state. */
-export function WordGoal({ current, saved, line = false }: { current?: Article | null; saved?: Article | null; line?: boolean }) {
+export function WordGoal({ current, saved, line = false, compact = false }: { current?: Article | null; saved?: Article | null; line?: boolean; compact?: boolean }) {
   const { today, goal, error, setGoal } = useWritingProgress();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLInputElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const id = useId();
+  useDismiss(editing, () => setEditing(false), [root]);
   useEffect(() => { if (editing) field.current?.focus(); }, [editing]);
-  if (today === null || goal === null) return error ? <p role="status" className="word-goal-error">{error}</p> : null;
+  // While the numbers load the widget keeps its footprint, so the bar around it does not shift when they arrive.
+  if (today === null || goal === null) return error ? <p role="status" className="word-goal-error">{error}</p> : <div ref={root} className={`word-goal word-goal-pending${compact ? " word-goal-compact" : ""}`} aria-hidden="true"><span className="word-goal-skeleton" /></div>;
 
   const words = liveWords(today, saved ? articleWords(saved) : 0, current ? articleWords(current) : saved ? articleWords(saved) : 0);
   const done = goal > 0 && words >= goal;
@@ -28,7 +32,7 @@ export function WordGoal({ current, saved, line = false }: { current?: Article |
     setBusy(false);
     if (failure) setProblem(failure); else setEditing(false);
   }
-  return <div className={`word-goal${done ? " is-done" : ""}`}>
+  return <div ref={root} className={`word-goal${done ? " is-done" : ""}${compact ? " word-goal-compact" : ""}`}>
     {line && goal > 0 && <div className="word-goal-line" role="progressbar" aria-label="Günlük kelime hedefi ilerlemesi" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(ratio * 100)}><span style={{ width: `${ratio * 100}%` }} /></div>}
     <button type="button" className="word-goal-button" aria-expanded={editing} aria-controls={id} onClick={() => { setDraft(String(goal)); setProblem(""); setEditing(!editing); }}>
       <svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label={goal > 0 ? `Günlük hedefin yüzde ${Math.round(ratio * 100)}'i tamamlandı` : "Günlük kelime hedefi kapalı"}>

@@ -18,3 +18,7 @@ Footer yayımlanmış site ve üye/okuma sayfalarında ortaktır. Studio/preview
 **Karakterli ana sayfa tam viewport olarak kalır.** Footer karakterin altına ayrı bant/yükseklik eklemez; alt köşelerde sahne üzerine yerleşir, ortadaki CRT alanını açık bırakır. Karakter asset’i ve yerleşim kuralları değiştirilmez. Dar ekranda gezinme ve öne çıkan kartlar footer’la çakışmayacak biçimde hizalanır. Diğer sayfalarda footer normal içerik akışının sonundadır; kısa sayfada ekran altını tamamlar.
 
 İletişim, arka planı bulanıklaştıran erişilebilir bir dialog açar. Ad, yanıt adresi, konu ve mesaj sunucudaki `POST /api/v1/contact` ucuna CSRF ile gönderilir. Alıcı yalnız aktif site sahibinin sunucudaki adresidir; istemci alıcı belirleyemez. Yapılandırılmış SMTP From korunur, doğrulanmış gönderici adresi Reply-To olur. Mesaj uygulama DB’sine veya log’a yazılmaz. IP başına saatte 5, adres başına 3 ve site genelinde 30 sınırı vardır. SMTP kabulü olmadan başarı verilmez; hata halinde form korunur. Yerelde gönderiler Mailpit’e gider; gerçek yayında yapılandırılan SMTP sağlayıcısı kullanılır.
+
+## Sabit hızlı liste
+
+Geniş ekranda Hızlı git penceresindeki iğne, listeyi sol tarafa sabitler. Panel sayfa kayarken görünür kalır; koleksiyon/yazı seçimi veya dışarı tıklamak paneli kapatmaz. Aynı iğneyle ayrılır. ⌘/Ctrl K sabit panelin aramasına odaklanır. Sabitleme tercihi aynı hesabın mevcut oturum belleğinde yazıdan dönüşte korunur; dar ekranda kartları sıkıştırmak yerine açılır Hızlı git kullanılır, ekran genişleyince sabit görünüm döner.

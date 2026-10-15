@@ -24,9 +24,12 @@ function SavedLibraryView() {
   const auth = useAuth(); const { articles } = useArticles(); const { workspace } = useWorkspace();
   const appearance = themeAppearance(workspace.applied);
   const [settings, setSettings] = useState(saved.recallView);
-  const { selected, query, sort, view, limit } = settings;
+  const { selected, query, sort, view, limit, quickPinned } = settings;
   const [name, setName] = useState(""); const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null); const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [wide, setWide] = useState(false);
+  const showPinned = quickPinned && wide;
+  const pinnedRef = useRef(false); pinnedRef.current = showPinned;
   const [quickQuery, setQuickQuery] = useState(""); const [quickOpen, setQuickOpen] = useState(false); const [compact, setCompact] = useState(false); const [jump, setJump] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; undo?: () => Promise<boolean> } | null>(null);
   const root = useRef<HTMLDivElement>(null); const quick = useRef<HTMLDetailsElement>(null); const quickInput = useRef<HTMLInputElement>(null);
@@ -71,6 +74,12 @@ function SavedLibraryView() {
     if (entry && dragging === id && !busy) moveEntry(entry, target);
   }
   useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(min-width: 1100px)");
+    const sync = () => setWide(media.matches); sync();
+    media.addEventListener?.("change", sync); return () => media.removeEventListener?.("change", sync);
+  }, []);
+  useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
     const title = root.current?.querySelector(".library-title"); if (!title) return;
     const observer = new IntersectionObserver(([entry]) => setCompact(!entry.isIntersecting), { threshold:0 }); observer.observe(title);
@@ -97,18 +106,21 @@ function SavedLibraryView() {
     function dismiss(event: PointerEvent) { root.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach(d => { if (!d.contains(event.target as Node)) d.open = false; }); }
     function escape(event: KeyboardEvent) {
       if (document.querySelector("dialog[open]")) return;
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); if (quick.current) quick.current.open = !quick.current.open; return; }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); if (pinnedRef.current) { quickInput.current?.focus(); return; } if (quick.current) quick.current.open = !quick.current.open; return; }
       if (event.key !== "Escape") return; const open = root.current?.querySelector<HTMLDetailsElement>("details[open]"); if (open) { open.open = false; open.querySelector("summary")?.focus(); event.stopPropagation(); } else setEditing(false); }
     document.addEventListener("pointerdown", dismiss); document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
   }, []);
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 10000); return () => clearTimeout(id); }, [toast]);
-  return <main className={`${appearance.className} saved-page library-v11`} style={appearance.style} aria-busy={busy}>
+  const quickPanel = <div className="library-quick-panel">
+    <div className="library-quick-heading"><span>Hızlı liste</span>{wide && <button type="button" className="library-pin" aria-label={showPinned ? "Hızlı listeyi ayır" : "Hızlı listeyi sola sabitle"} aria-pressed={showPinned} title={showPinned ? "Sabitlemeyi kaldır" : "Sola sabitle"} onClick={() => { setSettings(s => ({ ...s, quickPinned: !showPinned })); closeMenus(); requestAnimationFrame(() => { if (!showPinned) quickInput.current?.focus(); else quick.current?.querySelector("summary")?.focus(); }); }}><Icon kind="pin" /></button>}</div><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Koleksiyon veya yazı ara</span><input ref={quickInput} type="search" value={quickQuery} placeholder="Koleksiyon veya yazı ara" onChange={e => setQuickQuery(e.target.value)} onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); quickInput.current?.closest(".library-quick-panel")?.querySelector<HTMLButtonElement>(".quick-result")?.focus(); } if (e.key === "Enter") { if (quickEntries[0]) { e.preventDefault(); goTo(quickEntries[0]); } else if (quickCollections[0]) { e.preventDefault(); select(quickCollections[0].id); closeMenus(); } } }} /></label><div className="quick-results" onKeyDown={e => { if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return; const all = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button")); const i = all.indexOf(document.activeElement as HTMLButtonElement); e.preventDefault(); all[(i + (e.key === "ArrowDown" ? 1 : -1) + all.length) % all.length]?.focus(); }}><p>Koleksiyonlar</p>{quickCollections.map(c => <button type="button" className="quick-result" key={c.id} onClick={() => { select(c.id); closeMenus(); root.current?.scrollIntoView({ behavior: scrollBehavior() }); }}><Icon kind="folder" />{c.name}<span>{count(c.id)}</span></button>)}<p>Yazılar</p>{quickEntries.slice(0,40).map(entry => <button type="button" className="quick-result" key={entry.articleId} onClick={() => goTo(entry)}><Icon kind="bookmark" /><span>{articleFor(entry)!.title}</span><Icon kind="arrow" /></button>)}{quickEntries.length > 40 && <small>Diğer başlıklar için aramanı daralt.</small>}{!quickEntries.length && !quickCollections.length && <p>Sonuç bulunamadı.</p>}</div></div>;
+  return <main className={`${appearance.className} saved-page library-v11${showPinned ? " has-pinned-quick" : ""}`} style={appearance.style} aria-busy={busy}>
     <SitePageHeader theme={workspace.applied} />
     <div className="saved-layout" ref={root}>
       <div className="library-title"><h1>Kitaplığım</h1>{member && <><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Kitaplıkta ara</span><input type="search" placeholder="Kitaplıkta ara" value={query} onChange={e => update({ query: e.target.value })} /></label><button type="button" className="library-add" aria-label="Yeni koleksiyon" aria-expanded={editing && !custom} onClick={() => { select("all"); setName(""); setEditing(true); }}><Icon kind="plus" /></button></>}</div>
       {error && <p role="alert" className="saved-error">{error}</p>}
       {!member ? <section className="saved-empty"><Icon kind="bookmark" /><h2>Kendine bir kitaplık kur.</h2><p>{auth.session ? "Kitaplığı kullanmak için e-posta adresini doğrula." : "Sevdiğin yazılar, yalnız sana ait bir yerde."}</p>{!auth.session && <button type="button" onClick={() => auth.openAuth()}>Giriş yap</button>}</section> : !ready ? <p role="status">Kitaplık yükleniyor…</p> : <>
+        <div className="library-workspace">{showPinned && <aside className="library-quick-rail" aria-label="Sabit hızlı liste">{quickPanel}</aside>}<div className="library-main">
         <div className={`library-sticky${compact ? " is-compact" : ""}`}>
           <div className="saved-category-tabs" role="group" aria-label="Kaydedilen koleksiyonları">
             <button type="button" className="folder-tab" aria-pressed={selected === "all"} onClick={() => select("all")}>Tümü <span>{library.entries.length}</span></button>
@@ -116,7 +128,7 @@ function SavedLibraryView() {
           </div>
           <div className="library-actions">{compact && <label className="library-search sticky-search"><Icon kind="search" /><span className="visually-hidden">Kaydırırken kitaplıkta ara</span><input type="search" placeholder="Ara" value={query} onChange={e => update({ query:e.target.value })} /></label>}<label className="library-sort"><span className="visually-hidden">Sıralama</span><select value={sort} onChange={e => update({ sort: e.target.value })}><option value="saved">Son eklenen</option><option value="date">Yayın tarihi</option><option value="title">Başlık · A–Z</option></select></label>
             <div className="library-view-toggle" role="group" aria-label="Kitaplık görünümü"><button type="button" aria-label="Kart görünümü" aria-pressed={view === "grid"} onClick={() => setSettings(s => ({ ...s, view: "grid" }))}><Icon kind="grid" /></button><button type="button" aria-label="Kompakt liste" aria-pressed={view === "list"} onClick={() => setSettings(s => ({ ...s, view: "list" }))}><Icon kind="list" /></button></div>
-            <details ref={quick} className="library-quick" onToggle={e => { setQuickOpen(e.currentTarget.open); if (e.currentTarget.open) requestAnimationFrame(() => quickInput.current?.focus()); }}><summary title="Hızlı git · ⌘ / Ctrl K"><Icon kind="list" /><span>Hızlı git</span></summary>{quickOpen && <div className="library-quick-panel"><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Koleksiyon veya yazı ara</span><input ref={quickInput} type="search" value={quickQuery} placeholder="Koleksiyon veya yazı ara" onChange={e => setQuickQuery(e.target.value)} onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); quick.current?.querySelector<HTMLButtonElement>(".quick-result")?.focus(); } if (e.key === "Enter") { if (quickEntries[0]) { e.preventDefault(); goTo(quickEntries[0]); } else if (quickCollections[0]) { e.preventDefault(); select(quickCollections[0].id); closeMenus(); } } }} /></label><div className="quick-results" onKeyDown={e => { if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return; const all = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button")); const i = all.indexOf(document.activeElement as HTMLButtonElement); e.preventDefault(); all[(i + (e.key === "ArrowDown" ? 1 : -1) + all.length) % all.length]?.focus(); }}><p>Koleksiyonlar</p>{quickCollections.map(c => <button type="button" className="quick-result" key={c.id} onClick={() => { select(c.id); closeMenus(); root.current?.scrollIntoView({ behavior: scrollBehavior() }); }}><Icon kind="folder" />{c.name}<span>{count(c.id)}</span></button>)}<p>Yazılar</p>{quickEntries.slice(0,40).map(entry => <button type="button" className="quick-result" key={entry.articleId} onClick={() => goTo(entry)}><Icon kind="bookmark" /><span>{articleFor(entry)!.title}</span><Icon kind="arrow" /></button>)}{quickEntries.length > 40 && <small>Diğer başlıklar için aramanı daralt.</small>}{!quickEntries.length && !quickCollections.length && <p>Sonuç bulunamadı.</p>}</div></div>}</details>
+            {!showPinned && <details ref={quick} className="library-quick" onToggle={e => { setQuickOpen(e.currentTarget.open); if (e.currentTarget.open) requestAnimationFrame(() => quickInput.current?.focus()); }}><summary title="Hızlı git · ⌘ / Ctrl K"><Icon kind="list" /><span>Hızlı git</span></summary>{quickOpen && quickPanel}</details>}
           </div>
         </div>
         <div className="library-meta"><span role="status">{items.length} kayıt</span>{custom && <button type="button" className="saved-manage" aria-expanded={editing} onClick={() => { setName(custom?.name ?? ""); setEditing(!editing); }}>Koleksiyonu düzenle</button>}</div>
@@ -129,6 +141,7 @@ function SavedLibraryView() {
           </article>;
         })}</div>}
         {!!items.length && <div className="library-end"><span>{shown.length} / {items.length} kayıt</span>{limit < items.length && <button type="button" onClick={() => setSettings(s => ({ ...s, limit:s.limit+24 }))}>Daha fazla göster <span aria-hidden="true">↓</span></button>}</div>}
+        </div></div>
       </>}
       {toast && <div className="library-toast" role="status"><span aria-hidden="true">✓</span><span>{toast.text}</span>{toast.undo && <button type="button" disabled={busy} onClick={() => void act(toast.undo!, () => setToast({ text:"Geri alındı" }))}>Geri al</button>}<button type="button" aria-label="Bildirimi kapat" onClick={() => setToast(null)}><Icon kind="close" /></button></div>}
     </div>

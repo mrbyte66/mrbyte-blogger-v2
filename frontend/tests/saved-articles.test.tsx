@@ -279,3 +279,29 @@ it("retains this account's last loaded library when a refresh fails",async()=>{
  expect(screen.getByRole("alert").textContent).toContain("Bağlantı kesildi");
  expect(screen.getByText(articles[0].title)).toBeTruthy();
 });
+
+
+it("pins the quick index, keeps it through jumps and route return, and unpins it", async () => {
+  vi.stubGlobal("matchMedia", () => ({matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()}));
+  const native = HTMLElement.prototype.scrollIntoView; HTMLElement.prototype.scrollIntoView = vi.fn();
+  try {
+    me().collections.push({id:"c-default",name:"Genel",isDefault:true,version:0});
+    me().bookmarks.push({articleId:articles[0].id!,collectionId:"c-default",savedAt:"2026-10-01T10:00:00Z",version:0});
+    function Return() { const [visible,setVisible] = requireState(true); return <><button onClick={()=>setVisible(v=>!v)}>Sayfayı değiştir</button>{visible && <SavedLibraryPage />}</>; }
+    const {container} = await render(<Return />);
+    const details=container.querySelector<HTMLDetailsElement>(".library-quick")!;
+    await act(async()=>{details.open=true;fireEvent(details,new Event("toggle"));await settle();});
+    await click(screen.getByRole("button",{name:"Hızlı listeyi sola sabitle"}));
+    expect(screen.getByRole("complementary",{name:"Sabit hızlı liste"})).toBeTruthy();
+    await click(screen.getByRole("button",{name:articles[0].title}));
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    fireEvent.pointerDown(document.body); fireEvent.keyDown(document,{key:"Escape"});
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));
+    fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));
+    expect(screen.getByRole("complementary")).toBeTruthy();
+    await click(screen.getByRole("button",{name:"Hızlı listeyi ayır"}));
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(container.querySelector(".library-quick")).toBeTruthy();
+  } finally { HTMLElement.prototype.scrollIntoView = native; }
+});

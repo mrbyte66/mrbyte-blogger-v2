@@ -1,0 +1,20 @@
+# Kitaplık ve Hesap — tasarım V1.1
+
+Buradaki V1/V1.1 adları kullanıcıyla seçilen **tasarım alternatifleridir**; ürünün ilk sürümü V1 olarak kalır.
+
+Kitaplık, onaylanan V1.1 yerleşimini V1’in klasör sekmeleriyle birleştirir. Sekmeler içerik kategorileri değil, üyeye ait koleksiyonlardır. Kart ve kompakt liste aynı arama/sıralamayı kullanır. İlk 24 kayıt gösterilir, “Daha fazla göster” 24 ekler. Veri mevcut sunucu API’sinden gelir; yerel demo kayıt veya sahte sayaç eklenmez. Arama yüklenen tüm sunucu kayıtları arasında çalışır; 24 sınırı yalnız görünür liste içindir.
+
+- Kartı koleksiyon sekmesine bırakmak gerçek bookmark kaydını taşır. Tümü yalnız filtredir, taşıma hedefi değildir. Aynı işlem kartın menüsünden ve klavyeyle de yapılır; dokunmatik cihazda menü kullanılabilir.
+- Kaldırma/taşıma sonrası on saniyelik “Geri al” sunulur. Kaldırılan kayıt yeniden sunucuya kaydedilir; önceki koleksiyon kaldırılmışsa Genel kullanılır. Yeniden kaydın tarihi sunucunun yeni kayıt tarihidir. Başarısız işlem başarı gibi gösterilmez.
+- Hızlı git koleksiyon ve yazı başlıklarını arar. Sonuç seçimi filtreden bağımsız olarak kaydı görünür kılar, kaydırır ve odağı bağlantıya taşır. ⌘/Ctrl K menüyü açar, oklar ve Enter gezinir, Escape kapatır.
+- Kaydırırken filtre/arama kompakt şeritte kalır. Kaydırma bütün sayfadadır; ana içerikte iç içe scrollbar yoktur. Yazıya gidip geri dönünce filtre, görünüm, yüklenen kayıt sayısı ve konum aynı oturumun belleğinden geri gelir. Hesap değişimi veya çıkış özel bağlamı temizler. Ağ hatasında yalnız aynı hesabın son başarıyla yüklenmiş kitaplığı korunabilir.
+
+Hesap yatay bölüm gezinmesi, avatar seçicisi ve mevcut güvenlik/oturum/bağlantı akışlarını kullanır. Avatar seçenekleri küçük, sayfalı pencerede açılır; ad ve avatar profil API’sine kaydedilir. E-posta arayüzde salt okunurdur; değiştirme formu kaldırılmıştır. Renk modu yalnız üst çubuktadır. Bu sayfada hareket kapatma kontrolü yoktur; sistemin reduced-motion tercihi korunur.
+
+## Footer ve iletişim
+
+Footer yayımlanmış site ve üye/okuma sayfalarında ortaktır. Studio/preview çalışma yüzeylerine eklenmez. Site adı ve varsa tema footer metni korunur; Mozart kapsülü mevcut tek audio context’ini kullanır. Oynatma yalnız kullanıcı eylemiyle başlar; kaynak/atıf ve hata/devralma davranışı korunur.
+
+**Karakterli ana sayfa tam viewport olarak kalır.** Footer karakterin altına ayrı bant/yükseklik eklemez; alt köşelerde sahne üzerine yerleşir, ortadaki CRT alanını açık bırakır. Karakter asset’i ve yerleşim kuralları değiştirilmez. Dar ekranda gezinme ve öne çıkan kartlar footer’la çakışmayacak biçimde hizalanır. Diğer sayfalarda footer normal içerik akışının sonundadır; kısa sayfada ekran altını tamamlar.
+
+İletişim, arka planı bulanıklaştıran erişilebilir bir dialog açar. Ad, yanıt adresi, konu ve mesaj sunucudaki `POST /api/v1/contact` ucuna CSRF ile gönderilir. Alıcı yalnız aktif site sahibinin sunucudaki adresidir; istemci alıcı belirleyemez. Yapılandırılmış SMTP From korunur, doğrulanmış gönderici adresi Reply-To olur. Mesaj uygulama DB’sine veya log’a yazılmaz. IP başına saatte 5, adres başına 3 ve site genelinde 30 sınırı vardır. SMTP kabulü olmadan başarı verilmez; hata halinde form korunur. Yerelde gönderiler Mailpit’e gider; gerçek yayında yapılandırılan SMTP sağlayıcısı kullanılır.

@@ -1,5 +1,29 @@
 /** Generated from backend/docs/openapi.yaml. Do not edit; run npm run api:generate. */
 export interface paths {
+    "/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a plain-text message to the active site owner
+         * @description Public, CSRF-protected. Recipient is resolved from the active owner account.
+         *     Validated sender becomes Reply-To; configured SMTP From is retained.
+         *     Message content is not stored in the application or logs.
+         *     Limits: 5/hour per client, 3/hour per sender, 30/hour site-wide.
+         *     Only SMTP acceptance returns 204; missing provider/owner or send failure returns 503.
+         */
+        post: operations["sendContactMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/csrf": {
         parameters: {
             query?: never;
@@ -2486,6 +2510,38 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    sendContactMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    /** Format: email */
+                    email: string;
+                    subject: string;
+                    message: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Message accepted by the configured SMTP server */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            429: components["responses"]["RateLimited"];
+            503: components["responses"]["Problem"];
+        };
+    };
     getCsrfToken: {
         parameters: {
             query?: never;

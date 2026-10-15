@@ -24,6 +24,37 @@ tags:
   - name: studio
 
 paths:
+  /contact:
+    post:
+      tags: [public]
+      operationId: sendContactMessage
+      security: [{csrfHeader: []}]
+      summary: Send a plain-text message to the active site owner
+      description: |
+        Public, CSRF-protected. Recipient is resolved from the active owner account.
+        Validated sender becomes Reply-To; configured SMTP From is retained.
+        Message content is not stored in the application or logs.
+        Limits: 5/hour per client, 3/hour per sender, 30/hour site-wide.
+        Only SMTP acceptance returns 204; missing provider/owner or send failure returns 503.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, subject, message]
+              properties:
+                name: {type: string, minLength: 1, maxLength: 80}
+                email: {type: string, format: email, maxLength: 254}
+                subject: {type: string, minLength: 1, maxLength: 120}
+                message: {type: string, minLength: 1, maxLength: 5000}
+      responses:
+        '204': {description: Message accepted by the configured SMTP server}
+        '403': {$ref: '#/components/responses/Problem'}
+        '422': {$ref: '#/components/responses/Problem'}
+        '429': {$ref: '#/components/responses/RateLimited'}
+        '503': {$ref: '#/components/responses/Problem'}
+
   /auth/csrf:
     get:
       tags: [auth]

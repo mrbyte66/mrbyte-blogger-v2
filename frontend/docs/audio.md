@@ -7,3 +7,5 @@ Mevcut Mozart Symphony No. 40 kayıtları Musopen Symphony/Wikimedia Commons kay
 BroadcastChannel/Web Lock aynı origin sekmeleri koordine eder. Owner sekme kapanınca tarayıcı autoplay politikasına göre yeni tıklama gerekebilir; kesintisiz oynatma garanti edilmez. Retry konumu korur, arka plan denial kilidi serbest bırakmalı.
 
 Ses çeşitleri ve AssistiveTouch benzeri etkileşimli kontrol Backlog; hava durumuna göre öneri ayrı Backlog. Mevcut Mozart bu hazırlıkta değiştirilmez.
+
+Ortak footer’daki Mozart kapsülü aynı AmbientAudioProvider’ı kullanır; ikinci audio element veya autoplay eklenmez. Public footer varken eski köşe düğmesi gizlenir. Kaynak/atıf, devralma ve hata bilgisi kapsülde korunur. Karakterli ana sayfada footer karakteri yukarı itmez; sahnenin alt köşelerinde durur.

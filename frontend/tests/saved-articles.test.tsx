@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState as requireState, type ReactNode } from "react";
 import { act, fireEvent, render as baseRender, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "../components/auth/AuthProvider";
@@ -120,7 +120,7 @@ describe("library page", () => {
     const { container } = await render(<><SavedLibraryPage /><SignOut /></>);
     expect(screen.getByRole("button", { name: "Özel koleksiyon 1" })).toBeTruthy();
     const order = () => Array.from(container.querySelectorAll(".saved-item .article-card-title")).map((el) => el.textContent);
-    expect(order()).toEqual([articles[1].title, articles[0].title]);
+    expect(order()).toEqual([articles[0].title, articles[1].title]);
     fireEvent.change(screen.getByLabelText("Sıralama"), { target: { value: "title" } });
     expect(order()).toEqual([articles[0].title, articles[1].title].sort((a, b) => a.localeCompare(b, "tr")));
     fireEvent.change(screen.getByLabelText("Kitaplıkta ara"), { target: { value: "no-match-1234" } });
@@ -199,4 +199,83 @@ describe("account change (#5)", () => {
     await act(async () => { window.dispatchEvent(new Event("focus")); await settle(); });
     expect(screen.getByLabelText("Kitaplıkta ara")).toHaveProperty("value", "arama");
   });
+});
+
+describe("library V1.1 interactions", () => {
+  function savedPair() {
+    me().collections.push({ id:"c-a",name:"A",isDefault:true,version:0 },{ id:"c-b",name:"B",isDefault:false,version:0 });
+    me().bookmarks.push({ articleId:articles[0].id!,collectionId:"c-a",savedAt:"2026-10-01T10:00:00Z",version:0 });
+  }
+  it("moves a dragged card to a collection via the server and can undo", async () => {
+    savedPair(); const { container } = await render(<SavedLibraryPage />);
+    const transfer = { setData:vi.fn(),getData:()=>articles[0].id!,effectAllowed:"",dropEffect:"" };
+    fireEvent.dragStart(container.querySelector(".library-entry")!,{ dataTransfer:transfer });
+    await act(async () => { fireEvent.drop(screen.getByRole("button",{ name:"B 0" }),{ dataTransfer:transfer });await settle(); });
+    expect(bookmarks()[0].collectionId).toBe("c-b");
+    await click(screen.getByRole("button",{ name:"Geri al" }));
+    expect(bookmarks()[0].collectionId).toBe("c-a");
+  });
+  it("retains a failed move and does not report success or an undo", async () => {
+    savedPair(); await render(<SavedLibraryPage />);
+    const original = backend.fetchMock.getMockImplementation()!;
+    backend.fetchMock.mockImplementation((input,init) => init?.method === "PUT" && String(input).includes("/me/bookmarks/") ? Promise.resolve(new Response(JSON.stringify({code:"UNAVAILABLE",title:"Taşınamadı"}),{status:503})) : original(input,init));
+    fireEvent.click(screen.getByLabelText(`Kaydı yönet: ${articles[0].title}`));
+    await act(async () => { fireEvent.change(screen.getByLabelText(`${articles[0].title} için koleksiyon`),{target:{value:"c-b"}});await settle(); });
+    expect(bookmarks()[0].collectionId).toBe("c-a");
+    expect(screen.getByRole("alert").textContent).toContain("Taşınamadı");
+    expect(screen.queryByRole("button",{name:"Geri al"})).toBeNull();
+  });
+  it("removes and restores to the original collection", async () => {
+    savedPair(); await render(<SavedLibraryPage />);
+    fireEvent.click(screen.getByLabelText(`Kaydı yönet: ${articles[0].title}`));
+    await click(screen.getByRole("button",{ name:"Kitaplıktan kaldır" }));
+    expect(bookmarks()).toHaveLength(0);
+    await click(screen.getByRole("button",{name:"Geri al"}));
+    expect(bookmarks()).toEqual([expect.objectContaining({articleId:articles[0].id,collectionId:"c-a"})]);
+  });
+  it("keeps compact view and query when the same provider returns to the page", async () => {
+    savedPair();
+    function Return() { const [visible,setVisible] = requireState(true); return <><button onClick={()=>setVisible(v=>!v)}>Sayfayı değiştir</button>{visible && <SavedLibraryPage />}</>; }
+    const {container} = await render(<Return />);
+    fireEvent.click(screen.getByRole("button",{name:"Kompakt liste"}));
+    fireEvent.change(screen.getByLabelText("Kitaplıkta ara"),{target:{value:"Yapay"}});
+    fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));
+    fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));
+    expect(screen.getByLabelText("Kitaplıkta ara")).toHaveProperty("value","Yapay");
+    expect(container.querySelector(".library-list")).toBeTruthy();
+  });
+});
+
+it("loads the next batch and jumps to a title outside the current filter", async () => {
+  const extra: Article[] = Array.from({length:30},(_,i)=>({...articles[0],id:`20000000-0000-4000-8000-${String(100+i).padStart(12,"0")}`,slug:`arsiv-${i}`,title:`Arşiv ${String(i).padStart(2,"0")}`}));
+  const native = HTMLElement.prototype.scrollIntoView; const scrolled=vi.fn(); HTMLElement.prototype.scrollIntoView=scrolled;
+  vi.stubGlobal("matchMedia",()=>({matches:true})); articles.push(...extra);
+  try {
+    me().collections.push({id:"c-default",name:"Genel",isDefault:true,version:0});
+    for (const [i,a] of extra.entries()) { backend.state.member.publicArticles.set(a.id!,{slug:a.slug,stats:{views:0,claps:0,saves:0}});me().bookmarks.push({articleId:a.id!,collectionId:"c-default",savedAt:new Date(Date.UTC(2026,0,1,0,0,i)).toISOString(),version:0}); }
+    const {container}=await render(<SavedLibraryPage />);
+    expect(container.querySelectorAll(".library-entry")).toHaveLength(24);
+    await click(screen.getByRole("button",{name:/Daha fazla göster/}));
+    expect(container.querySelectorAll(".library-entry")).toHaveLength(30);
+    fireEvent.change(screen.getByLabelText("Kitaplıkta ara"),{target:{value:"Arşiv 29"}});
+    expect(container.querySelectorAll(".library-entry")).toHaveLength(1);
+    const details=container.querySelector<HTMLDetailsElement>(".library-quick")!;
+    await act(async()=>{details.open=true;fireEvent(details,new Event("toggle"));await settle();});
+    fireEvent.change(screen.getByLabelText("Koleksiyon veya yazı ara"),{target:{value:"Arşiv 00"}});
+    await click(screen.getByRole("button",{name:"Arşiv 00"}));
+    expect(screen.getByLabelText("Kitaplıkta ara")).toHaveProperty("value","");
+    expect(container.querySelector(`#saved-${extra[0].id}`)).toBeTruthy();
+    expect(scrolled).toHaveBeenCalled(); expect(details.open).toBe(false);
+  } finally { articles.splice(3); HTMLElement.prototype.scrollIntoView=native; }
+});
+
+it("retains this account's last loaded library when a refresh fails",async()=>{
+ me().collections.push({id:"c-default",name:"Genel",isDefault:true,version:0});
+ me().bookmarks.push({articleId:articles[0].id!,collectionId:"c-default",savedAt:"2026-10-01T10:00:00Z",version:0});
+ await render(<SavedLibraryPage />);
+ const original=backend.fetchMock.getMockImplementation()!;
+ backend.fetchMock.mockImplementation((input,init)=>String(input).includes("/me/collections") ? Promise.resolve(new Response(JSON.stringify({code:"UNAVAILABLE",title:"Bağlantı kesildi"}),{status:503})) : original(input,init));
+ await act(async()=>{window.dispatchEvent(new Event("focus"));await settle();});
+ expect(screen.getByRole("alert").textContent).toContain("Bağlantı kesildi");
+ expect(screen.getByText(articles[0].title)).toBeTruthy();
 });

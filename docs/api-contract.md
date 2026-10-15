@@ -43,3 +43,7 @@ Ayrı draft/published revision; yazı/seri ilk-yayın slug kilidi; bağımsız Y
 ## Giriş için adres doğrulaması (#2)
 
 Geçerli şifre + doğrulanmamış hesap `403 EMAIL_VERIFICATION_REQUIRED` döner; authenticated session oluşturulmaz. Yanlış kimlik bilgileri genel `401 INVALID_CREDENTIALS` olarak kalır. Eski PENDING oturumları her istekte geçersizleştirilir. Anonim verification/resend, hesap varlığını açıklamayan 202 yanıtını korur. E-postaya teslim edilen tek kullanımlık sıfırlama bağlantısının onayı, mevcut sözleşmede adresi de doğrular; GET linki tüketmez ve sıfırlama otomatik giriş yapmaz.
+
+## İletişim formu
+
+`POST /api/v1/contact` herkese açık, CSRF zorunlu iletişim gönderimidir. `name` (1–80), `email` (geçerli adres, en fazla 254), `subject` (1–120, tek satır), `message` (1–5000) alır. İstemci alıcı veremez; aktif site sahibinin adresi kullanılır. SMTP kabulünde 204, alan hatasında 422, sınırlamada Retry-After ile 429, sağlayıcı/alıcı yoksa veya SMTP hatasında 503 döner. Reply-To doğrulanmış gönderen, From yapılandırılmış uygulama adresidir. İçerik uygulama DB/log’unda saklanmaz. Saatlik limitler IP 5, e-posta 3, site 30. Sözleşme: backend/docs/openapi.yaml.

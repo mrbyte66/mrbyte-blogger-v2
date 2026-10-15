@@ -86,7 +86,7 @@ class SecurityConfig {
                                 "/api/v1/articles/**", "/api/v1/series", "/api/v1/series/**", "/api/v1/seo/**",
                                 "/api/v1/media/**").permitAll()
                         // Anonymous or signed-in reactions (CSRF still required for these unsafe methods).
-                        .requestMatchers(HttpMethod.POST, "/api/v1/engagement/session", "/api/v1/impressions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/engagement/session", "/api/v1/impressions", "/api/v1/contact").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/v1/articles/*/clap").permitAll()
                         .requestMatchers("/api/v1/studio/**").hasAuthority(Authorities.OWNER)
                         .requestMatchers("/api/v1/me", "/api/v1/me/**").hasAuthority(Authorities.VERIFIED)

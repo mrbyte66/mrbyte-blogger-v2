@@ -200,11 +200,14 @@ describe("server-backed membership", () => {
     const backend = fakeBackend({ signedIn: { email: "alice@example.com" } });
     render(<AuthProvider><AccountPage /></AuthProvider>);
     await act(settle);
+    fireEvent.click(screen.getByRole("button", { name: "Avatarı değiştir" }));
     fireEvent.click(screen.getByRole("radio", { name: "Gözlüklü" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tamam" }));
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri kaydet" })); await settle(); });
     const patch = backend.state.calls.find((c) => c.method === "PATCH" && c.path === "/me")!;
     expect(patch.body).toMatchObject({ avatar: "glasses" });
     expect(patch.headers["If-Match"]).toBe('"0"');
+    fireEvent.click(screen.getByRole("button", { name: "Avatarı değiştir" }));
     await waitFor(() => expect((screen.getByRole("radio", { name: "Gözlüklü" }) as HTMLInputElement).checked).toBe(true));
   });
   it("asks to re-authenticate before changing the password", async () => {

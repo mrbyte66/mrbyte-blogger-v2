@@ -20,7 +20,8 @@ public class MailGateway {
 
     public enum Result { SENT, NOT_CONFIGURED, FAILED }
 
-    public record Message(String to, String subject, String body, String messageKey) {
+    public record Message(String to, String subject, String body, String messageKey, String replyTo) {
+        public Message(String to, String subject, String body, String messageKey) { this(to, subject, body, messageKey, null); }
         @Override
         public String toString() {
             return "Message[subject=" + subject + "]";
@@ -48,6 +49,7 @@ public class MailGateway {
         SimpleMailMessage mail = new SimpleMailMessage();
         mail.setFrom(from);
         mail.setTo(message.to());
+        if (message.replyTo() != null) mail.setReplyTo(message.replyTo());
         mail.setSubject(message.subject());
         mail.setText(message.body());
         try {

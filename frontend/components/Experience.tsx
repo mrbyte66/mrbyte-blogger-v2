@@ -6,7 +6,7 @@ import { useArticles } from "../lib/articles/use-articles";
 import { SceneFeatured } from "./SceneFeatured";
 import { useSeriesWorkspace } from "../lib/series/use-series-workspace";
 import { publishedSeries } from "../lib/series/model";
-import { useReducer } from "react";
+import { useEffect, useReducer } from "react";
 import { useSitePreferences } from "./SitePreferences";
 import { AmbientAudioToggle } from "./audio/AmbientAudio";
 import { Character } from "./Character";
@@ -27,6 +27,13 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
   const { series: storedSeries } = useSeriesWorkspace();
   const featuredSeries = publishedSeries(storedSeries).find((entry) => entry.slug === featuredSeriesSlug && entry.articleSlugs.some((slug) => articles.some((article) => article.slug === slug)));
   const [navigation, dispatch] = useReducer((state: Navigation, action: NavigationAction) => navigateArticles(state, action, articles), initialNavigation);
+  useEffect(() => {
+    const open = (section: unknown) => { if (section === "writing" || section === "about" || section === "projects") dispatch({ type: "open", section }); };
+    open(new URLSearchParams(window.location.search).get("bolum"));
+    const receive = (event: Event) => { if (!editing) open((event as CustomEvent).detail); };
+    window.addEventListener("satir:open-section", receive);
+    return () => window.removeEventListener("satir:open-section", receive);
+  }, [editing]);
   const { colorMode: preference, setColorMode, motionEnabled, setMotionEnabled } = useSitePreferences();
   const dark = preference ? preference === "dark" : colorMode === "dark";
   // The scene's light switch walks through the three modes: lights on → reading lamp → lights off.

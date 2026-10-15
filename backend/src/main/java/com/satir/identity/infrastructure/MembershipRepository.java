@@ -45,6 +45,11 @@ public class MembershipRepository {
 
     // ---------------------------------------------------------------- accounts
 
+    public Optional<String> contactOwnerEmail() {
+        return jdbc.sql("SELECT email FROM app_user WHERE role = 'OWNER' AND status = 'ACTIVE' AND verified_at IS NOT NULL")
+                .query(String.class).optional();
+    }
+
     public Optional<Account> byEmail(String normalizedEmail) {
         return jdbc.sql("SELECT " + ACCOUNT_COLUMNS + " WHERE email_normalized = :email").param("email", normalizedEmail)
                 .query(MembershipRepository::account).optional();

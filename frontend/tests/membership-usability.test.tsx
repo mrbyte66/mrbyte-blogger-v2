@@ -73,15 +73,10 @@ describe("membership usability", () => {
     expect((screen.getByRole("button", { name: "Hesap oluştur" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("validates account e-mail and password changes with the same field feedback", async () => {
+  it("keeps account email read-only and validates password changes", async () => {
     fakeBackend({ signedIn: { email: "okur@example.test" } }); render(<AuthProvider><AccountPage /></AuthProvider>); await act(settle);
-    const email = screen.getByLabelText("Yeni e-posta adresi", { exact: true });
-    fireEvent.change(email, { target: { value: "okur" } });
-    expect(email.getAttribute("aria-invalid")).toBe("true");
-    expect((screen.getByRole("button", { name: "E-postayı değiştir" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(email, { target: { value: "yeni@example.test" } });
-    expect(email.getAttribute("aria-invalid")).toBe("false");
-    expect((screen.getByRole("button", { name: "E-postayı değiştir" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByLabelText("Yeni e-posta adresi")).toBeNull();
+    expect(screen.getByLabelText("E-posta", { exact:true })).toHaveProperty("readOnly",true);
     fireEvent.click(screen.getByRole("button", { name: "Güvenlik" }));
     const password = screen.getByLabelText("Yeni şifre", { exact: true });
     const repeat = screen.getByLabelText("Yeni şifre tekrarı", { exact: true });

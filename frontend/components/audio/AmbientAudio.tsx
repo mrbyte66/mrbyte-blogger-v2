@@ -86,15 +86,15 @@ export function AmbientAudioProvider({ children }: { children: ReactNode }) {
   }
   return <AudioContext.Provider value={{ phase, track, toggle: () => session.current ? session.current.toggle() : toggle() }}>{children}<audio ref={audio} preload="none" onTimeUpdate={measure} onEnded={next} onPlaying={() => { if (requested.current) updatePhase("on"); }} onWaiting={() => { if (requested.current) updatePhase("loading"); }} onError={() => { if (requested.current) { requested.current = false; operation.current++; updatePhase("error"); } }} /></AudioContext.Provider>;
 }
-export function AmbientAudioToggle({ embedded = false, scene = false }: { embedded?: boolean; scene?: boolean }) {
+export function AmbientAudioToggle({ embedded = false, scene = false, footer = false }: { embedded?: boolean; scene?: boolean; footer?: boolean }) {
   const { phase, track, toggle } = useContext(AudioContext);
   const [insideFrame, setInsideFrame] = useState(false);
   useEffect(() => { setInsideFrame(window.parent !== window); }, []);
   if (insideFrame) return null;
   const enabled = phase === "on" || phase === "loading";
-  return <div className={`ambient-player ${scene ? "ambient-scene" : embedded ? "ambient-embedded" : "ambient-global"}`}>
+  return <div className={`ambient-player ${footer ? "ambient-footer" : scene ? "ambient-scene" : embedded ? "ambient-embedded" : "ambient-global"}`}>
     <button type="button" className="ambient-toggle" aria-label={enabled ? "Mozart müziğini kapat" : phase === "blocked" ? "Mozart müziğine devam et" : phase === "error" ? "Mozart müziğini yeniden dene" : "Mozart müziğini aç"} aria-pressed={enabled} aria-busy={phase === "loading"} onClick={toggle} title={`${phase === "blocked" ? "Aynı yerden devam et" : enabled ? "Sesi kapat" : "Sesi aç"} · Mozart · 40 dakika`}>
-      {phase === "on" ? <span className="ambient-equalizer" aria-hidden="true"><i /><i /><i /><i /></span> : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4V4Z" />{enabled ? <><path d="M15 8c2 2 2 6 0 8M18 5c4 4 4 10 0 14" /></> : <path d="m16 9 5 6m0-6-5 6" />}</svg>}
+      {footer ? <><span className="footer-wave" aria-hidden="true"><i/><i/><i/><i/><i/></span><span>Mozart</span><span className="footer-play" aria-hidden="true">{enabled ? "Ⅱ" : "▶"}</span></> : phase === "on" ? <span className="ambient-equalizer" aria-hidden="true"><i /><i /><i /><i /></span> : <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4V4Z" />{enabled ? <><path d="M15 8c2 2 2 6 0 8M18 5c4 4 4 10 0 14" /></> : <path d="m16 9 5 6m0-6-5 6" />}</svg>}
       {scene && <span className="ambient-label">{phase === "blocked" ? "Devam et" : `Müzik ${enabled ? "açık" : "kapalı"}`}</span>}
     </button>
     <div className="ambient-caption"><span>Wolfgang Amadeus Mozart</span><p>1756–1791. Klasik dönemin bestecisi; senfonileri, operaları ve piyano eserleriyle tanınır.</p><a href={mozartTracks[track].source} target="_blank" rel="noopener noreferrer">Musopen Symphony ↗</a></div>

@@ -22,7 +22,7 @@ describe("inline canvas editing", () => {
     expect(editDocumentText(draft,{...articlePatch,value:" "})).toBeNull();
     expect(parseInlineEdit({...patch,value:{danger:true}})).toBeNull();
   });
-  it("streams edits from the canvas and restores the original on Escape", () => {
+  it("streams edits from the canvas and does not revert the streamed edit on Escape", () => {
     const post = vi.spyOn(window.parent,"postMessage");
     render(<InlineCanvasEditor theme={workspace.draft} draft={null} enabled><div data-block-id={block.id}><h1 data-inline-field="title">Kod yazarım.</h1></div></InlineCanvasEditor>);
     expect(screen.getByRole("heading").getAttribute("tabindex")).toBe("0");
@@ -31,7 +31,7 @@ describe("inline canvas editing", () => {
     fireEvent.input(screen.getByLabelText("Başlık · tuval"));
     expect(post).toHaveBeenLastCalledWith({type:inlineEditEvent,edit:{...patch,value:"İlk taslak"}},window.location.origin);
     fireEvent.keyDown(screen.getByLabelText("Başlık · tuval"),{key:"Escape"});
-    expect(post).toHaveBeenLastCalledWith({type:inlineEditEvent,edit:{...patch,previous:"İlk taslak",value:"Kod yazarım."}},window.location.origin);
+    expect(post).toHaveBeenLastCalledWith({type:inlineEditEvent,edit:{...patch,value:"İlk taslak"}},window.location.origin);
     fireEvent.click(screen.getByRole("heading"));
     screen.getByLabelText("Başlık · tuval").textContent=patch.value;
     fireEvent.input(screen.getByLabelText("Başlık · tuval"));

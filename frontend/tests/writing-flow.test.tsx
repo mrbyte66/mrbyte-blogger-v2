@@ -66,3 +66,23 @@ it("waits for the joined draft before restoring the caret to an existing paragra
  rerender(<InlineCanvasEditor theme={workspace.draft} draft={next} enabled>{content(next)}</InlineCanvasEditor>);
  expect(screen.getByRole("textbox").textContent).toBe("Birinciİkinci");
 });
+
+it("Escape leaves the new text intact instead of reverting the writing session",()=>{
+ const post=vi.spyOn(window.parent,"postMessage");
+ const content=(text:string)=><p data-edit-field="paragraph-0">{text}</p>;
+ const {rerender}=render(<InlineCanvasEditor theme={workspace.draft} draft={draft} enabled>{content("Birinci")}</InlineCanvasEditor>);
+ const node=open("paragraph-0");
+ node.textContent="Birinci cümle tamamlandı."; fireEvent.input(node);
+ const next={...draft,article:{...article,paragraphs:["Birinci cümle tamamlandı.","İkinci"]}};
+ rerender(<InlineCanvasEditor theme={workspace.draft} draft={next} enabled>{content(next.article.paragraphs[0])}</InlineCanvasEditor>);
+ const count=post.mock.calls.length;
+ fireEvent.keyDown(node,{key:"Escape"});
+ expect(node.textContent).toBe("Birinci cümle tamamlandı.");
+ expect(post.mock.calls.slice(count).some(call=>call[0]?.edit?.value==="Birinci")).toBe(false);
+});
+it("offers headings and quotes beside selected text without opening a block menu",()=>{
+ const post=mount(),node=open("paragraph-0"); caret(node,0,7);
+ fireEvent.click(screen.getByRole("button",{name:"Ara başlık"}));
+ expect(post.mock.calls.map(call=>call[0]).findLast(data=>data.type===inlineEditEvent).edit).toMatchObject({action:"heading2",value:"Birinci"});
+ expect(screen.queryByRole("listbox")).toBeNull();
+});

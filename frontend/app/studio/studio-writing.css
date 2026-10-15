@@ -76,3 +76,18 @@ html .studio.writing-studio[data-view] .studio-inspector .site-design-controls {
  .writing-voice span,.writing-voice small { display:none; }
  .writing-tools>nav { max-width:calc(100vw - 32px); }
 }
+
+/* A companion surface, not a popover over the sentence being written. */
+@media(min-width:1100px) {
+ html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view] > .studio-workspace {
+  grid-template-columns:minmax(0,1fr) 320px!important;
+  grid-template-areas:"canvas inspector"!important;
+ }
+ html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view] .studio-inspector {
+  grid-area:inspector!important; position:relative!important; inset:auto!important;
+  width:auto!important; height:auto!important; min-height:0; max-height:none!important;
+  margin:14px 16px 18px 0; overflow:auto; align-self:stretch;
+  box-shadow:0 8px 28px color-mix(in srgb,var(--sv-ink) 5%,transparent);
+ }
+ html .studio.writing-studio.has-writing-panel[data-view="sahne"] .studio-canvas { padding-inline:24px; }
+}

@@ -414,7 +414,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   /** Turns the paragraph being written into another text block; an empty one gets a selected starter text. */
   function turnInto(item: Active, action: "heading2" | "heading3" | "quote", text: string) {
     const value = text.trim() ? text : starterText[action] ?? "";
-    item.node.textContent = value;
+    paint(item, value, safeMarks(value, adjustMarks(textOf(item), value, marks.current)));
     if (!text.trim()) selectAllNext.current = true;
     pendingField.current = item.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = action;
     setMenu(null);
@@ -533,7 +533,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
         }
         finish(true, "split", offset,end); return;
       }
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (linkEditor) { setLinkEditor(null); active.node.focus(); } else finish(false); return; }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (linkEditor) { setLinkEditor(null); active.node.focus(); } else finish(true); return; }
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); finish(true); return; }
       const key = event.key.toLowerCase();
       if (key === "z" && (event.metaKey || event.ctrlKey)) { event.preventDefault(); if((!event.shiftKey && cursor.current===0) || (event.shiftKey && cursor.current>=history.current.length-1)) { finish(true); window.parent.postMessage({type:event.shiftKey ? previewEvents.redo : previewEvents.undo},window.location.origin); } else travel(event.shiftKey ? 1 : -1); return; }
@@ -569,6 +569,10 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     </div>}
     {active && (selectionText || linkEditor) && !menu && <div ref={toolbar} role="toolbar" aria-label="Metin araçları" className="inline-edit-toolbar writing-selection-toolbar" style={{ ...position, ...(position.left === undefined ? { visibility: "hidden" } : {}) }} onMouseDown={event=>event.preventDefault()}>
       {active.rich && <><div className="inline-group" role="group" aria-label="Biçim">{toggles.filter(item=>["bold","italic","highlight"].includes(item.type)).map(item=><button key={item.type} type="button" aria-label={item.label} title={item.label} aria-pressed={formats[item.type]} onClick={()=>format(item.type)}><EditorIcon name={item.icon} size={17}/></button>)}<button type="button" aria-label="Bağlantı" title="Bağlantı" aria-pressed={formats.link} onClick={openLink}><EditorIcon name="link" size={17}/></button></div><i/></>}
+      {active.rich && index >= 0 && <><div className="inline-group" role="group" aria-label="Paragraf biçimi">{(["heading2", "quote"] as const).map(kind => <button key={kind} type="button" aria-label={kind === "heading2" ? "Ara başlık" : "Alıntı"} title={kind === "heading2" ? "Ara başlık" : "Alıntı"} aria-pressed={kindRef.current === kind} onClick={() => {
+        if (kindRef.current === kind) { pendingField.current = active.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = "paragraph"; finish(true, "paragraph"); }
+        else turnInto(active, kind, textOf(active));
+      }}><EditorIcon name={kind === "heading2" ? "heading" : "quote"} size={17}/></button>)}</div><i/></>}
       <button type="button" aria-label="Diğer metin araçları" title="Diğer araçlar" aria-expanded={moreFormats} onClick={()=>setMoreFormats(!moreFormats)}>•••</button>
       {moreFormats && <div className="writing-format-more" role="group" aria-label="Diğer metin araçları">
         {active.rich && <>{toggles.filter(item=>["strike","code"].includes(item.type)).map(item=><button key={item.type} aria-label={item.label} onClick={()=>format(item.type)}><EditorIcon name={item.icon} size={16}/>{item.label}</button>)}<button aria-label="Biçimi temizle" onClick={clearFormatting}><EditorIcon name="clear" size={16}/>Biçimi temizle</button></>}

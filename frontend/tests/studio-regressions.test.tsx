@@ -4,7 +4,7 @@ import { SiteEditor } from "../components/builder/SiteEditor";
 import { SeriesArticleNav } from "../components/series/SeriesArticleNav";
 import { SiteDesignControls } from "../components/builder/SiteDesignControls";
 import { MemorySite, renderWithSite } from "./support/memory-site";
-import { readCanvas } from "./helpers/canvas";
+import { readCanvas, writeCanvas } from "./helpers/canvas";
 
 beforeEach(() => {
   localStorage.clear(); document.documentElement.dataset.studioView = "odak";
@@ -62,4 +62,18 @@ it("does not report success when applying the site design fails; retries the pre
   expect(site.workspace.draft.typography).toBe("editorial");
   await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Temayı uygula"}));});
   expect(site.workspace.applied.typography).toBe("editorial");
+});
+
+it("keeps design controls open while writing and dismisses them explicitly",()=>{
+ const site=new MemorySite(); articlePage(site);
+ fireEvent.click(screen.getByRole("button",{name:"Tasarım"}));
+ const panel=screen.getByRole("complementary",{name:"Seçili alanın ayarları"});
+ fireEvent.pointerDown(document.body);
+ writeCanvas("paragraph-0","Yazarken tasarımı karşılaştırıyorum.");
+ expect(panel.hidden).toBe(false);
+ expect(screen.getByRole("button",{name:"Yazı boyutu: Büyük"})).toBeTruthy();
+ fireEvent.click(screen.getByRole("button",{name:"Ayar panelini kapat"}));
+ expect(panel.hidden).toBe(true);
+ const draft=readCanvas();
+ expect(draft.kind==="article" && draft.article.paragraphs[0]).toBe("Yazarken tasarımı karşılaştırıyorum.");
 });

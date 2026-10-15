@@ -9,7 +9,7 @@ Studio aynı araçları dört yerleşimde sunar. Seçim tarayıcıda (`satir:stu
 - **Kontakt**: pill gezinme (Yazılar, Seriler, Ana sayfa; 1100–1299 px’te yalnız ikon), kart düzeni; sayfa seçici kapak kartlı kitaplık galerisi ve ayrıntı çekmecesi açar.
 - **Sahne**: başlangıç düzenleri üst çubukta, sayfa sahnede, bloklar altta şeritte; blok paleti kendi “Blok ekle” düğmesinin üstünde açılır.
 
-**Paneller.** Ayar paneli sayfayı daraltmaz, yüzer; Escape veya boş yere basınca (tuval çerçevesi içindekiler dahil) kapanır. Yüzen yüzeyler `data-layer` ile işaretlidir: son açılan ya da basılan öne gelir (`lib/studio/layers.ts`), örneğin tasarım paneli açıkken açılan blok paleti onun arkasında kalmaz; paneli açan düğmeye yeniden basmak paneli öne getirir. Katmanlar site geneli ses düğmesinin altında kalır.
+**Paneller.** Yazı ve seri düzenlerken açık ayar paneli tuvale dönünce kapanmaz. 1100 px ve üstünde tuvalin yanında yer ayırır; metnin üstünü örtmez. Kapat düğmesi veya panelde Escape ile kapanır. Ana sayfa tasarımındaki yüzen panellerin mevcut davranışı korunur. Yüzen yüzeyler `data-layer` ile işaretlidir: son açılan ya da basılan öne gelir (`lib/studio/layers.ts`), örneğin tasarım paneli açıkken açılan blok paleti onun arkasında kalmaz; paneli açan düğmeye yeniden basmak paneli öne getirir. Katmanlar site geneli ses düğmesinin altında kalır.
 
 **Bir ikon, bir işlev.** Dişli: Site tercihleri · palet: Tema tasarımı · üç katlı blok: Sayfa yapısı · not kâğıdı: Özel notlar · dikey çerçeve: Kapak · yatay çerçeve: Görsel · ev: Site tasarımı · iki pencere: Studio görünümü. Aynı ikon başka bir işleve verilmez; tanımsız ad boş çizilir.
 

@@ -11,3 +11,5 @@ Studio yapı/canvas/inspector masaüstünde birlikte görünür, mobilde okunur 
 Formlarda hatalı alan kırmızı çerçeve ve alanın altındaki kısa açıklamayla belirtilir; yalnız renge dayanılmaz. Açık/koyu tema ve ekran okuyucu için aria-invalid/aria-describedby kullanılır. Kullanıcı yazmaya başladığında hatası görünür; düzeltince çerçeve ve uyarı kalkar. Parlama kullanılmaz.
 
 Studio’da değişiklik en az tıklama ve kısa mouse yolu ile yapılır. Metin tuvalde düzenlenir; ikincil panel seçilen alanın/araç düğmesinin yanında açılır. Kayıt ve yayın komutları sayfa ve görünüm değişiminde aynı yerde kalır.
+
+- Sürekli yazma akışında panel açıp kapatma zorunluluğu azaltılır. Ara başlık ve alıntı seçili metnin yanında uygulanır; açık çalışma paneli tuvale dönünce kendiliğinden kapanmaz. Geniş ekranda panel yazının üstünü örtmez. Escape metni geri almaz; geri alma ayrı ve açık bir eylemdir. Bu kolaylıklar mevcut tema, tipografi ve görsel bütünlük korunarak sağlanır.

@@ -62,3 +62,5 @@ Kayıt (Mevcut/Planlanan/Tamamlandı) alanı kaldırıldı; işin durumu yalnız
 ## Studio etkileşim ilkesi — 2026-10-15
 
 Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az gezdirerek yapabilmeli. Metin önce tuvalde doğrudan düzenlenir; ikincil araçlar seçilen alanın veya tetikleyicinin yakınında açılır. Gerekli kayıt, yayın ve gezinme kontrolleri görünüm/sayfa değişince kaybolmaz ya da yer değiştirmez. Minimalistlik gerekli işlevleri saklamak veya sahneyi boşaltmak değildir.
+
+- Sürekli yazma akışında panel açıp kapatma zorunluluğu azaltılır. Ara başlık ve alıntı seçili metnin yanında uygulanır; açık çalışma paneli tuvale dönünce kendiliğinden kapanmaz. Geniş ekranda panel yazının üstünü örtmez. Escape metni geri almaz; geri alma ayrı ve açık bir eylemdir. Bu kolaylıklar mevcut tema, tipografi ve görsel bütünlük korunarak sağlanır.

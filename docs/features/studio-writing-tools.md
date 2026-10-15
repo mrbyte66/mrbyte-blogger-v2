@@ -15,3 +15,5 @@
 **Günlük kelime hedefi.** Site ayarında `dailyWordGoal` (0–20.000, 0 kapalı). Bugünkü sayı, her yazıda gün başındaki son revizyonla bugünkü son revizyon arasındaki net kelime artışıdır (site saat dilimi); silinen metin hedefi geri götürmez, kaydedilmemiş değişiklik canlı eklenir. Uç: `GET /api/v1/studio/writing/today`. Hedef, If-Match ile `PATCH /api/v1/studio/site` üzerinden kaydedilir.
 
 İmleç konumu tuval çerçevesinden iletilir; yazma yüzeyinde teknik satır/sütun bilgisi gösterilmez.
+
+Seçili metnin yanındaki araç çubuğunda ara başlık ve alıntı tek tıkla uygulanır; aynı düğme paragraf biçimine döndürür. Biçim değişiminde metin içi vurgular korunur. Yazarken Escape düzenlemeyi bitirir, yazılan metni geri almaz.

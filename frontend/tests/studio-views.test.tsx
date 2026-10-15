@@ -109,7 +109,7 @@ describe("Studio views", () => {
     expect(screen.queryByRole("complementary", { name: "Kenar notları" })).toBeNull();
   });
 
-  it("closes the settings panel on Escape, on empty space and on a canvas press, but not on tool buttons", () => {
+  it("keeps settings available across canvas presses and closes them on Escape", () => {
     studio();
     selectPage(articles[0].title);
     const panel = () => screen.getByLabelText("Seçili alanın ayarları");
@@ -122,10 +122,9 @@ describe("Studio views", () => {
     fireEvent.pointerDown(screen.getByRole("button", { name: "Önizle" }));
     expect(panel().hidden).toBe(false);
     fireEvent.pointerDown(screen.getByLabelText("Canlı sayfa tuvali"));
-    expect(panel().hidden).toBe(true);
-    open();
+    expect(panel().hidden).toBe(false);
     canvasMessage({ type: previewEvents.pointer });
-    expect(panel().hidden).toBe(true);
+    expect(panel().hidden).toBe(false);
   });
 
   it("opens settings beside the pressed block or the chosen writing tool", () => {

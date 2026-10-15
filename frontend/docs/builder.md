@@ -12,8 +12,10 @@ Site genelinde tek indeksleme kontrolü Studio ayarında. Owner private yazı ü
 
 Studio üst çubuğundaki sayfa seçici geniş bir dialog açar; arama, durum filtresi ve yazı/seri oluşturma buradadır. Escape ve dış alan tıklaması kapatır, odak seçiciye döner. Başlangıç düzenleri kompakt seçicidedir; düzen değişiminden sonra önceki taslağa dönüş sunulur. Tuvale odaklan yan panelleri gizler.
 
-Düzenle modunda desteklenen başlık, özet ve paragraflar tuvalden tıklama veya Enter ile açılır. Bağlamsal metin editöründe Tamam / Ctrl–⌘+Enter taslağa aktarır; Escape vazgeçer. Frame origin/source, alan izin listesi ve önceki değer doğrulanır. URL/yayın durumu bu mesajla değişmez. Zengin metin biçimlendirme #25 kapsamındadır.
+Düzenle modunda desteklenen başlık, özet ve paragraflar tuvalden tıklama veya Enter ile açılır. Bağlamsal metin editöründe Tamam / Ctrl–⌘+Enter taslağa aktarır; Escape metni koruyarak düzenlemeyi bitirir. Frame origin/source, alan izin listesi ve önceki değer doğrulanır. URL/yayın durumu bu mesajla değişmez. Zengin metin biçimlendirme #25 kapsamındadır.
 
 Tema tasarımı → Keşfedilebilirlik altında tek site indeksleme anahtarı vardır. Gerçek backend ayarı version/If-Match ile hemen kaydedilir; başarısız işlem başarılı gösterilmez. Deployment indeksleme koruması ayrıca geçerlidir. Studio chrome açık/koyu tema, dar ekran ve reduced-motion desteğiyle çalışır; CRT artwork korunur.
 
-Studio dört görünümde çalışır (Marjinalya, Odak, Kontakt, Sahne); ayrıntı ve ortak kurallar `docs/features/studio-views.md`, yazı araçları (satır içi biçim, özel notlar, günlük hedef) `docs/features/studio-writing-tools.md` içindedir. Ayar paneli yüzer ve boş yere basınca ya da Escape ile kapanır; tuval çerçevesi ilk boyamadan gerçek boyutta kurulur.
+Studio dört görünümde çalışır (Marjinalya, Odak, Kontakt, Sahne); ayrıntı ve ortak kurallar `docs/features/studio-views.md`, yazı araçları (satır içi biçim, özel notlar, günlük hedef) `docs/features/studio-writing-tools.md` içindedir. Yazı/seri düzenlerken İçindekiler ve Ayarlar tek bir sağ paneli paylaşır; panel tuvale dönünce kapanmaz. Dar ekranda geçici yüzey olur, bir başlığa gidince kapanır; tuval çerçevesi ilk boyamadan gerçek boyutta kurulur.
+
+Yazı araçları altta doğrudan görünür; sık kullanılan ekleme işlemleri menüye saklanmaz. Hover ＋ dolu metni değiştirmeden altına blok ekler; seçili metin araçları mevcut bloğu biçimlendirir. İçindekiler gerçek başlıklardan türetilir ve tuvalin kaydırmasını izler.

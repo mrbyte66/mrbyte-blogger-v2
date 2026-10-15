@@ -8,6 +8,7 @@ import { adjustMarks, clearMark, covers, isSafeHref, markAt, safeMarks, toggleMa
 import { markedHtml } from "../../lib/articles/marked-html";
 import { readMarked, selectOffsets, selectionOffsets } from "../../lib/builder/rich-text";
 import { editRowSelector } from "../../lib/builder/rows";
+import { WritingGlyph } from "./WritingGlyph";
 import { EditorIcon } from "./EditorIcon";
 
 type Active = { original: string; originalMarks: TextMark[]; allowEmpty: boolean; edit: InlineEdit; max: number; node: HTMLElement; label: string; rich: boolean };
@@ -72,6 +73,17 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   // Medium-like insertion: a ＋ beside an empty line and a "/" menu, both keyboard friendly.
   const [menu, setMenu] = useState<{ query: string } | null>(null);
   const [menuIndex, setMenuIndex] = useState(0);
+  const menuInserts = useRef(false);
+  const [hoverBox, setHoverBox] = useState<{left:number;top:number;bottom:number;height:number}|null>(null);
+  const hoverNode = useRef<HTMLElement|null>(null);
+  const surface = useRef({paper:"#fcfcf8",ink:"#243329",line:"#dce2d9"});
+  function readSurface(node: HTMLElement) { const css=getComputedStyle(node); surface.current={paper:css.getPropertyValue("--panel").trim() || "#fcfcf8",ink:css.color || "#243329",line:css.getPropertyValue("--line").trim() || "#dce2d9"}; }
+  function clearHover() { hoverNode.current?.classList.remove("canvas-block-hover"); hoverNode.current=null; setHoverBox(null); }
+  useEffect(() => {
+    const clear = () => clearHover();
+    window.addEventListener("scroll", clear, true); window.addEventListener("resize", clear);
+    return () => {window.removeEventListener("scroll",clear,true);window.removeEventListener("resize",clear);hoverNode.current?.classList.remove("canvas-block-hover");};
+  }, []);
   const [lineBox, setLineBox] = useState<{ left: number; top: number; bottom: number; height: number } | null>(null);
   const menuRef = useRef(menu); menuRef.current = menu;
   const kindRef = useRef<string | null>(null);
@@ -159,7 +171,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const rect = range?.width ? range : item.node.getBoundingClientRect();
     const width = toolbar.current?.offsetWidth ?? 260;
     const height = toolbar.current?.offsetHeight ?? 48;
-    const css = getComputedStyle(item.node);
+    const css = getComputedStyle(item.node); readSurface(item.node);
     // Above the text when there is room, otherwise just below it; never over the line being written.
     setPosition({ left: Math.max(8, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - 8)), top: rect.top > height + 18 ? rect.top - height - 10 : Math.max(8, Math.min(rect.bottom + 10, window.innerHeight - height - 8)), "--inline-paper": css.getPropertyValue("--panel") || "#fff", "--inline-ink": css.color } as CSSProperties);
     setSelectionText(selected);
@@ -276,11 +288,14 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     function drop(event: DragEvent) { event.preventDefault(); }
     node.addEventListener("input", input);
     node.addEventListener("paste", paste); node.addEventListener("drop", drop);
+    const leaveFrame = () => finish(true);
+    window.addEventListener("blur", leaveFrame);
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     document.addEventListener("selectionchange", reposition);
     return () => {
       node.removeEventListener("input", input); node.removeEventListener("paste", paste); node.removeEventListener("drop", drop);
+      window.removeEventListener("blur", leaveFrame);
       window.removeEventListener("scroll", reposition, true); window.removeEventListener("resize", reposition); document.removeEventListener("selectionchange", reposition);
       node.removeAttribute("contenteditable"); node.classList.remove("is-writing"); node.removeAttribute("aria-multiline");
       if (oldRole) node.setAttribute("role", oldRole); else node.removeAttribute("role");
@@ -290,13 +305,13 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  function finish(apply: boolean, action?: InlineEdit["action"], offset?: number, end?: number) {
+  function finish(apply: boolean, action?: InlineEdit["action"], offset?: number, end?: number, insertKind?: InlineEdit["insertKind"]) {
     const item = live.current;
     if (!item) return;
     const read = item.rich ? readMarked(item.node) : null;
     const next = read ? read.text : item.node.innerText ?? item.node.textContent ?? "";
     const nextMarks = read?.marks ?? [];
-    if (apply && (next.trim() || item.allowEmpty || action==="paragraph" || action==="remove") && (next !== item.edit.previous || action || (item.rich && JSON.stringify(nextMarks) !== JSON.stringify(item.edit.marks ?? [])))) post(item, next, nextMarks, { ...(action ? { action } : {}), ...(offset !== undefined ? { offset } : {}), ...(end !== undefined ? {end} : {}) });
+    if (apply && (next.trim() || item.allowEmpty || action==="paragraph" || action==="remove") && (next !== item.edit.previous || action || (item.rich && JSON.stringify(nextMarks) !== JSON.stringify(item.edit.marks ?? [])))) post(item, next, nextMarks, { ...(action ? { action } : {}), ...(insertKind ? {insertKind} : {}), ...(offset !== undefined ? { offset } : {}), ...(end !== undefined ? {end} : {}) });
     else if (!apply) {
       if (item.edit.previous !== item.original || (item.rich && JSON.stringify(item.edit.marks ?? []) !== JSON.stringify(item.originalMarks))) post(item, item.original, item.originalMarks);
       if (item.rich) paint(item, item.original, item.originalMarks); else item.node.textContent = item.original;
@@ -309,7 +324,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if(action==="join-next") { pendingField.current=item.edit.field; pendingUntil.current=Date.now()+2000; pendingOffset.current=next.length; }
     if(action==="remove" && draft?.kind==="article") { pendingField.current=`paragraph-${Math.min(Number(item.edit.field.slice(10)),Math.max(0,draft.article.paragraphs.length-2))}`; pendingUntil.current=Date.now()+2000; pendingOffset.current=0; }
     if(action && pendingField.current && draft?.kind==="article") {
-      const predicted=editDocumentText(draft,{...item.edit,value:next,previous:documentText(draft,item.edit.field)?.value ?? item.edit.previous,marks:nextMarks,action,...(offset!==undefined ? {offset}:{}),...(end!==undefined ? {end}: {})});
+      const predicted=editDocumentText(draft,{...item.edit,value:next,previous:documentText(draft,item.edit.field)?.value ?? item.edit.previous,marks:nextMarks,action,...(insertKind ? {insertKind} : {}),...(offset!==undefined ? {offset}:{}),...(end!==undefined ? {end}: {})});
       if(predicted?.kind==="article") pendingExpected.current={value:documentText(predicted,pendingField.current)?.value ?? "",length:predicted.article.paragraphs.length};
     }
     setLinkEditor(null);
@@ -408,7 +423,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       turnInto(item, action, text.slice(mark[0].length));
       return;
     }
-    if (text.startsWith("/") && !/\s/.test(text)) { if (!menuRef.current) setMenuIndex(0); setMenu({ query: text.slice(1) }); }
+    if (text.startsWith("/") && !/\s/.test(text)) { if (!menuRef.current) setMenuIndex(0); menuInserts.current=false; setMenu({ query: text.slice(1) }); }
     else if (menuRef.current) setMenu(null);
   }
   /** Turns the paragraph being written into another text block; an empty one gets a selected starter text. */
@@ -423,6 +438,13 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   function choose(choice: BlockChoice) {
     const item = live.current;
     if (!item) return;
+    if (menuInserts.current && ["paragraph","heading2","heading3","quote"].includes(choice.id)) {
+      menuInserts.current=false; setMenu(null);
+      pendingKind.current=choice.id === "paragraph" ? null : choice.id;
+      selectAllNext.current=choice.id !== "paragraph";
+      finish(true,"insert-after",undefined,undefined,choice.id as InlineEdit["insertKind"]);
+      return;
+    }
     const clearSlash = () => { if (menuRef.current && readMarked(item.node).text.startsWith("/")) { item.node.textContent = ""; item.node.dispatchEvent(new Event("input", { bubbles: true })); } };
     if (choice.id === "paragraph") { clearSlash(); setMenu(null); if(kindRef.current!=="paragraph") finish(true,"paragraph"); else item.node.focus(); return; }
     if (choice.id === "heading2" || choice.id === "heading3" || choice.id === "quote") { turnInto(item, choice.id, menuRef.current && textOf(item).startsWith("/") ? "" : textOf(item)); return; }
@@ -495,11 +517,28 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   const matches = blockChoices.filter((choice) => !query || choice.words.split(" ").some((word) => word.startsWith(query)) || choice.label.toLocaleLowerCase("tr").startsWith(query));
   const kind = draft?.kind === "article" && index >= 0 ? (draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph") : null;
   kindRef.current = kind;
-  const showPlus = !!active && index >= 0 && draft?.kind === "article" && !menu && !selectionText && !!lineBox && (typeof window === "undefined" || window.innerWidth>=480 || !value.trim());
-  const menuStyle: CSSProperties | undefined = lineBox ? { left: Math.max(8, Math.min(lineBox.left, window.innerWidth - 300)), ...(lineBox.bottom + 360 < window.innerHeight ? { top: lineBox.bottom + 8 } : { bottom: window.innerHeight - lineBox.top + 8 }) } : undefined;
-  return <div ref={root} className="inline-canvas-root" onKeyDownCapture={(event) => {
+  const plusBox = hoverBox ?? (index >= 0 ? lineBox : null);
+  const showPlus = enabled && draft?.kind === "article" && !menu && !selectionText && !!plusBox;
+  const menuStyle: CSSProperties | undefined = lineBox ? { left: Math.max(8, Math.min(lineBox.left, window.innerWidth - Math.min(360,window.innerWidth-16)-8)), top: Math.max(8, Math.min(lineBox.bottom+8,window.innerHeight-260)) } : undefined;
+  return <div ref={root} className="inline-canvas-root" style={{"--inline-paper":surface.current.paper,"--inline-ink":surface.current.ink,"--panel":surface.current.paper,"--ink":surface.current.ink,"--line":surface.current.line} as CSSProperties} onPointerMove={event => {
+    if (!enabled || draft?.kind !== "article" || menu || selectionText || event.pointerType === "touch") return;
+    const target=event.target as HTMLElement;
+    if(target.closest(".inline-plus,.inline-block-menu,.inline-edit-toolbar")) return;
+    const node=target.closest<HTMLElement>('[data-edit-field^="paragraph-"]');
+    if(node && locate(node)) {
+      if(hoverNode.current === node) return;
+      hoverNode.current?.classList.remove("canvas-block-hover"); hoverNode.current=node; readSurface(node); node.classList.add("canvas-block-hover");
+      const rect=node.getBoundingClientRect();setHoverBox({left:rect.left,top:rect.top,bottom:rect.bottom,height:Math.min(rect.height,40)});
+    } else if (!target.closest("article")) clearHover();
+  }} onPointerLeave={() => {if(!menu) clearHover();}} onKeyDownCapture={(event) => {
     if (!enabled || event.nativeEvent.isComposing || event.keyCode===229) return;
     if((event.metaKey||event.ctrlKey) && event.key.toLowerCase()==="s" && draft) { event.preventDefault(); window.parent.postMessage({type:previewEvents.save},window.location.origin); return; }
+    if (active && menu && active.node.contains(event.target as Node)) {
+      const count = Math.max(1, matches.length);
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMenuIndex((i) => (i + (event.key === "ArrowDown" ? 1 : -1) + count) % count); return; }
+      if (event.key === "Enter" && matches.length) { event.preventDefault(); event.stopPropagation(); choose(matches[Math.min(menuIndex, matches.length - 1)]); return; }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setMenu(null); return; }
+    }
     if(active && active.node.contains(event.target as Node)) {
       const at=selectionOffsets(active.node);
       const text=textOf(active);
@@ -514,12 +553,6 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
           event.preventDefault(); const next=i+(event.key==="ArrowUp" ? -1 : 1); finish(true); pendingField.current=`paragraph-${next}`; pendingUntil.current=Date.now()+2000; pendingOffset.current=event.key==="ArrowUp" ? draft.article.paragraphs[next].length : 0; return;
         }
       }
-    }
-    if (active && menu && active.node.contains(event.target as Node)) {
-      const count = Math.max(1, matches.length);
-      if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMenuIndex((i) => (i + (event.key === "ArrowDown" ? 1 : -1) + count) % count); return; }
-      if (event.key === "Enter" && matches.length) { event.preventDefault(); event.stopPropagation(); choose(matches[Math.min(menuIndex, matches.length - 1)]); return; }
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setMenu(null); return; }
     }
     if (active && (active.node.contains(event.target as Node) || toolbar.current?.contains(event.target as Node))) {
       const insideNode = active.node.contains(event.target as Node);
@@ -560,10 +593,15 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     if (target && !toolbar.current?.contains(target) && !active.node.contains(target)) finish(true);
   }}>
     {active ? frozen.current : children}
-    {showPlus && <button type="button" className="inline-plus" aria-label="Blok ekle" title="Blok ekle · ya da / yaz" style={{ left: Math.max(4, lineBox!.left - 44), top: lineBox!.top + (lineBox!.height - 32) / 2 }} onMouseDown={(event) => event.preventDefault()} onClick={() => { setMenuIndex(0); setMenu({ query: "" }); }}><EditorIcon name="plus" size={18} /></button>}
+    {showPlus && <button type="button" className="inline-plus" aria-label="Blok ekle" title="Blok ekle · ya da / yaz" style={{ left: Math.max(4, plusBox!.left - 40), top: plusBox!.top + (plusBox!.height - 32) / 2 }} onMouseDown={(event) => event.preventDefault()} onClick={() => {
+      const node=hoverNode.current;
+      if(node && node!==live.current?.node) {clickPoint.current=null;activate(node);const r=node.getBoundingClientRect();setLineBox({left:r.left,top:r.top,bottom:r.bottom,height:Math.min(r.height,40)});}
+      setLinkEditor(null);setSelectionText(false);menuInserts.current=true;setMenuIndex(0);setMenu({query:""});
+    }}><EditorIcon name="plus" size={18} /></button>}
     {active && menu && <div className="inline-block-menu" role="listbox" aria-label="Blok ekle" style={menuStyle} onMouseDown={(event) => event.preventDefault()}>
       <span className="inline-block-menu-title">{menu.query ? `“${menu.query}”` : "BLOK EKLE"}</span>
-      {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-label={choice.label} aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true">{choice.id.startsWith("heading") ? "T" : choice.glyph}</span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span></button>)}
+      {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-label={choice.label} aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true"><WritingGlyph kind={choice.id} size={28}/></span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span></button>)}
+      {!menu.query && <button disabled aria-label="Sesle yazma · Yakında"><span className="inline-block-glyph"><EditorIcon name="microphone" size={22}/></span><span className="inline-block-text"><strong>Ses</strong><small>Yakında</small></span></button>}
       {index>=0 && draft?.kind==="article" && !menu.query && <div className="writing-block-actions" role="group" aria-label="Paragraf işlemleri"><button aria-label="Paragrafı yukarı taşı" disabled={index===0} onClick={()=>finish(true,"move-up")}><EditorIcon name="up" size={16}/></button><button aria-label="Paragrafı aşağı taşı" disabled={index===draft.article.paragraphs.length-1} onClick={()=>finish(true,"move-down")}><EditorIcon name="down" size={16}/></button><button aria-label="Altına paragraf ekle" onClick={()=>finish(true,"insert-after")}><EditorIcon name="plus" size={16}/></button><button aria-label="Bloğu sil" onClick={()=>finish(true,"remove")}><EditorIcon name="trash" size={16}/></button></div>}
       {!matches.length && <p className="inline-block-empty">Eşleşen blok yok · Esc</p>}
     </div>}

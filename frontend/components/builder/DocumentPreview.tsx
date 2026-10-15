@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import type { Theme } from "../../lib/builder/model";
 import { previewEvents, rectOf, type CanvasRect, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { navigateEvent, targetFromLink, type DocumentDraft } from "../../lib/builder/document-protocol";
+import { documentOutline } from "../../lib/builder/document-outline";
 import { scrollBehavior } from "../../lib/motion";
 import { ArticlePageView } from "./ArticlePage";
 import { SeriesPageView } from "../series/SeriesPage";
@@ -15,20 +16,27 @@ export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: 
     root.current?.querySelectorAll("[data-edit-field]").forEach((node) => node.classList.toggle("document-selected", node.getAttribute("data-edit-field") === selection.id));
     root.current?.classList.toggle("document-focus", selection.editing && selection.id !== "body" && !!root.current?.querySelector(".document-selected"));
   }, [selection.id, selection.editing, draft]);
+  const outlineKey = documentOutline(draft).map(item => item.field).join(",");
   useEffect(() => {
-    if (selection.editing && selection.id) root.current?.querySelector(`[data-edit-field="${CSS.escape(selection.id)}"]`)?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
-  }, [selection.id, selection.request, selection.editing]);
-  // The settings card beside the selected block follows it while the page scrolls or reflows.
-  useEffect(() => {
-    if (!selection.editing || !selection.id) return;
-    let frame = 0;
+    const fields = outlineKey.split(",");
+    let frame = 0, last = "";
+    const nodes = () => fields.map(field => root.current?.querySelector<HTMLElement>(`[data-edit-field="${field}"]`)).filter((node): node is HTMLElement => !!node);
     const report = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => {
-      const node = root.current?.querySelector(`[data-edit-field="${CSS.escape(selection.id!)}"]`);
-      if (node) window.parent.postMessage({ type: previewEvents.anchor, rect: rectOf(node) }, window.location.origin);
+      const headings = nodes();
+      const scroll = document.scrollingElement;
+      const atEnd = scroll && scroll.scrollTop > 0 && scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop < 3;
+      const current = atEnd ? headings.at(-1) : headings.filter(node => node.getBoundingClientRect().top <= 130).at(-1) ?? headings[0];
+      const field = current?.dataset.editField;
+      if (field && field !== last) { last = field; window.parent.postMessage({type:previewEvents.outline, field}, window.location.origin); }
     }); };
-    window.addEventListener("scroll", report, true); window.addEventListener("resize", report);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", report, true); window.removeEventListener("resize", report); };
-  }, [selection.id, selection.editing]);
+    function jump(event: MessageEvent) {
+      if (event.source !== window.parent || event.origin !== window.location.origin || event.data?.type !== previewEvents.outlineJump || !fields.includes(event.data.field)) return;
+      const node = nodes().find(node => node.dataset.editField === event.data.field);
+      if (node) { node.scrollIntoView({block:"start", behavior:scrollBehavior()}); node.focus({preventScroll:true}); report(); }
+    }
+    window.addEventListener("message", jump); window.addEventListener("scroll", report, true); window.addEventListener("resize", report); report();
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("message", jump); window.removeEventListener("scroll", report, true); window.removeEventListener("resize", report); };
+  }, [outlineKey]);
   return <div ref={root} className={selection.editing ? "document-editing" : ""} onClickCapture={(event) => {
     const node = event.target as HTMLElement;
     if (!selection.editing) {

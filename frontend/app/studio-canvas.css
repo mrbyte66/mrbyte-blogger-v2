@@ -115,3 +115,32 @@ html[data-studio-view] .inline-canvas-root:has(.document-editing) .article-view 
 .inline-canvas-root .writing-selection-toolbar button { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; }
 .inline-canvas-root .writing-selection-toolbar .writing-format-more button { display:flex; width:100%; flex:0 0 auto; }
 @media(max-width:479px) { .document-editing .is-writing:empty { padding-left:20px; } }
+
+/* The frame uses the same warm paper as Studio; reading is a colour, not another editor. */
+html[data-tone="reading"] .theme-site { --panel:#fff4dc; --surface:#eddfc2; --ink:#3b3428; --muted:#75664d; --line:#dfcfad; background:#fff4dc; }
+.canvas-text-target { scroll-margin-top:40px; }
+.canvas-block-hover { outline:1px solid color-mix(in srgb,var(--ink) 12%,transparent); outline-offset:8px; border-radius:5px; }
+.inline-block-menu { --inline-paper:var(--panel); --inline-ink:var(--ink); }
+html[data-studio-view] .inline-block-menu { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:min(360px,calc(100vw - 16px)); gap:5px; padding:10px; border-radius:18px; background:var(--panel); color:var(--ink); border:1px solid var(--line); box-shadow:0 12px 36px #0002; }
+html[data-studio-view] .inline-block-menu-title,html .writing-block-actions,html[data-studio-view] .inline-block-empty { grid-column:1/-1; }
+html[data-studio-view] .inline-block-menu-title { padding:2px 5px 5px; font-size:9px; }
+html[data-studio-view] .inline-block-menu>button { display:flex; flex-direction:column; align-items:flex-start; gap:7px; min-height:70px; padding:10px; border:1px solid var(--line); border-radius:12px; background:transparent; color:var(--ink); }
+html[data-studio-view] .inline-block-menu>button:hover,html[data-studio-view] .inline-block-menu>button[aria-selected=true] { background:color-mix(in srgb,#cfc6f5 23%,var(--panel)); }
+html[data-studio-view] .inline-block-menu>button:disabled { opacity:.4; cursor:not-allowed; }
+html[data-studio-view] .inline-block-glyph { background:none; width:24px; height:24px; color:var(--ink); }
+html[data-studio-view] .inline-block-menu>button:nth-of-type(4) .inline-block-glyph { color:#ad91d2; }
+html[data-studio-view] .inline-block-text strong { font-size:11px; font-weight:500; }
+html[data-studio-view] .inline-block-text small { display:none; }
+html .writing-block-actions { justify-content:flex-end; border-top:1px solid var(--line); padding-top:5px; }
+@media(max-width:480px) { html[data-studio-view] .inline-block-menu { grid-template-columns:repeat(4,minmax(0,1fr)); } html[data-studio-view] .inline-block-menu>button { padding:8px 6px; min-height:62px; } }
+/* Keep the live page header, but give composition room to breathe in the editor. */
+html[data-studio-view] .document-editing .site-page-header { min-height:68px; padding:14px 28px; }
+html[data-studio-view] .document-editing .reading-content { padding-top:30px; }
+html[data-studio-view] .document-editing .article-view h1 { font-size:clamp(32px,4.6vw,48px); line-height:1.12; letter-spacing:-.045em; }
+html[data-studio-view] .document-editing .series-article-nav { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding:10px 14px; margin-bottom:26px; }
+html[data-studio-view] .document-editing .series-article-heading { display:flex; align-items:center; gap:12px; border:0; margin:0; padding:0; }
+html[data-studio-view] .document-editing .series-article-actions { margin:0; }
+@media(max-width:600px) { html[data-studio-view] .document-editing .site-page-header { padding-inline:18px; } html[data-studio-view] .document-editing .reading-content { padding:24px 28px 50px; } }
+html[data-studio-view] .inline-block-menu .writing-glyph { width:28px; height:28px; }
+html[data-studio-view] .inline-block-menu .inline-block-glyph { width:30px; height:30px; }
+html[data-studio-view] .inline-block-menu>button { min-height:79px; }

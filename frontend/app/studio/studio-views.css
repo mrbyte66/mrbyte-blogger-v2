@@ -1009,3 +1009,23 @@ html .studio[data-view] .rail-recent-item { animation:sv-unfold 320ms var(--sv-s
 html .studio[data-view] .studio-inspector.is-anchored { z-index:45; padding:18px; overflow:auto; border:1px solid var(--sv-glass-line); border-left:1px solid var(--sv-glass-line); border-radius:24px; background:var(--sv-glass); box-shadow:var(--sv-shadow),0 30px 60px -30px rgba(0,0,0,.35); -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px); transform-origin:top left; transition:opacity 200ms var(--sv-ease),transform 320ms var(--sv-spring),display 320ms allow-discrete; }
 html .studio[data-view] .studio-inspector.is-anchored .inspector-heading { margin-bottom:10px; }
 html .studio .block-bar kbd { display:inline-grid; place-items:center; min-width:22px; height:22px; padding:0 5px; margin:0 2px; border-radius:7px; background:var(--sv-sunk); font:600 11px/1 var(--sv-mono); color:var(--sv-ink); }
+
+/* Warm paper, as approved in the Marjinalya reading-colour mockup. */
+html[data-tone="reading"] .studio[data-view] {
+ --sv-bg:#f4e7cb; --sv-card:#fff4dc; --sv-sunk:#eddfc2; --sv-ink:#3b3428; --sv-sub:#75664d; --sv-faint:#a3967d; --sv-line:#dfcfad;
+ --sv-glass:rgba(255,244,220,.9); --sv-glass-line:rgba(82,61,30,.12); --sv-shadow:0 12px 36px -18px #63491f35;
+ --art-card:#fff8e9; --sv-primary:#3c503f; --sv-on-primary:#fff8e9;
+}
+html[data-tone="reading"] .studio[data-view="marjinalya"],html[data-tone="reading"] .studio[data-view="odak"] { --sv-accent:#d8cbef; --sv-accent-soft:#d8cbef66; }
+html[data-tone="reading"] .studio[data-view="odak"] { --sv-primary:#8972b1; --sv-on-primary:#fffaf2; }
+html[data-tone="reading"] .studio[data-view="kontakt"] { --sv-primary:#38547d; --sv-on-primary:#fffaf2; }
+/* On a phone the trigger is in the middle of the header, not at the window's right edge. */
+@media(max-width:700px) {
+ html .studio[data-view] .studio-view-popover { position:fixed; inset:128px 12px auto; width:auto; max-height:calc(100dvh - 144px); overflow:auto; transform-origin:top center; }
+}
+@media(max-width:1099px) {
+ html .studio[data-view] { grid-template-columns:minmax(0,1fr)!important; }
+ html .studio[data-view]>.studio-topbar { min-width:0; max-width:100%; width:100%; }
+ html .studio[data-view]>.studio-workspace { min-width:0; max-width:100%; }
+ html .studio[data-view] :is(.studio-location,.studio-page-picker,.studio-preview) { min-width:0; max-width:100%; }
+}

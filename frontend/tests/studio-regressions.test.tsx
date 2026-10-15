@@ -22,6 +22,7 @@ it("keeps save, content actions and live design on the article in Odak, includin
   const header=document.querySelector(".studio-topbar") as HTMLElement;
   expect(within(header).getByRole("button",{name:"Sayfayı kaydet ↗"})).toBeTruthy();
   expect(within(header).getByText("•••")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button",{name:"İçindekiler"}));
   fireEvent.click(screen.getByRole("button",{name:"Tuvale odaklan"}));
   expect(document.querySelector(".studio-focus")).toBeTruthy();
   fireEvent.click(screen.getByRole("button",{name:"Tasarım"}));

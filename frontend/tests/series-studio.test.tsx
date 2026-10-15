@@ -1,4 +1,4 @@
-import { readCanvas, writeCanvas } from "./helpers/canvas";
+import { discardWriting, readCanvas, writeCanvas, writingTool } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); if (previousScroll) Object.defineProperty(Element.prototype, "scrollIntoView", previousScroll); else Reflect.deleteProperty(Element.prototype, "scrollIntoView"); });
 function openFirst() { selectPage(initialSeries[0].title); }
-function section(name: string) { fireEvent.click(screen.getByRole("button", { name })); }
+function section(name: string) { fireEvent.click(writingTool(name)); }
 async function save() { await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Sayfayı kaydet ↗" })); }); }
 const studio = (site = new MemorySite()) => { renderWithSite(<SiteEditor />, { site, mode: "studio" }); return site; };
 
@@ -32,7 +32,7 @@ describe("series authoring beside the canvas", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seriyi kaydet" })); });
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
     expect(site.series.at(-1)).toMatchObject({ title: "Şiir ve kültür", slug: "siir-ve-kultur", status: "draft", articleSlugs: [] });
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
     selectPage(/Şiir ve kültür/);
     section("Bölümler");
     const picker = screen.getByLabelText("Bölüm ekle");
@@ -66,7 +66,7 @@ describe("series authoring beside the canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: "Vazgeç" }));
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
     expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"article"}>).article.title).toBe("Korunan yazım");
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
   });
   it("uploads a cover image in the shared page editor; series pages have no layout knobs", async () => {
     const site = studio(); openFirst(); section("Kapak görseli");

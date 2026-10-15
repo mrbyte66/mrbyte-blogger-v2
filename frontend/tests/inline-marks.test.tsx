@@ -125,13 +125,13 @@ describe("formatting in the canvas", () => {
     expect(lastEdit(post).marks).toEqual([]);
   });
 
-  it("turns the block into a heading or removes it with one press", () => {
+  it("inserts a heading below the block or removes the selected block", () => {
     const post = mount();
     open();
     expect(screen.queryByRole("toolbar")).toBeNull();
     fireEvent.click(screen.getByRole("button",{name:"Blok ekle"}));
     fireEvent.click(screen.getByRole("option",{name:"Başlık"}));
-    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "heading2" });
+    expect(lastEdit(post)).toMatchObject({ field: "paragraph-0", action: "insert-after", insertKind:"heading2" });
     open();
     fireEvent.click(screen.getByRole("button",{name:"Blok ekle"}));
     fireEvent.click(screen.getByRole("button", { name: "Bloğu sil" }));

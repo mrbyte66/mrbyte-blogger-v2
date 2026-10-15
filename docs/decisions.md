@@ -64,3 +64,7 @@ Kayıt (Mevcut/Planlanan/Tamamlandı) alanı kaldırıldı; işin durumu yalnız
 Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az gezdirerek yapabilmeli. Metin önce tuvalde doğrudan düzenlenir; ikincil araçlar seçilen alanın veya tetikleyicinin yakınında açılır. Gerekli kayıt, yayın ve gezinme kontrolleri görünüm/sayfa değişince kaybolmaz ya da yer değiştirmez. Minimalistlik gerekli işlevleri saklamak veya sahneyi boşaltmak değildir.
 
 - Sürekli yazma akışında panel açıp kapatma zorunluluğu azaltılır. Ara başlık ve alıntı seçili metnin yanında uygulanır; açık çalışma paneli tuvale dönünce kendiliğinden kapanmaz. Geniş ekranda panel yazının üstünü örtmez. Escape metni geri almaz; geri alma ayrı ve açık bir eylemdir. Bu kolaylıklar mevcut tema, tipografi ve görsel bütünlük korunarak sağlanır.
+
+### Studio tasarımı — Kenar Haritası
+
+2026-10-15: Kullanıcı dört Studio görünümüne uyarlanan Kenar Haritası tasarımının uygulanmasını seçti. Marjinalya okuma rengi çizimdeki sıcak kâğıt tonuna yaklaştırılır; lavanta ayrıntıları korunur. Doğrudan açık yazı araçları ve tek alanı paylaşan İçindekiler/Ayarlar kullanılır. Dar ekranda iki panel ile yazı sıkıştırılmaz.

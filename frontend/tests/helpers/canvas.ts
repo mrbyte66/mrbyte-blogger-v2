@@ -66,6 +66,13 @@ export function writeCanvas(field: string, value: string) {
 
 /** Open a secondary writing control through its compact menu. */
 export function writingTool(name:string) {
-  if(!screen.queryByRole("button",{name})) fireEvent.click(screen.getByLabelText("Yazı araçları"));
+  if (!screen.queryByRole("button",{name})) {
+    if (!screen.queryByRole("tab",{name:"Ayarlar"})) fireEvent.click(screen.getByRole("button",{name:"İçindekiler"}));
+    fireEvent.click(screen.getByRole("tab",{name:"Ayarlar"}));
+  }
   return screen.getByRole("button",{name});
+}
+export function discardWriting() {
+  fireEvent.click(screen.getByLabelText("İçerik işlemleri"));
+  fireEvent.click(screen.getByRole("button",{name:"Kaydedilmemiş değişiklikleri geri al"}));
 }

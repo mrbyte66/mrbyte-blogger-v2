@@ -9,6 +9,8 @@ import { isBlockId, isSceneField, parseCanvasRect, parseCaret, type CaretPositio
 import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 
 type Props = {
+  onOutlineCurrent?: (field: string) => void;
+  outlineJump?: { field: string; request: number } | null;
   onSaveRequest?: () => void;
   onHistory?: (direction: -1 | 1) => void;
   document?: DocumentDraft | null;
@@ -28,7 +30,7 @@ type Props = {
   onAnchor?: (rect: DOMRect) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor, onSaveRequest, onHistory }: Props) {
+export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor, onSaveRequest, onHistory, onOutlineCurrent, outlineJump }: Props) {
   const {session,openAuth}=useAuth();
   const [unavailable,setUnavailable]=useState(false);
   const [epoch,setEpoch]=useState(0);
@@ -47,8 +49,8 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   const [loaded, setLoaded] = useState(false);
   useEffect(()=>{if(unavailable && session) {setUnavailable(false);setLoaded(false);setEpoch(n=>n+1);} },[session]);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor });
-  current.current = { serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor };
+  const current = useRef({ serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent });
+  current.current = { serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
@@ -58,6 +60,9 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
     target?.postMessage({ type: previewEvents.selection, ...state.selection }, window.location.origin);
   }
 
+  useEffect(() => {
+    if (outlineJump) frame.current?.contentWindow?.postMessage({ type: previewEvents.outlineJump, field: outlineJump.field }, window.location.origin);
+  }, [outlineJump]);
   useEffect(() => { synchronize(); }, [serialized, document]);
   useEffect(() => {
     if (resetKey) frame.current?.contentWindow?.postMessage({ type: previewEvents.reset }, window.location.origin);
@@ -86,6 +91,7 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
           current.current.onAnchor?.(new DOMRect(box.left + rect.x * scale, box.top + rect.y * scale, rect.width * scale, rect.height * scale));
         }
       }
+      if (event.data?.type === previewEvents.outline && typeof event.data.field === "string" && isDocumentField(event.data.field)) current.current.onOutlineCurrent?.(event.data.field);
       const caret = parseCaret(event.data);
       if (caret !== undefined) current.current.onCaret?.(caret);
       if (event.data?.type === previewEvents.select && isBlockId(event.data.id) && (current.current.document ? isDocumentField(event.data.id) : current.current.workspace.draft.blocks.some((block) => block.id === event.data.id))) {

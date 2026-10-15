@@ -55,7 +55,8 @@ describe("Studio views", () => {
     expect(document.documentElement.dataset.studioView).toBe("odak");
     expect(screen.queryByRole("complementary", { name: "Kenar notları" })).toBeNull();
     expect(screen.getByLabelText("Yazı araçları")).toBeTruthy();
-    expect(screen.getByRole("switch", { name: "Odak modu" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button",{name:"Studio görünümü"}));
+    expect(screen.getByRole("switch", { name: "Yazılan bloğun dışını soluklaştır" })).toBeTruthy();
   });
 
   it("takes a stored view on the next visit and ignores unknown values", () => {
@@ -127,18 +128,17 @@ describe("Studio views", () => {
     expect(panel().hidden).toBe(false);
   });
 
-  it("opens settings beside the pressed block or the chosen writing tool", () => {
+  it("uses the shared companion panel for canvas and writing tool settings", () => {
     studio();
     selectPage(articles[0].title);
     const panel = () => screen.getByLabelText("Seçili alanın ayarları");
     canvasMessage({ type: previewEvents.select, id: "meta", rect: { x: 40, y: 200, width: 300, height: 24 } });
     expect(panel().hidden).toBe(false);
-    expect(panel().classList.contains("is-anchored")).toBe(true);
-    expect(panel().style.position).toBe("fixed");
-    expect(root().classList.contains("has-inspector")).toBe(false);
+    expect(panel().classList.contains("writing-companion")).toBe(true);
+    expect(root().classList.contains("has-inspector")).toBe(true);
     fireEvent.keyDown(document, { key: "Escape" });
     fireEvent.click(writingTool("Kapak görseli"));
-    expect(panel().classList.contains("is-anchored")).toBe(true);
+    expect(panel().classList.contains("writing-companion")).toBe(true);
   });
 
   it("offers the library as cover cards with a detail drawer in Kontakt", async () => {

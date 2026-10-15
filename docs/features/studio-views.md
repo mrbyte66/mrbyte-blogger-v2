@@ -4,8 +4,8 @@ Studio aynı araçları dört yerleşimde sunar. Seçim tarayıcıda (`satir:stu
 
 Üst çubuğun sağında üç ayrı denetim vardır, her biri tek basışta: **renk modu** (Gündüz · Okuma · Gece), **Studio görünümü** (kendi düğmesinde; dört görünüm kartı, Odak’ta soluklaştırma anahtarı) ve **hesap** (profil menüsü). Görünüm seçimi hesap menüsüne karışmaz; “Siteye dön” bağlantısı yoktur (marka kutusu siteyi açar).
 
-- **Marjinalya** (varsayılan): sol ray (Yazılar, Site) ve altında son açılan sayfalar; tasarım ile bir sayfa arasında tek basışla gidip gelinir. Üst çubukta konum/durum/tarih, yazı tuvalinde sessiz sayfa ve tuval çubuğunda küçük Yazı araçları menüsü. Adres, kapak, yayın ve özel notlar ihtiyaç halinde açılır.
-- **Odak**: sessiz üst çubukta sayfa işlemleri, tuval çubuğunda küçük araç menüsü, sağda paragraf haritası; Odak anahtarı yazılmayan blokları soluklaştırır.
+- **Marjinalya** (varsayılan): sol ray (Yazılar, Site) ve altında son açılan sayfalar; tasarım ile bir sayfa arasında tek basışla gidip gelinir. Üst çubukta konum/durum/tarih, yazı tuvalinde sessiz sayfa ve altta doğrudan görünür yazı araçları. Adres, kapak, yayın ve özel notlar ihtiyaç halinde açılır.
+- **Odak**: sessiz üst çubukta sayfa işlemleri, altta doğrudan görünür araçlar, sağda isteğe bağlı başlık haritası; Odak anahtarı yazılmayan blokları soluklaştırır.
 - **Kontakt**: pill gezinme (Yazılar, Seriler, Ana sayfa; 1100–1299 px’te yalnız ikon), kart düzeni; sayfa seçici kapak kartlı kitaplık galerisi ve ayrıntı çekmecesi açar.
 - **Sahne**: başlangıç düzenleri üst çubukta, sayfa sahnede, bloklar altta şeritte; blok paleti kendi “Blok ekle” düğmesinin üstünde açılır.
 
@@ -19,4 +19,12 @@ Studio aynı araçları dört yerleşimde sunar. Seçim tarayıcıda (`satir:stu
 
 Canlı tuval çerçevesi (`/preview?embedded=1`) görünümü <html> üzerinden okur (`app/studio-canvas.css`): site tasarımı aynen kalır, yazma yüzeyi sade kalır; görünüm, çevresindeki yerleşimi ve isteğe bağlı soluklaştırmayı değiştirir. Satır sayılan bloklar `lib/builder/rows.ts` ile CSS’te aynı listedir. Tuvalden gelen düzenlemeler render beklenmeden en güncel taslağa uygulanır; taslak tuvalin başladığı metni tutmuyorsa tuvaldeki değer geçerli olur. Geri alma ya da sunucu kopyası tuvaldeki yazımı bitirip metni yeniler (`mrbyte:canvas-reset`).
 
-Yazı ve seri düzenlerken Tasarım düğmesi aynı site tema taslağını açar; ayarlar o sayfanın tuvalinde canlı görünür. Temayı uygula açık bir işlemdir ve yazı kaydından ayrıdır. Odak dahil bütün görünümlerde Kaydet/yayın işlemleri üst çubukta, yazı araçları tuval çubuğunda kalır. Düzenle modunda site header’ı korunur. Bağımsız yazı/seri seçimi kaydetmeden önce de önizlemeye yansır; ziyaretçinin yayınlanmış sayfası bu seçimden etkilenmez.
+Yazı ve seri düzenlerken Tasarım düğmesi aynı site tema taslağını açar; ayarlar o sayfanın tuvalinde canlı görünür. Temayı uygula açık bir işlemdir ve yazı kaydından ayrıdır. Odak dahil bütün görünümlerde Kaydet/yayın işlemleri üst çubukta, yazı araçları tuvalin altında kalır. Düzenle modunda site header’ı korunur. Bağımsız yazı/seri seçimi kaydetmeden önce de önizlemeye yansır; ziyaretçinin yayınlanmış sayfası bu seçimden etkilenmez.
+
+## Kenar Haritası — 2026-10-15
+
+Yazı başlığı ve H2/H3 bölümlerinden İçindekiler otomatik oluşur. Bir başlığa tıklamak tuvali o bölüme kaydırır; kaydırma sırasında aktif bölüm güncellenir. Paragraflar, alıntılar ve özel notlar başlık diye listelenmez. Yeni başlıklar ve başlık değişiklikleri kaydetmeden önce haritada görünür.
+
+İçindekiler ve Ayarlar tek sağ panelin sekmeleridir. Masaüstünde yan yana ikinci bir inspector açılmaz. Ayar içeriği sekme değişiminde korunur. Dar ekranda panel geçici açılır ve başlık seçilince kapanır. Ortak renk modu Gündüz/Okuma/Gece arasında kontrol kaybettirmez; okuma rengi sıcak kâğıttır.
+
+Metin, Başlık, Alıntı, Görsel, Kod, Tablo ve pasif Ses araçları doğrudan görünür. Yapı kartları ana sayfa düzeninde korunur; yazının başlık haritasıyla karıştırılmaz. Odak ana sayfa dock'u Yapı, Tasarım, Önizle ve Uygula eylemlerini birlikte sunar. İşlevi olmayan odak düğmesi gösterilmez.

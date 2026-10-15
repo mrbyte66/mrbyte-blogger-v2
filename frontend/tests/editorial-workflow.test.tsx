@@ -1,5 +1,5 @@
 import { writingTool } from "./helpers/canvas";
-import { readCanvas, writeCanvas } from "./helpers/canvas";
+import { discardWriting, readCanvas, writeCanvas } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -36,7 +36,6 @@ describe("article-first editorial workflow", () => {
     expect(site.series[0].articleSlugs).toContain("yeni-bolum");
     expect(publicArticles(site.articles).some((a) => a.slug === "yeni-bolum")).toBe(false);
     expect(publicSeries(site.series, site.articles)[0].articleSlugs).not.toContain("yeni-bolum");
-    fireEvent.click(writingTool("Metin ve paragraflar"));
     writeCanvas("paragraph-0", "İlk bölümün metni.");
     await action("Yayına al");
     expect(publicSeries(site.series, site.articles)[0].articleSlugs).toContain("yeni-bolum");
@@ -51,7 +50,6 @@ describe("article-first editorial workflow", () => {
     expect(savedSeries).toMatchObject({ title: "Yeni ufuklar", slug: "yeni-ufuklar", status: "draft" });
     expect(screen.getByRole("button", {name:"Yazının serisi"}).textContent).toContain(savedSeries.title);
     expect(screen.queryByLabelText("Yeni seri başlığı")).toBeNull();
-    fireEvent.click(writingTool("Metin ve paragraflar"));
     writeCanvas("paragraph-0", "İlk yazı.");
     await action("Yayına al");
     // The series stays a draft: publishing a series is an explicit, separate owner action (Ü6).
@@ -146,7 +144,6 @@ describe("standalone series creation on the live canvas", () => {
     expect(site.series).toHaveLength(seriesCount + 1);
     expect(created).toMatchObject({ title: "Mevsim defteri", slug: "mevsim-defteri", status: "draft", articleSlugs: [] });
     expect(screen.getByText("Taslak kaydedildi; ziyaretçilerden gizli.")).toBeTruthy();
-    fireEvent.click(writingTool("Seri başlığı"));
     writeCanvas("title", "Mevsim defteri 2");
     expect(screen.queryByText("Taslak kaydedildi; ziyaretçilerden gizli.")).toBeNull();
     writeCanvas("title", "Mevsim defteri");
@@ -224,7 +221,7 @@ describe("standalone series creation on the live canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: site.series[0].title }));
     expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"series"}>).series.title).toBe("Kaybolmasın");
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
     expect(screen.queryByLabelText("Seri başlığı")).toBeNull();
     expect(site.series).toHaveLength(count);
   });

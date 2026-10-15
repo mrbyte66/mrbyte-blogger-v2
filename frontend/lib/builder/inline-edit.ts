@@ -2,7 +2,7 @@ import type { PageBlock } from "./model";
 import type { DocumentDraft } from "./document-protocol";
 import { adjustMarks, safeMarks, splitMarks, validMarks, type TextMark } from "../articles/marks";
 export const inlineEditEvent = "mrbyte:inline-edit";
-export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; offset?: number; end?: number; pasteText?: string; marks?: TextMark[]; action?: "join-previous" | "join-next" | "paste" | "split" | "move-up" | "move-down" | "insert-after" | "remove" | "paragraph" | "heading2" | "heading3" | "quote" };
+export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; insertKind?: "paragraph" | "heading2" | "heading3" | "quote"; offset?: number; end?: number; pasteText?: string; marks?: TextMark[]; action?: "join-previous" | "join-next" | "paste" | "split" | "move-up" | "move-down" | "insert-after" | "remove" | "paragraph" | "heading2" | "heading3" | "quote" };
 const themeFields: Partial<Record<PageBlock["kind"], Record<string, number>>> = {
   scene: { title: 160, emphasis: 160, description: 2000 }, intro: { title: 160, eyebrow: 120, description: 2000 },
   articles: { title: 160 }, series: { title: 160 }, projects: { title: 160 },
@@ -30,7 +30,7 @@ export function documentText(draft: DocumentDraft, field: string): { value: stri
 export function parseInlineEdit(value: unknown): InlineEdit | null {
   if (!value || typeof value !== "object") return null;
   const e = value as InlineEdit;
-  return (e.end === undefined || (Number.isInteger(e.end) && e.end >= (e.offset ?? 0) && e.end <= 20000)) && (e.pasteText === undefined || (e.action === "paste" && typeof e.pasteText === "string" && e.pasteText.length <= 20000)) && (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || ["join-previous", "join-next", "paste", "split", "move-up", "move-down", "insert-after", "remove", "paragraph", "heading2", "heading3", "quote"].includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
+  return (e.insertKind === undefined || (e.action === "insert-after" && ["paragraph","heading2","heading3","quote"].includes(e.insertKind))) && (e.end === undefined || (Number.isInteger(e.end) && e.end >= (e.offset ?? 0) && e.end <= 20000)) && (e.pasteText === undefined || (e.action === "paste" && typeof e.pasteText === "string" && e.pasteText.length <= 20000)) && (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || ["join-previous", "join-next", "paste", "split", "move-up", "move-down", "insert-after", "remove", "paragraph", "heading2", "heading3", "quote"].includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
 }
 export function editThemeText(block: PageBlock, edit: InlineEdit): PageBlock | null {
   const text = themeText(block, edit.field);
@@ -53,7 +53,9 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
     const paragraphMarks: TextMark[][] = draft.article.paragraphs.map((_,i)=>[...(draft.article.paragraphMarks?.[i] ?? [])]);
     const carried = paragraphFormats[index].kind === "heading" ? [] : safeMarks(edit.value, edit.marks ?? adjustMarks(edit.previous, edit.value, paragraphMarks[index]));
     paragraphMarks[index] = carried;
-    if (edit.action === "insert-after") { paragraphs.splice(index+1,0,""); paragraphFormats.splice(index+1,0,{kind:"paragraph"}); paragraphMarks.splice(index+1,0,[]); blockIds?.paragraphs.splice(index+1,0,crypto.randomUUID()); }
+    if (edit.action === "insert-after") { const kind=edit.insertKind ?? "paragraph";
+      paragraphs.splice(index+1,0,kind === "paragraph" ? "" : kind === "quote" ? "Alıntı" : kind === "heading3" ? "Alt başlık" : "Başlık");
+      paragraphFormats.splice(index+1,0,kind === "heading2" || kind === "heading3" ? {kind:"heading",level:kind === "heading3" ? 3 : 2} : {kind}); paragraphMarks.splice(index+1,0,[]); blockIds?.paragraphs.splice(index+1,0,crypto.randomUUID()); }
     if(edit.action === "split") {
       if(edit.offset === undefined || edit.offset>edit.value.length) return null;
       paragraphs[index]=edit.value.slice(0,edit.offset); paragraphs.splice(index+1,0,edit.value.slice(edit.end ?? edit.offset));

@@ -5,6 +5,8 @@ export const previewEvents = {
   redo: "mrbyte:redo-document",
   workspace: "mrbyte:preview",
   ready: "mrbyte:canvas-ready",
+  outline: "mrbyte:canvas-outline-current",
+  outlineJump: "mrbyte:canvas-outline-jump",
   selection: "mrbyte:canvas-selection",
   select: "mrbyte:select-block",
   /** Where the writing caret is: block row (as numbered in the canvas) and column. `null` row = no caret. */

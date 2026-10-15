@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { type ContentStatus } from "../../lib/editorial/store";
-export function DocumentActions({ status, disabled, canPublish, publishHint = "", onSave, onSchedule }: { status: ContentStatus; disabled: boolean; canPublish: boolean; publishHint?: string; onSave: (status: ContentStatus) => void; onSchedule?: () => void }) {
+export function DocumentActions({ status, disabled, canPublish, publishHint = "", onSave, onSchedule, onRevert, canRevert = false }: { status: ContentStatus; disabled: boolean; canPublish: boolean; publishHint?: string; onSave: (status: ContentStatus) => void; onSchedule?: () => void; onRevert?: () => void; canRevert?: boolean }) {
   const root = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     function outside(event: PointerEvent) { if (root.current?.open && !root.current.contains(event.target as Node)) root.current.open = false; }
@@ -16,6 +16,7 @@ export function DocumentActions({ status, disabled, canPublish, publishHint = ""
     <button disabled={disabled} onClick={() => act("draft")}>{status === "trashed" || status === "archived" ? "Taslağa geri yükle" : "Taslak olarak kaydet"}</button>
     {status !== "archived" && status !== "trashed" && <button disabled={disabled} onClick={() => act("archived")}>Arşivle</button>}
     {status !== "trashed" && <button className="document-trash" disabled={disabled} onClick={() => act("trashed")}>Sil · çöp kutusuna taşı</button>}
+    {onRevert && <button disabled={!canRevert} onClick={() => { if(root.current) root.current.open=false; onRevert(); }}>Kaydedilmemiş değişiklikleri geri al</button>}
     <p>Arşiv ve çöp kutusu ziyaretçiden gizlenir. İçerikler geri yüklenebilir; kalıcı silme yoktur.</p>
   </div></details>;
 }

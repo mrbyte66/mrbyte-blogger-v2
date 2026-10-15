@@ -17,3 +17,5 @@
 İmleç konumu tuval çerçevesinden iletilir; yazma yüzeyinde teknik satır/sütun bilgisi gösterilmez.
 
 Seçili metnin yanındaki araç çubuğunda ara başlık ve alıntı tek tıkla uygulanır; aynı düğme paragraf biçimine döndürür. Biçim değişiminde metin içi vurgular korunur. Yazarken Escape düzenlemeyi bitirir, yazılan metni geri almaz.
+
+Hover ile görünen ＋, tıklama ile önce yazma alanı seçmeyi gerektirmez. Dolu paragrafta menüden bir metin türü seçmek altına yeni blok ekler; mevcut metin ve işaretlemeler korunur. Slash kısayolu mevcut satırı dönüştürmeye devam eder. Ekleme menüsü ile seçili metin biçim araçları aynı anda gösterilmez.

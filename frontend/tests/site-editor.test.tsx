@@ -1,4 +1,4 @@
-import { readCanvas, writeCanvas, writingTool } from "./helpers/canvas";
+import { discardWriting, readCanvas, writeCanvas, writingTool } from "./helpers/canvas";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ArticleRoute } from "../components/builder/ArticlePage";
@@ -81,7 +81,7 @@ describe("page editing and visitor content", () => {
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(screen.getByRole("alert").textContent).toContain("kalıcı bağlantı kullanılıyor");
     expect(site.articles.filter((a) => a.slug === articles[0].slug)).toHaveLength(1);
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
     expect(screen.queryByLabelText("Yazı başlığı")).toBeNull();
   });
   it("adds an article to a series from the series editor with the server keeping membership", async () => {
@@ -116,7 +116,7 @@ describe("page editing and visitor content", () => {
     await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
     expect(screen.getByRole("alert").textContent).toContain("Kaydedilemedi");
     expect(site.article(articles[0].slug)!.title).toBe(articles[0].title);
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
     expect((readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"article"}>).article.title).toBe(articles[0].title);
     selectPage(/Ana sayfa/);
     expect(screen.queryByLabelText("Yazı başlığı")).toBeNull();
@@ -127,7 +127,7 @@ describe("page editing and visitor content", () => {
     message({ type: previewEvents.select, id: "meta" });
     fireEvent.change(screen.getByLabelText("Kalıcı bağlantı adı"), { target: { value: "henuz-kaydedilmedi" } });
     expect(screen.getByRole("link", { name: /Kaydedilmiş sayfayı aç/ }).getAttribute("href")).toBe(`/seriler/${initialSeries[0].slug}`);
-    fireEvent.click(screen.getByRole("button", { name: "Değişiklikleri geri al" }));
+    discardWriting();
     message({ type: previewEvents.select, id: "summary" });
     writeCanvas("summary", "Yeni seri açıklaması");
     expect(site.series[0].summary).toBe(initialSeries[0].summary);

@@ -1,93 +1,113 @@
-/* A stable, quiet writing surface shared by the four personal Studio views. */
-html .studio.writing-studio[data-view] > .studio-workspace {
- grid-template-columns:minmax(0,1fr)!important;
- display:grid;
- grid-template-rows:minmax(0,1fr)!important;
- grid-template-areas:"canvas"!important;
-}
-html .studio.writing-studio[data-view] .studio-preview { grid-area:canvas; min-width:0; }
-html .studio.writing-studio[data-view] .studio-inspector { position:fixed; z-index:40; inset:100px 28px auto auto; width:340px; height:auto; max-height:calc(100dvh - 128px); border:1px solid var(--sv-line); border-radius:22px; box-shadow:var(--sv-shadow); }
-.writing-tools { position:relative; }
-.writing-tools>summary { display:flex; align-items:center; gap:7px; list-style:none; cursor:pointer; color:var(--sv-ink); font-size:12px; padding:8px 10px; border:1px solid var(--sv-line); border-radius:999px; white-space:nowrap; }
-.writing-tools>summary::-webkit-details-marker { display:none; }
-.writing-tools>nav { position:absolute; top:calc(100% + 8px); left:0; width:220px; max-height:60dvh; overflow:auto; padding:8px; border:1px solid var(--sv-line); border-radius:16px; background:var(--sv-card); box-shadow:var(--sv-shadow); z-index:50; animation:writing-menu-in 160ms ease-out; }
-html .studio.writing-studio[data-view] .writing-tools>nav { display:flex; flex-direction:column; gap:2px; }
-html .studio.writing-studio[data-view] .writing-tools>nav button { display:flex; width:100%; min-width:0; min-height:36px; flex-direction:row; gap:10px; padding:8px 10px; background:transparent; border:0; border-radius:9px; box-shadow:none; color:var(--sv-ink); }
-html .studio.writing-studio[data-view] .writing-tools>nav button>span { display:inline; font-size:12px; opacity:1; }
-html .studio.writing-studio[data-view] .writing-tools>nav button:hover { background:var(--sv-sunk); }
-html .studio.writing-studio[data-view] .studio-margin,
-html .studio.writing-studio[data-view] .focus-goal,
-html .studio.writing-studio[data-view] .focus-readout,
-html .studio.writing-studio[data-view] .studio-dateline { display:none; }
-html .studio.writing-studio[data-view] .studio-canvas-tools { flex-wrap:wrap; flex:0 0 auto; min-height:58px; height:auto; padding:10px 0; gap:8px; margin:0; align-self:stretch; justify-self:stretch; }
-html .studio.writing-studio[data-view] .canvas-controls { flex-shrink:0; }
-.writing-voice { display:flex; align-items:center; gap:6px; padding:5px 9px; color:var(--sv-sub); background:none; border:1px solid var(--sv-line); border-radius:999px; height:29px; font-size:11px; opacity:.45; cursor:not-allowed; white-space:nowrap; }
-.writing-voice small { font-size:8px; }
-html .studio.writing-studio[data-view] .canvas-context { gap:8px; min-width:0; flex-wrap:wrap; }
-html .studio.writing-studio[data-view] .studio-header-state { gap:9px; }
-html .studio.writing-studio[data-view] .studio-saved { min-width:90px; font-size:10px; }
-html .studio.writing-studio[data-view] .studio-status:not(:empty) { position:absolute; z-index:35; bottom:16px; left:50%; transform:translateX(-50%); margin:0; max-width:calc(100% - 32px); border:1px solid var(--sv-line); border-radius:12px; box-shadow:var(--sv-shadow); }
-html .studio.writing-studio[data-view] .studio-inspector { animation:writing-menu-in 160ms ease-out; transition:none; }
-
-html .studio.writing-studio[data-view] .studio-icon-button { width:36px; height:36px; flex:0 0 36px; }
-@keyframes writing-menu-in { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-@media(max-width:700px) {
- html .studio.writing-studio[data-view] .studio-canvas-tools { height:auto; min-height:0; flex-wrap:wrap; gap:8px; }
- html .studio.writing-studio[data-view] .canvas-context { width:100%; justify-content:flex-start; }
- html .studio.writing-studio[data-view] .canvas-controls { width:100%; justify-content:flex-end; }
- html .studio.writing-studio[data-view] .studio-inspector { inset:auto 8px 8px; width:auto; max-height:70dvh; border-radius:20px; }
-
- html .studio.writing-studio[data-view] .studio-saved { display:none; }
- .writing-voice { padding-inline:6px; font-size:10px; }
-}
-@media(prefers-reduced-motion:reduce) { .writing-tools>nav,html .studio.writing-studio[data-view] .studio-inspector { animation:none; } }
-html[data-motion="off"] .writing-tools>nav,html[data-motion="off"] .studio.writing-studio[data-view] .studio-inspector { animation:none; }
-.canvas-session-message { max-width:310px; text-align:center; padding:24px; }
-.canvas-session-message p { line-height:1.7; font-size:13px; }
-.canvas-session-message button { margin-top:12px; border:1px solid var(--line); border-radius:999px; padding:10px 18px; background:var(--panel); color:var(--ink); font-size:12px; }
-html .studio.writing-studio[data-view] .studio-top-actions>.studio-primary { width:92px; flex:0 0 92px; min-width:0; padding-inline:8px; white-space:nowrap; font-size:12px; }
-html .studio.writing-studio[data-view] .studio-top-actions>.studio-publish { width:82px; flex-basis:82px; }
-html .studio.writing-studio[data-view] .studio-state { min-width:65px; justify-content:center; }
-html .studio.writing-studio[data-view] .studio-state-suffix { display:none; }
-html .studio.writing-studio[data-view] .studio-top-actions { flex-shrink:0; }
-@media(max-width:700px) { html .studio.writing-studio[data-view] .studio-top-actions>.studio-primary { width:78px; flex-basis:78px; font-size:11px; } html .studio.writing-studio[data-view] .studio-top-actions>.studio-publish { width:72px; flex-basis:72px; } }
-
-/* View colours and character remain personal; page commands never change location. */
-html .studio.writing-studio[data-view] .studio-preview { display:flex; flex-direction:column; width:100%; height:100%; max-width:none; margin:0; padding:0 24px 18px; min-height:0; }
+/* Satırın Ritmi: the page, a shared companion panel and direct writing tools. */
+html .studio.writing-studio[data-view] > .studio-workspace { display:grid; grid-template-columns:minmax(0,1fr)!important; grid-template-rows:minmax(0,1fr)!important; grid-template-areas:"canvas"!important; min-height:0; }
+html .studio.writing-studio[data-view] .studio-preview { grid-area:canvas; display:flex; flex-direction:column; min-width:0; min-height:0; width:100%; height:100%; max-width:none; margin:0; padding:0 20px 16px; }
 html .studio.writing-studio[data-view] .studio-canvas { flex:1 1 0; min-height:0; width:100%; height:auto; margin:0; }
-html .studio.writing-studio[data-view] .studio-inspector .site-design-controls { grid-column:1/-1; }
-.site-design-apply { position:sticky; bottom:-24px; padding:14px 0 0; background:var(--sv-card); border-top:1px solid var(--sv-line); }
+html .studio.writing-studio[data-view] .studio-canvas-tools { flex:0 0 auto; display:flex; flex-wrap:wrap; justify-content:space-between; min-height:56px; height:auto; gap:8px; padding:9px 0; margin:0; align-self:stretch; justify-self:stretch; }
+html .studio.writing-studio[data-view] .canvas-context { gap:9px; min-width:0; flex-wrap:wrap; }
+html .studio.writing-studio[data-view] .canvas-controls { flex-shrink:0; }
+html .studio.writing-studio[data-view] :is(.studio-margin,.focus-goal,.focus-readout,.focus-minimap,.studio-dateline) { display:none; }
+html .studio.writing-studio[data-view] .studio-icon-button { width:34px; height:34px; flex:0 0 34px; }
+html .studio.writing-studio[data-view] .studio-top-actions { flex-shrink:0; }
+html .studio.writing-studio[data-view] .studio-top-actions>.studio-primary { min-width:0; padding-inline:17px; white-space:nowrap; font-size:12px; }
+html .studio.writing-studio[data-view] .studio-header-state { gap:9px; }
+html .studio.writing-studio[data-view] .studio-saved { font-size:10px; }
+html .studio.writing-studio[data-view] .studio-state-suffix { display:none; }
+html .studio.writing-studio[data-view] .studio-status:not(:empty) { position:absolute; z-index:35; bottom:94px; left:50%; transform:translateX(-50%); max-width:calc(100% - 32px); margin:0; border:1px solid var(--sv-line); border-radius:12px; box-shadow:var(--sv-shadow); }
+.writing-tool-ribbon { flex:0 0 auto; display:flex; align-items:stretch; justify-content:space-between; gap:12px; margin-top:12px; padding:7px; border:1px solid var(--sv-line); border-radius:19px; background:var(--sv-card); box-shadow:0 8px 24px color-mix(in srgb,var(--sv-ink) 4%,transparent); }
+.writing-tool-primary,.writing-tool-settings { display:flex; align-items:stretch; gap:2px; min-width:0; }
+.writing-tool-primary { flex:1; flex-wrap:wrap; }
+.writing-tool-settings { padding-left:10px; border-left:1px solid var(--sv-line); }
+.writing-tool-ribbon button { display:flex; flex:1 0 auto; justify-content:center; align-items:center; gap:8px; min-height:40px; padding:8px 12px; border:0; border-radius:12px; background:transparent; color:var(--sv-ink); cursor:pointer; font-family:var(--sv-ui); font-size:12px; transition:background 160ms ease,transform 160ms ease; }
+.writing-tool-ribbon button svg { color:var(--sv-primary); }
+.writing-tool-ribbon button:nth-child(3) svg { color:#b7a0dc; fill:color-mix(in srgb,#cfc6f5 16%,transparent); }
+.writing-tool-ribbon button:hover:not(:disabled) { background:var(--sv-sunk); }
+.writing-tool-ribbon button:active:not(:disabled) { transform:translateY(1px); }
+.writing-tool-ribbon button:focus-visible { outline:2px solid var(--sv-primary); outline-offset:1px; }
+.writing-tool-ribbon button:disabled { opacity:.4; cursor:not-allowed; }
+.writing-tool-ribbon small { font-size:9px; color:var(--sv-sub); }
+html .studio.writing-studio[data-view] .writing-companion { z-index:30; padding:0; display:flex; flex-direction:column; min-height:0; border:1px solid var(--sv-line); border-radius:22px; background:var(--sv-card); box-shadow:none; overflow:hidden; animation:writing-panel-in 180ms ease-out; }
+html .studio.writing-studio[data-view] .writing-companion[hidden] { display:none; }
+.writing-panel-tabs { display:flex; align-items:center; gap:4px; padding:12px 14px 0; flex:0 0 auto; border-bottom:1px solid var(--sv-line); }
+.writing-panel-tabs button { position:relative; min-height:42px; padding:8px 10px 13px; background:none; border:0; color:var(--sv-sub); font-family:var(--sv-ui); font-size:12px; cursor:pointer; }
+.writing-panel-tabs [aria-selected=true] { color:var(--sv-ink); font-weight:600; }
+.writing-panel-tabs [aria-selected=true]::after { content:""; position:absolute; height:3px; bottom:0; left:10px; right:10px; border-radius:3px; background:var(--sv-primary); }
+.writing-panel-tabs .writing-panel-close { margin-left:auto; padding-inline:5px; }
+.writing-companion [role=tabpanel] { min-height:0; flex:1; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:20px 16px; }
+.document-outline { min-height:100%; display:flex; flex-direction:column; }
+.document-outline ol { padding:0; margin:22px 0; list-style:none; }
+.document-outline li { position:relative; }
+.document-outline li::before { content:""; position:absolute; left:11px; top:0; bottom:0; width:1px; background:var(--sv-line); }
+.document-outline li:first-child::before { top:50%; }
+.document-outline li:last-child::before { bottom:50%; }
+.document-outline button { width:100%; display:flex; align-items:center; gap:11px; padding:14px 10px 14px 4px; border:0; border-radius:12px; background:none; color:var(--sv-sub); font:400 14px/1.45 var(--sv-display); text-align:left; cursor:pointer; overflow-wrap:anywhere; }
+.document-outline button:hover { background:var(--sv-sunk); color:var(--sv-ink); }
+.document-outline button[aria-current] { color:var(--sv-ink); background:var(--sv-accent-soft); }
+.document-outline button i { position:relative; flex:0 0 15px; width:15px; height:15px; border:1px solid var(--sv-faint); border-radius:50%; background:var(--sv-card); transform:scale(.65); }
+.document-outline button[aria-current] i { border-color:var(--sv-primary); background:var(--sv-primary); box-shadow:0 0 0 5px color-mix(in srgb,var(--sv-primary) 18%,transparent); }
+.document-outline li[data-level="3"] button { padding-left:22px; font-size:13px; }
+.document-outline li[data-level="3"]::before { left:29px; }
+.outline-number { font:10px var(--sv-mono); min-width:15px; color:var(--sv-sub); }
+.document-outline footer { margin-top:auto; padding-top:18px; border-top:1px solid var(--sv-line); }
+.document-outline footer span { display:block; color:var(--sv-sub); font-size:10px; margin-bottom:7px; }
+.document-outline footer strong { font:400 16px/1.4 var(--sv-display); overflow-wrap:anywhere; }
+.outline-empty { padding:18px 4px; color:var(--sv-sub); font-size:12px; line-height:1.7; }
+.outline-empty>svg { color:#b7a0dc; }
+.outline-empty button { font:12px var(--sv-ui); padding:8px 0; color:var(--sv-ink); }
+.writing-setting-choices { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:20px; }
+.writing-setting-choices button { display:flex; align-items:center; gap:5px; padding:7px 9px; border:1px solid var(--sv-line); border-radius:999px; font:10px var(--sv-ui); color:var(--sv-sub); background:transparent; cursor:pointer; }
+.writing-setting-choices button[aria-pressed=true] { background:var(--sv-accent-soft); color:var(--sv-ink); border-color:transparent; }
+.writing-setting-title { margin:0 0 20px; font-size:20px; letter-spacing:-.5px; }
+html .studio.writing-studio[data-view] .writing-companion .inspector-fields { display:block; padding:0; }
+.site-design-apply { position:sticky; bottom:-20px; padding:14px 0 0; background:var(--sv-card); border-top:1px solid var(--sv-line); }
 .site-design-apply .studio-primary { width:100%; }
 .site-design-apply p { font-size:12px; line-height:1.5; margin:8px 0; }
+@keyframes writing-panel-in { from { opacity:0; transform:translateX(5px); } to { opacity:1; transform:none; } }
 @media(min-width:1100px) {
  html .studio.writing-studio[data-view="odak"],html .studio.writing-studio[data-view="kontakt"],html .studio.writing-studio[data-view="sahne"] { display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:72px minmax(0,1fr); grid-template-areas:"top" "work"; padding:0; align-items:stretch; gap:0; }
  html .studio.writing-studio[data-view]:not([data-view="marjinalya"])>.studio-topbar { grid-area:top; display:flex; height:72px; padding:0 24px; border-bottom:1px solid var(--sv-line); gap:12px; }
- html .studio.writing-studio[data-view]:not([data-view="marjinalya"])>.studio-workspace { grid-area:work; margin:0; height:auto; overflow:hidden; }
+ html .studio.writing-studio[data-view]:not([data-view="marjinalya"])>.studio-workspace { grid-area:work; height:auto; overflow:hidden; margin:0; }
  html .studio.writing-studio[data-view] .studio-location { display:flex; flex:1; min-width:0; gap:12px; }
- html .studio.writing-studio[data-view] .studio-page-picker { min-width:0; flex:0 1 380px; max-width:380px; }
+ html .studio.writing-studio[data-view] .studio-page-picker { min-width:0; flex:0 1 350px; max-width:350px; }
  html .studio.writing-studio[data-view] .studio-page-trigger strong { max-width:100%; }
  html .studio.writing-studio[data-view] .studio-top-actions { margin-left:auto; display:flex; gap:8px; }
- html .studio.writing-studio[data-view="odak"] .studio-preview { max-width:1240px; margin:auto; }
- html .studio.writing-studio[data-view="sahne"] .studio-canvas { padding:20px 68px; }
- html .studio.writing-studio[data-view="sahne"] .studio-canvas-tools { z-index:7; }
+ html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view]>.studio-workspace { grid-template-columns:minmax(0,1fr) 264px!important; grid-template-areas:"canvas inspector"!important; }
+ html .studio.writing-studio[data-view] .writing-companion { grid-area:inspector!important; position:relative!important; inset:auto!important; width:auto!important; height:auto!important; max-height:none!important; margin:14px 16px 16px 0; align-self:stretch; }
+ html .studio.writing-studio[data-view="sahne"] .studio-canvas { padding:18px 28px; }
+ html .studio.writing-studio[data-view="odak"] .writing-tool-ribbon { border-radius:999px; }
+ html .studio.writing-studio[data-view="kontakt"] .studio-pills { flex:0 1 auto; }
+ html .studio.writing-studio[data-view="kontakt"] .studio-pills .studio-nav-item { min-width:0; padding-inline:12px; }
+}
+@media(max-width:1099px) {
+ .studio .canvas-focus-toggle { display:none!important; }
+ html .studio.writing-studio[data-view] .writing-companion { position:fixed; inset:100px 16px auto auto; width:min(310px,calc(100vw - 32px)); height:min(600px,calc(100dvh - 124px)); max-height:none; box-shadow:var(--sv-shadow); }
+ html .studio.writing-studio[data-view] .studio-header-state .studio-saved { display:none; }
 }
 @media(max-width:700px) {
  html .studio.writing-studio[data-view] .studio-preview { padding:0 10px 10px; }
- .writing-voice span,.writing-voice small { display:none; }
- .writing-tools>nav { max-width:calc(100vw - 32px); }
+ html .studio.writing-studio[data-view] .studio-canvas-tools { gap:8px; }
+ html .studio.writing-studio[data-view] .canvas-context { flex:1; }
+ html .studio.writing-studio[data-view] .canvas-controls { flex-wrap:wrap; justify-content:flex-end; }
+ html .studio.writing-studio[data-view] .studio-top-actions>.studio-primary { padding-inline:10px; font-size:11px; }
+ .writing-tool-ribbon { flex-wrap:wrap; gap:5px; padding:5px; margin-top:8px; border-radius:16px; }
+ .writing-tool-primary { flex:1 1 100%; justify-content:center; }
+ .writing-tool-ribbon button { flex:1 0 25%; min-height:36px; padding:6px 7px; font-size:10px; gap:5px; }
+ .writing-tool-primary button svg { width:17px; height:17px; }
+ .writing-tool-settings { width:100%; border-left:0; border-top:1px solid var(--sv-line); padding:4px 0 0; }
+ .writing-tool-settings button { flex-basis:auto; }
+ html .studio.writing-studio[data-view] .writing-companion { inset:auto 8px 8px; width:auto; height:min(60dvh,530px); border-radius:20px; }
 }
-
-/* A companion surface, not a popover over the sentence being written. */
-@media(min-width:1100px) {
- html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view] > .studio-workspace {
-  grid-template-columns:minmax(0,1fr) 320px!important;
-  grid-template-areas:"canvas inspector"!important;
- }
- html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view] .studio-inspector {
-  grid-area:inspector!important; position:relative!important; inset:auto!important;
-  width:auto!important; height:auto!important; min-height:0; max-height:none!important;
-  margin:14px 16px 18px 0; overflow:auto; align-self:stretch;
-  box-shadow:0 8px 28px color-mix(in srgb,var(--sv-ink) 5%,transparent);
- }
- html .studio.writing-studio.has-writing-panel[data-view="sahne"] .studio-canvas { padding-inline:24px; }
+@media(prefers-reduced-motion:reduce) { .writing-companion,.writing-tool-ribbon button { animation:none!important; transition:none!important; } }
+html[data-motion=off] .writing-companion { animation:none!important; }
+.canvas-session-message { max-width:310px; text-align:center; padding:24px; }
+.canvas-session-message p { line-height:1.7; font-size:13px; }
+.canvas-session-message button { margin-top:12px; border:1px solid var(--line); border-radius:999px; padding:10px 18px; background:var(--panel); color:var(--ink); font-size:12px; }
+html .studio.writing-studio.studio-focus[data-view] .writing-companion { display:none; }
+/* Legacy view rules must not create implicit columns or a clipped desktop-width mobile canvas. */
+html .studio.writing-studio[data-view]>.studio-workspace { display:grid!important; min-width:0; max-width:100%; }
+html .studio.writing-studio[data-view] .studio-preview { grid-column:1!important; grid-row:1!important; }
+html .studio.writing-studio[data-view] .writing-companion { transition:none; }
+@media(max-width:1099px) {
+ html .studio.writing-studio[data-view] { grid-template-columns:minmax(0,1fr)!important; }
+ html .studio.writing-studio[data-view]>.studio-workspace { width:100%; margin:0; }
+ html .studio.writing-studio[data-view] .studio-preview { max-width:100%; }
 }

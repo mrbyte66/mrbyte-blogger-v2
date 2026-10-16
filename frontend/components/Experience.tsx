@@ -66,6 +66,6 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
     </div>
 
     <footer className="site-footer"><span className="footer-signature">HER ŞEY BİR MERAKLA BAŞLAR.</span><span className="scene-indicator"><span aria-hidden="true">✳</span> BURADASIN</span><div className="scene-controls" inert={editing}><AmbientAudioToggle scene /></div></footer>
-    <ContentPanel navigation={navigation} dispatch={dispatch} siteName={siteName} />
+    <ContentPanel navigation={navigation} dispatch={dispatch} siteName={siteName} defaultDark={colorMode === "dark"} />
   </section>;
 }

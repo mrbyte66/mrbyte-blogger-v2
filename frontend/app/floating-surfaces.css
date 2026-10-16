@@ -31,8 +31,8 @@ html .utility-island .account-dropdown--island { --panel:inherit; --surface:inhe
 @media(max-width:560px) {
  .experience .site-header:has(.utility-island) { height:auto; min-height:0; padding:14px 12px 0; flex-wrap:wrap; justify-content:center; gap:8px; }
  .site-header:has(.utility-island) .wordmark { flex-basis:100%; text-align:center; font-size:24px; }
- .experience .utility-island { margin:0; padding:4px; gap:2px; }
- .experience .utility-island .color-mode-switch { --cm-size:44px; }
+ .experience .site-header>.utility-island { margin:0; padding:4px; gap:2px; }
+ .experience .site-header>.utility-island .color-mode-switch { --cm-size:44px; }
  .utility-island .island-divider { display:none; }
  .experience:has(.utility-island) .introduction { top:150px; }
  .utility-island .account-dropdown--island { top:calc(100% + 12px); right:-2px; width:min(280px,calc(100vw - 32px)); }
@@ -81,3 +81,18 @@ html body :is(.account-dropdown,.auth-dialog,.account-confirm,.footer-info-dialo
 .panel-topbar>.utility-island { margin-left:auto; }
 /* Reading transitions create stacking contexts; keep the account menu above their content. */
 .panel-topbar:has(.account-dropdown) { position:relative; z-index:40; }
+
+/* A glass shell cannot show through opaque transition faces. Keep only moving faces filled
+   while pages cross, so their text never doubles; settled list and article views stay clear. */
+.content-dialog :is(.cover-frame,.cover-current) { background:transparent; }
+.content-dialog .cover-changing>.cover-current { background:var(--panel); }
+.content-dialog .cover-current { transition:background-color 220ms ease; }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+ html body .content-dialog .panel-shell[class] { background:linear-gradient(125deg,color-mix(in srgb,var(--ink) 4%,transparent),transparent 45%,color-mix(in srgb,#d7c8f5 3%,transparent)),color-mix(in srgb,var(--panel) 62%,transparent); box-shadow:inset 1px 0 0 color-mix(in srgb,var(--ink) 12%,transparent),-20px 0 80px #08120b20; }
+ .content-dialog .article-card { background:linear-gradient(135deg,color-mix(in srgb,var(--ink) 4%,transparent),transparent 55%),color-mix(in srgb,var(--panel) 32%,transparent); -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ink) 9%,transparent); }
+ .content-dialog .article-card:hover { background-color:color-mix(in srgb,var(--surface) 48%,transparent); }
+ .content-dialog .topic-filter button { background:color-mix(in srgb,var(--panel) 30%,transparent); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); box-shadow:inset 0 1px 0 color-mix(in srgb,var(--ink) 7%,transparent); }
+ .content-dialog .topic-filter button[aria-pressed=true] { color:var(--panel); background:color-mix(in srgb,var(--ink) 94%,transparent); border-color:var(--ink); }
+}
+@media(prefers-reduced-motion:reduce) { .content-dialog .cover-current { transition:none; } }
+html[data-motion=off] .content-dialog .cover-current { transition:none; }

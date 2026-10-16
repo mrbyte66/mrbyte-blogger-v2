@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent, type CSSProperties } from "react";
 import { SitePageHeader } from "../SitePageHeader";
 import { useAuth } from "../auth/AuthProvider";
 import { useArticles } from "../../lib/articles/use-articles";
@@ -11,6 +11,7 @@ import { articleDraftCover } from "../../lib/catalog-covers";
 import { SlideLink } from "../SlideLink";
 import { scrollBehavior } from "../../lib/motion";
 import { LibraryIcon as Icon } from "../library/LibraryIcon";
+import { LibraryPreview } from "./LibraryPreview";
 import { useSavedLibrary, type SavedEntry } from "./SavedProvider";
 
 const dragType = "application/x-satir-bookmark";
@@ -24,10 +25,11 @@ function SavedLibraryView() {
   const auth = useAuth(); const { articles } = useArticles(); const { workspace } = useWorkspace();
   const appearance = themeAppearance(workspace.applied);
   const [settings, setSettings] = useState(saved.recallView);
-  const { selected, query, sort, view, limit, quickPinned } = settings;
+  const { selected, query, sort, view, limit, quickPinned, previewId, previewWidth } = settings;
   const [name, setName] = useState(""); const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null); const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [wide, setWide] = useState(false);
+  const [wide, setWide] = useState(false); const [desktopPreview, setDesktopPreview] = useState(false);
+  const [previewDrop, setPreviewDrop] = useState(false);
   const showPinned = quickPinned && wide;
   const pinnedRef = useRef(false); pinnedRef.current = showPinned;
   const [quickQuery, setQuickQuery] = useState(""); const [quickOpen, setQuickOpen] = useState(false); const [compact, setCompact] = useState(false); const [jump, setJump] = useState<string | null>(null);
@@ -40,6 +42,9 @@ function SavedLibraryView() {
   const custom = category && !category.isDefault ? category : undefined;
   const articleMap = new Map(publicArticles(articles).filter(a => a.id).map(a => [a.id!, a]));
   const articleFor = (entry: SavedEntry) => entry.available ? articleMap.get(entry.articleId) : undefined;
+  const previewEntry = library.entries.find(e => e.articleId === previewId);
+  const previewArticle = previewEntry && articleFor(previewEntry);
+  const hasPreview = !!previewArticle && member;
   const search = query.trim().toLocaleLowerCase("tr");
   const items = library.entries.filter(entry => {
     const a = articleFor(entry);
@@ -58,7 +63,22 @@ function SavedLibraryView() {
     try { if (await task()) after(); } finally { operation.current = false; setBusy(false); }
   }
   function closeMenus() { root.current?.querySelectorAll<HTMLDetailsElement>("details[open]").forEach(d => { d.open = false; }); }
-  function goTo(entry: SavedEntry) { setSettings(s => ({ ...s, selected: "all", query: "", limit: library.entries.length })); setJump(entry.articleId); closeMenus(); }
+  function goTo(entry: SavedEntry) { setSettings(s => ({ ...s, selected: "all", query: "", limit: library.entries.length, ...(hasPreview ? { previewId:entry.articleId } : {}) })); setJump(entry.articleId); closeMenus(); }
+  function openPreview(entry: SavedEntry) {
+    if (!articleFor(entry)) return;
+    setSettings(s => ({ ...s, previewId: entry.articleId })); closeMenus();
+    setDragging(null); setPreviewDrop(false); setDropTarget(null);
+  }
+  function closePreview() {
+    setSettings(s => ({ ...s, previewId: null }));
+    requestAnimationFrame(() => document.getElementById(`saved-${previewId}`)?.querySelector<HTMLButtonElement>(".library-peek")?.focus({preventScroll:true}));
+  }
+  function dropPreview(event: DragEvent) {
+    event.preventDefault(); const id = event.dataTransfer.getData(dragType);
+    const entry = library.entries.find(e => e.articleId === id);
+    if (entry && dragging === id && !busy) openPreview(entry);
+    setPreviewDrop(false);
+  }
   function removeEntry(entry: SavedEntry) {
     closeMenus();
     void act(() => remove(entry.articleId), () => setToast({ text:"Kitaplıktan kaldırıldı", undo: () => restore(entry) }));
@@ -76,8 +96,10 @@ function SavedLibraryView() {
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
     const media = window.matchMedia("(min-width: 1100px)");
-    const sync = () => setWide(media.matches); sync();
-    media.addEventListener?.("change", sync); return () => media.removeEventListener?.("change", sync);
+    const previewMedia = window.matchMedia("(min-width: 901px)");
+    const sync = () => { setWide(media.matches); setDesktopPreview(previewMedia.matches); }; sync();
+    media.addEventListener?.("change", sync); previewMedia.addEventListener?.("change", sync);
+    return () => { media.removeEventListener?.("change", sync); previewMedia.removeEventListener?.("change", sync); };
   }, []);
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") return;
@@ -113,8 +135,8 @@ function SavedLibraryView() {
   }, []);
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 10000); return () => clearTimeout(id); }, [toast]);
   const quickPanel = <div className="library-quick-panel">
-    <div className="library-quick-heading"><span>Hızlı liste</span>{wide && <button type="button" className="library-pin" aria-label={showPinned ? "Hızlı listeyi ayır" : "Hızlı listeyi sola sabitle"} aria-pressed={showPinned} title={showPinned ? "Sabitlemeyi kaldır" : "Sola sabitle"} onClick={() => { setSettings(s => ({ ...s, quickPinned: !showPinned })); closeMenus(); requestAnimationFrame(() => { if (!showPinned) quickInput.current?.focus(); else quick.current?.querySelector("summary")?.focus(); }); }}><Icon kind="pin" /></button>}</div><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Koleksiyon veya yazı ara</span><input ref={quickInput} type="search" value={quickQuery} placeholder="Koleksiyon veya yazı ara" onChange={e => setQuickQuery(e.target.value)} onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); quickInput.current?.closest(".library-quick-panel")?.querySelector<HTMLButtonElement>(".quick-result")?.focus(); } if (e.key === "Enter") { if (quickEntries[0]) { e.preventDefault(); goTo(quickEntries[0]); } else if (quickCollections[0]) { e.preventDefault(); select(quickCollections[0].id); closeMenus(); } } }} /></label><div className="quick-results" onKeyDown={e => { if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return; const all = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button")); const i = all.indexOf(document.activeElement as HTMLButtonElement); e.preventDefault(); all[(i + (e.key === "ArrowDown" ? 1 : -1) + all.length) % all.length]?.focus(); }}><p>Koleksiyonlar</p>{quickCollections.map(c => <button type="button" className="quick-result" key={c.id} onClick={() => { select(c.id); closeMenus(); root.current?.scrollIntoView({ behavior: scrollBehavior() }); }}><Icon kind="folder" />{c.name}<span>{count(c.id)}</span></button>)}<p>Yazılar</p>{quickEntries.slice(0,40).map(entry => <button type="button" className="quick-result" key={entry.articleId} onClick={() => goTo(entry)}><Icon kind="bookmark" /><span>{articleFor(entry)!.title}</span><Icon kind="arrow" /></button>)}{quickEntries.length > 40 && <small>Diğer başlıklar için aramanı daralt.</small>}{!quickEntries.length && !quickCollections.length && <p>Sonuç bulunamadı.</p>}</div></div>;
-  return <main className={`${appearance.className} saved-page library-v11${showPinned ? " has-pinned-quick" : ""}`} style={appearance.style} aria-busy={busy}>
+    <div className="library-quick-heading"><span>Hızlı liste</span>{wide && <button type="button" className="library-pin" aria-label={showPinned ? "Hızlı listeyi ayır" : "Hızlı listeyi sola sabitle"} aria-pressed={showPinned} title={showPinned ? "Sabitlemeyi kaldır" : "Sola sabitle"} onClick={() => { setSettings(s => ({ ...s, quickPinned: !showPinned })); closeMenus(); requestAnimationFrame(() => { if (!showPinned) quickInput.current?.focus(); else quick.current?.querySelector("summary")?.focus(); }); }}><Icon kind="pin" /></button>}</div><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Koleksiyon veya yazı ara</span><input ref={quickInput} type="search" value={quickQuery} placeholder="Koleksiyon veya yazı ara" onChange={e => setQuickQuery(e.target.value)} onKeyDown={e => { if (e.key === "ArrowDown") { e.preventDefault(); quickInput.current?.closest(".library-quick-panel")?.querySelector<HTMLButtonElement>(".quick-result")?.focus(); } if (e.key === "Enter") { if (quickEntries[0]) { e.preventDefault(); goTo(quickEntries[0]); } else if (quickCollections[0]) { e.preventDefault(); select(quickCollections[0].id); closeMenus(); } } }} /></label><div className="quick-results" onKeyDown={e => { if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return; const all = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>("button")); const i = all.indexOf(document.activeElement as HTMLButtonElement); e.preventDefault(); all[(i + (e.key === "ArrowDown" ? 1 : -1) + all.length) % all.length]?.focus(); }}><p>Koleksiyonlar</p>{quickCollections.map(c => <button type="button" className="quick-result" key={c.id} onClick={() => { select(c.id); closeMenus(); root.current?.scrollIntoView({ behavior: scrollBehavior() }); }}><Icon kind="folder" />{c.name}<span>{count(c.id)}</span></button>)}<p>Yazılar</p>{quickEntries.slice(0,40).map(entry => <button type="button" className={`quick-result${hasPreview && previewId === entry.articleId ? " is-previewed" : ""}`} key={entry.articleId} onClick={() => goTo(entry)}><Icon kind="bookmark" /><span>{articleFor(entry)!.title}</span><Icon kind="arrow" /></button>)}{quickEntries.length > 40 && <small>Diğer başlıklar için aramanı daralt.</small>}{!quickEntries.length && !quickCollections.length && <p>Sonuç bulunamadı.</p>}</div></div>;
+  return <main className={`${appearance.className} saved-page library-v11${showPinned ? " has-pinned-quick" : ""}${hasPreview ? " has-library-preview" : ""}${dragging ? " is-preview-dragging" : ""}`} style={{...appearance.style,"--library-preview-width":`${previewWidth}px`} as CSSProperties} aria-busy={busy}>
     <SitePageHeader theme={workspace.applied} />
     <div className="saved-layout" ref={root}>
       <div className="library-title"><h1>Kitaplığım</h1>{member && <><label className="library-search"><Icon kind="search" /><span className="visually-hidden">Kitaplıkta ara</span><input type="search" placeholder="Kitaplıkta ara" value={query} onChange={e => update({ query: e.target.value })} /></label><button type="button" className="library-add" aria-label="Yeni koleksiyon" aria-expanded={editing && !custom} onClick={() => { select("all"); setName(""); setEditing(true); }}><Icon kind="plus" /></button></>}</div>
@@ -135,13 +157,14 @@ function SavedLibraryView() {
         {editing && <form className="saved-category-form" onSubmit={e => { e.preventDefault(); void act(() => custom ? rename(custom.id,name) : create(name), () => { setName(""); setEditing(false); }); }}><label>Koleksiyon adı<input autoFocus value={name} maxLength={60} onChange={e => setName(e.target.value)} /></label><button type="submit" disabled={busy || !name.trim()}>Kaydet</button><button type="button" onClick={() => setEditing(false)}>Vazgeç</button>{custom && <button type="button" disabled={busy} onClick={() => void act(() => deleteCategory(custom.id), () => { select(defaultId || "all"); setToast({ text: "Yazılar Genel koleksiyonuna taşındı" }); })}>Koleksiyonu kaldır</button>}</form>}
         {!items.length ? <section className="saved-empty"><Icon kind="bookmark" /><h2>{search ? "Aradığın satır henüz burada değil." : library.entries.length ? "Bu koleksiyon henüz boş." : "İlk satırını sakla."}</h2>{search ? <button type="button" onClick={() => update({ query: "", selected: "all" })}>Aramayı temizle</button> : <SlideLink href="/" direction="back">Yazıları keşfet ↗</SlideLink>}</section> : <div className={`saved-articles library-${view}`}>{shown.map(entry => {
           const article = articleFor(entry); const collection = library.collections.find(c => c.id === entry.collectionId);
-          return <article id={`saved-${entry.articleId}`} className={`saved-item library-entry${dragging === entry.articleId ? " is-dragging" : ""}`} key={entry.articleId} draggable={!busy} onDragStart={e => { if (busy) { e.preventDefault(); return; } setDragging(entry.articleId); e.dataTransfer.setData(dragType,entry.articleId); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { setDragging(null); setDropTarget(null); }}>
-            {article ? <SlideLink className="library-entry-link" title={article.title} href={`/yazilar/${article.slug}`} draggable={false} onClick={() => remember.current({ ...settings, scroll: window.scrollY })}><span className="library-entry-art"><CatalogCover src={article.coverUrl} fallback={articleDraftCover(article)} /></span><Icon kind="bookmark" /><span className="library-entry-text"><span className="library-entry-category">{article.category}</span><span className="article-card-title">{article.title}</span></span><span className="library-entry-collection">{collection?.name}</span><time dateTime={entry.savedAt}>{new Date(entry.savedAt).toLocaleDateString("tr-TR", { day:"numeric",month:"short",year:"numeric" })}</time><span className="library-read-arrow"><Icon kind="arrow" /></span></SlideLink> : <div className="saved-unavailable"><h2>Yazı şu anda erişilemiyor</h2><button type="button" disabled={busy} onClick={() => void act(() => remove(entry.articleId), () => setToast({ text:"Kayıt kaldırıldı" }))}>Kaydı kaldır</button></div>}
-            {article && <><button type="button" className="library-bookmark" disabled={busy} aria-label={`Kitaplıktan kaldır: ${article.title}`} onClick={() => removeEntry(entry)}><Icon kind="bookmark" /></button><details className="library-entry-menu"><summary aria-label={`Kaydı yönet: ${article.title}`}><span aria-hidden="true">•••</span></summary><div className="library-entry-popover"><label><Icon kind="folder" /><span>Koleksiyona taşı</span><select aria-label={`${article.title} için koleksiyon`} value={entry.collectionId} disabled={busy} onChange={e => moveEntry(entry,e.target.value)}>{library.collections.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label><button type="button" disabled={busy} onClick={() => removeEntry(entry)}><Icon kind="bookmark" />Kitaplıktan kaldır</button></div></details></>}
+          return <article id={`saved-${entry.articleId}`} className={`saved-item library-entry${hasPreview && previewId === entry.articleId ? " is-previewed" : ""}${dragging === entry.articleId ? " is-dragging" : ""}`} key={entry.articleId} draggable={!busy} onDragStart={e => { if ((e.target as HTMLElement).closest("button,summary,select") || busy) { e.preventDefault(); return; } setDragging(entry.articleId); e.dataTransfer.setData(dragType,entry.articleId); e.dataTransfer.effectAllowed = "copyMove"; const box=e.currentTarget.getBoundingClientRect(); e.dataTransfer.setDragImage?.(e.currentTarget,Math.max(0,e.clientX-box.left),Math.max(0,e.clientY-box.top)); }} onDragEnd={() => { setDragging(null); setDropTarget(null); setPreviewDrop(false); }}>
+            {article ? <SlideLink className="library-entry-link" title={article.title} href={`/yazilar/${article.slug}`} draggable={!busy} onClick={() => remember.current({ ...settings, scroll: window.scrollY })}><span className="library-entry-art"><CatalogCover src={article.coverUrl} fallback={articleDraftCover(article)} /></span><Icon kind="bookmark" /><span className="library-entry-text"><span className="library-entry-category">{article.category}</span><span className="article-card-title">{article.title}</span></span><span className="library-entry-collection">{collection?.name}</span><time dateTime={entry.savedAt}>{new Date(entry.savedAt).toLocaleDateString("tr-TR", { day:"numeric",month:"short",year:"numeric" })}</time><span className="library-read-arrow"><Icon kind="arrow" /></span></SlideLink> : <div className="saved-unavailable"><h2>Yazı şu anda erişilemiyor</h2><button type="button" disabled={busy} onClick={() => void act(() => remove(entry.articleId), () => setToast({ text:"Kayıt kaldırıldı" }))}>Kaydı kaldır</button></div>}
+            {article && <><button type="button" className="library-peek" aria-label={`Önizle: ${article.title}`} aria-pressed={hasPreview && previewId === entry.articleId} onClick={() => openPreview(entry)}><Icon kind="eye" /><span className="library-tooltip" aria-hidden="true">Kenarda oku</span></button><button type="button" className="library-bookmark" disabled={busy} aria-label={`Kitaplıktan kaldır: ${article.title}`} onClick={() => removeEntry(entry)}><Icon kind="bookmark" /></button><details className="library-entry-menu"><summary aria-label={`Kaydı yönet: ${article.title}`}><span aria-hidden="true">•••</span></summary><div className="library-entry-popover"><label><Icon kind="folder" /><span>Koleksiyona taşı</span><select aria-label={`${article.title} için koleksiyon`} value={entry.collectionId} disabled={busy} onChange={e => moveEntry(entry,e.target.value)}>{library.collections.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label><button type="button" disabled={busy} onClick={() => removeEntry(entry)}><Icon kind="bookmark" />Kitaplıktan kaldır</button></div></details></>}
           </article>;
         })}</div>}
         {!!items.length && <div className="library-end"><span>{shown.length} / {items.length} kayıt</span>{limit < items.length && <button type="button" onClick={() => setSettings(s => ({ ...s, limit:s.limit+24 }))}>Daha fazla göster <span aria-hidden="true">↓</span></button>}</div>}
-        </div></div>
+        </div>{hasPreview && <LibraryPreview article={previewArticle} desktop={desktopPreview} width={previewWidth} onResize={value=>setSettings(s=>({...s,previewWidth:value}))} onClose={closePreview} onOpen={()=>remember.current({...settings,scroll:window.scrollY})} />}</div>
+        {library.entries.some(e=>!!articleFor(e)) && <div className={`library-preview-edge${previewDrop ? " is-over" : ""}${hasPreview ? " has-content" : ""}`} onDragOver={e=>{if(dragging && !busy){e.preventDefault();e.dataTransfer.dropEffect="copy";setPreviewDrop(true);setDropTarget(null);}}} onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))setPreviewDrop(false);}} onDrop={dropPreview}><button type="button" className="library-preview-plus" aria-label="Yazı önizlemesi aç" onClick={()=>{const entry = items.find(e=>articleFor(e)) ?? library.entries.find(e=>articleFor(e));if(entry)openPreview(entry);}}><Icon kind="plus" /><span className="library-tooltip" aria-hidden="true">Kenarda oku</span></button>{dragging && <span className="library-drop-hint">{previewDrop ? "Buraya bırak" : "Kenarda oku"}</span>}</div>}
       </>}
       {toast && <div className="library-toast" role="status"><span aria-hidden="true">✓</span><span>{toast.text}</span>{toast.undo && <button type="button" disabled={busy} onClick={() => void act(toast.undo!, () => setToast({ text:"Geri alındı" }))}>Geri al</button>}<button type="button" aria-label="Bildirimi kapat" onClick={() => setToast(null)}><Icon kind="close" /></button></div>}
     </div>

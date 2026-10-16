@@ -293,3 +293,79 @@ html[data-motion=off] :is(.public-frame,.library-v11,.personal-account) * { anim
  .has-pinned-quick .library-workspace { display:grid; grid-template-columns:240px minmax(0,1fr); gap:28px; align-items:start; }
  .has-pinned-quick .library-actions { margin-left:auto; }
 }
+
+/* Library reading desk. All surfaces inherit the current public theme. */
+.library-peek,.library-preview-icon { display:grid; place-items:center; position:relative; width:36px; height:36px; border-radius:10px; flex-shrink:0; }
+.library-peek { position:absolute; right:90px; top:10px; background:color-mix(in srgb,var(--panel) 90%,transparent); color:var(--ink); opacity:0; transition:opacity .16s,transform .16s; }
+.library-entry:hover .library-peek,.library-entry:focus-within .library-peek,.library-peek[aria-pressed=true] { opacity:1; }
+.library-peek:hover,.library-preview-icon:hover { background:var(--personal-accent); color:var(--personal-accent-ink); }
+.library-tooltip { position:absolute; z-index:2; right:0; top:calc(100% + 7px); width:max-content; max-width:180px; pointer-events:none; padding:7px 10px; border-radius:8px; font-size:11px; line-height:1.4; font-weight:400; color:var(--panel); background:var(--ink); opacity:0; transform:translateY(-3px); transition:opacity .16s,transform .16s; }
+:is(.library-peek,.library-preview-icon,.library-preview-plus):is(:hover,:focus-visible) .library-tooltip { opacity:1; transform:none; }
+.library-entry.is-previewed { border-color:var(--personal-accent); box-shadow:0 0 0 1px var(--personal-accent); }
+.library-list .library-entry.is-previewed,.quick-result.is-previewed { background:color-mix(in srgb,var(--personal-accent) 40%,var(--panel)); }
+.library-list .library-peek { top:4px; right:42px; background:var(--panel); }
+.library-list .library-entry-link { padding-right:84px; }
+.library-preview-edge { position:fixed; right:14px; top:50%; z-index:35; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; border-radius:18px; padding:8px; transition:background .2s,padding .2s,box-shadow .2s; }
+.library-preview-plus { display:grid; place-items:center; position:relative; width:36px; height:36px; border:1px solid color-mix(in srgb,var(--personal-accent) 70%,var(--line)); border-radius:50%; background:var(--personal-accent); color:var(--personal-accent-ink); transition:transform .2s; }
+.library-preview-plus:hover { transform:scale(1.08); }
+.library-drop-hint { font-size:10px; max-width:64px; line-height:1.5; text-align:center; color:var(--personal-accent-ink); pointer-events:none; }
+.is-preview-dragging .library-preview-edge { background:color-mix(in srgb,var(--personal-accent) 85%,var(--panel)); padding:18px 10px; box-shadow:0 0 0 5px color-mix(in srgb,var(--personal-accent) 22%,transparent); }
+.library-preview-edge.is-over { outline:2px dashed var(--personal-accent-ink); outline-offset:3px; }
+.library-preview-edge.is-over .library-preview-plus { transform:scale(1.16); }
+.library-preview { position:sticky; top:18px; align-self:start; display:flex; flex-direction:column; min-width:0; height:clamp(320px,calc(100svh - 240px),900px); border:1px solid var(--line); border-left:2px solid var(--personal-accent); border-radius:18px; background:var(--panel); color:var(--ink); animation:library-sheet-in .22s ease-out both; z-index:20; }
+.library-preview-toolbar { display:flex; align-items:center; gap:6px; padding:14px 18px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.library-preview-identity { display:flex; align-items:center; gap:10px; flex:1; min-width:0; font:10px var(--mono); letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.library-preview-identity>span { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.library-preview-identity .catalog-cover { width:36px; height:28px; object-fit:cover; border-radius:5px; flex-shrink:0; }
+.library-preview-scroll { min-height:0; flex:1; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:24px; animation:personal-arrive .16s ease-out both; }
+.library-preview-scroll .article-view>h2 { font-size:clamp(24px,2vw,34px); line-height:1.17; margin:0 0 18px; }
+.library-preview-scroll .article-meta { flex-wrap:wrap; gap:8px 12px; font-size:10px; margin-bottom:24px; }
+.library-preview-scroll .article-lead { font-size:21px; line-height:1.5; }
+.library-preview-scroll .article-view>div>p { font-size:14px; line-height:1.85; }
+.library-preview-scroll .article-view>div :is(h2,h3) { font-size:22px; line-height:1.3; margin:28px 0 14px; }
+.library-preview-scroll .eyebrow { font-size:10px; }
+.library-preview-scroll .code-toolbar { flex-wrap:wrap; gap:8px; }
+.library-preview-scroll .code-block { font-size:11px; }
+.library-preview-scroll .article-table-scroll { max-width:100%; }
+.library-preview-scroll .article-view blockquote { font-size:18px; padding-left:16px; }
+.library-preview-resize { position:absolute; top:0; bottom:0; left:-13px; width:24px; cursor:col-resize; touch-action:none; z-index:2; }
+.library-preview-resize::after { content:""; position:absolute; left:10px; width:3px; top:42%; height:42px; border-radius:9px; background:var(--personal-accent); opacity:.6; }
+.library-preview-resize:hover::after,.library-preview-resize:focus-visible::after { opacity:1; width:4px; }
+.library-preview.is-closing { animation:library-sheet-out .16s ease-in both; pointer-events:none; }
+@keyframes library-sheet-in { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
+@keyframes library-sheet-out { to { opacity:0; transform:translateX(12px); } }
+@media(min-width:901px) {
+ .has-library-preview .saved-layout { max-width:1640px; }
+ .has-library-preview .library-workspace { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,min(var(--library-preview-width),40vw)); gap:24px; align-items:start; }
+ .has-library-preview .library-main { container-type:inline-size; container-name:library-content; }
+ .has-library-preview .library-sticky { flex-wrap:wrap; gap:8px; }
+ .has-library-preview .saved-category-tabs { flex-basis:100%; }
+ .has-library-preview .library-actions { margin-left:auto; max-width:100%; }
+ .has-library-preview .library-preview-edge { right:calc(max(32px,(100vw - 1640px)/2 + 32px) + min(var(--library-preview-width),40vw) - 26px); }
+ .has-library-preview .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(min-width:1100px) {
+ .has-library-preview.has-pinned-quick .library-workspace { grid-template-columns:220px minmax(0,1fr) minmax(300px,min(var(--library-preview-width),40vw)); }
+}
+@container library-content (max-width:440px) {
+ .has-library-preview .library-grid { grid-template-columns:1fr; }
+ .has-library-preview .library-list .library-entry-link { grid-template-columns:22px minmax(0,1fr); }
+ .has-library-preview .library-list .library-entry-link :is(time,.library-entry-collection,.library-read-arrow) { display:none; }
+ .has-library-preview .library-actions { gap:5px; }
+ .has-library-preview .library-actions .library-sort select { max-width:110px; }
+ .has-library-preview .library-sticky.is-compact .library-actions { flex-wrap:wrap; }
+}
+@media(max-width:900px) {
+ .library-preview-sheet { position:fixed; inset:auto 12px 12px; margin:0 auto; width:calc(100% - 24px); max-width:650px; max-height:85svh; height:78svh; border-radius:22px; padding:0; }
+ .library-preview-sheet:not([open]) { display:none; }
+ .library-preview-sheet::backdrop { background:#0005; backdrop-filter:blur(2px); }
+ .library-preview-sheet { animation:library-sheet-up .22s ease-out both; }
+ .library-preview-sheet.is-closing { animation:library-sheet-down .16s ease-in both; }
+ .library-preview-scroll { padding:22px; }
+ .library-preview-edge { right:8px; top:auto; bottom:26px; }
+ .library-peek { opacity:1; }
+ @keyframes library-sheet-up { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:none; } }
+ @keyframes library-sheet-down { to { opacity:0; transform:translateY(24px); } }
+}
+@media(hover:none) { .library-peek { opacity:1; } }
+html[data-motion=off] .library-v11 :is(.library-preview,.library-preview-scroll,.library-tooltip,.library-preview-plus,.library-preview-edge) { animation:none; transition:none; }

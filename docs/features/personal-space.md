@@ -22,3 +22,14 @@ Footer yayımlanmış site ve üye/okuma sayfalarında ortaktır. Studio/preview
 ## Sabit hızlı liste
 
 Geniş ekranda Hızlı git penceresindeki iğne, listeyi sol tarafa sabitler. Panel sayfa kayarken görünür kalır; koleksiyon/yazı seçimi veya dışarı tıklamak paneli kapatmaz. Aynı iğneyle ayrılır. ⌘/Ctrl K sabit panelin aramasına odaklanır. Sabitleme tercihi aynı hesabın mevcut oturum belleğinde yazıdan dönüşte korunur; dar ekranda kartları sıkıştırmak yerine açılır Hızlı git kullanılır, ekran genişleyince sabit görünüm döner.
+
+## Kenarda okuma
+
+Mevcut temanın yüzeyleri, tipografisi, paleti ve klasör sekmeleri korunur. Kart/satırın göz düğmesi (hover, klavye odağı veya dokunmatik görünüm) yayımlanmış yazıyı sağda açar. Kenardaki küçük + aynı paneli ilk görünür yazıyla açar; yerel kitaplık kartının bu hedefe sürüklenip bırakılması koleksiyonu değiştirmeden önizlemeyi değiştirir. Koleksiyona bırakma ayrı bir taşıma işlemidir. Yabancı sürükleme verisi kabul edilmez.
+
+- İçerik sunucudan `expand=document` ile gelen public içeriktir; taslak/private/erişilemez kayıt önizlenmez. Ortak ArticleContent biçimlendirme, görsel, kod ve tabloyu gösterir; bu modda engagement/okuma geçmişi/annotation bağlamı kurulmaz ve görüntülenme olayı gönderilmez.
+- Kart/liste, sabit hızlı liste ve önizleme birlikte kullanılabilir. Seçili kart/satır ve hızlı listedeki başlık lavantayla eşleşir. Önizleme açıkken hızlı listeden başka başlık seçmek içeriği değiştirir. Filtre değiştirmek açık önizlemeyi kendiliğinden kapatmaz.
+- Genişletme ikonu gerçek yazıya gider; açıklama hover/klavye odağında görünür. Başlık ve arama mevcut kitaplıkta kalır. Panel ayırıcısı fareyle veya sağ/sol oklarla boyutlandırılır; dar merkezde tarih/koleksiyon sütunları azaltılır, kartlar gerektiğinde tek sütuna iner.
+- 900 px ve altında yerel modal dialog alt pencere olur; arka plan inert ve kaydırma kilitlidir. Escape, kapat düğmesi ve dış alan kapatır; kapanıştan sonra göz düğmesine odak döner. Masaüstünde dış tıklama açık paneli kapatmaz.
+- Panel tercihi, genişliği ve seçili yazı mevcut hesaba ait provider belleğinde yazıya gidip dönüşte korunur; çıkış/hesap değişimi temizler. Özel kayıt veya seçim tarayıcı storage’ına yazılmaz.
+- Panel açılışı 220 ms, içerik geçişi/kapanışı 160 ms; reduced-motion ve mevcut hareket tercihi korunur. Tema rengi veya karakter değiştirilmez.

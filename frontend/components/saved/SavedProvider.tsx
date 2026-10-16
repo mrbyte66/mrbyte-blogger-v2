@@ -14,8 +14,8 @@ import { allPages, api, describe } from "../../lib/api/http";
 export type SavedCollection = Schema<"Collection">;
 export type SavedEntry = { articleId: string; slug?: string; collectionId: string; savedAt: string; version: number; available: boolean };
 export type SavedLibrary = { collections: SavedCollection[]; entries: SavedEntry[] };
-export type LibraryView = { selected: string; query: string; sort: string; view: "grid" | "list"; limit: number; scroll: number; quickPinned: boolean };
-const initialView = (): LibraryView => ({ selected: "all", query: "", sort: "saved", view: "grid", limit: 24, scroll: 0, quickPinned: false });
+export type LibraryView = { selected: string; query: string; sort: string; view: "grid" | "list"; limit: number; scroll: number; quickPinned: boolean; previewId: string | null; previewWidth: number };
+const initialView = (): LibraryView => ({ selected: "all", query: "", sort: "saved", view: "grid", limit: 24, scroll: 0, quickPinned: false, previewId: null, previewWidth: 400 });
 type BookmarkDto = Schema<"BookmarkItem">;
 type MemberLibrary = {
   library: SavedLibrary; defaultId: string; ready: boolean; member: boolean; error: string;

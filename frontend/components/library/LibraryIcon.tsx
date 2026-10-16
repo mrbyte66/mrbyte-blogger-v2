@@ -1,6 +1,8 @@
 import type { CSSProperties } from "react";
-type Kind = "pin" | "search" | "grid" | "list" | "bookmark" | "folder" | "arrow" | "close" | "plus" | "lock" | "device" | "link";
+type Kind = "eye" | "expand" | "pin" | "search" | "grid" | "list" | "bookmark" | "folder" | "arrow" | "close" | "plus" | "lock" | "device" | "link";
 const paths: Record<Kind, string> = {
+ eye: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
+ expand: "M14 3h7v7m0-7L11 13M10 4H4v16h16v-6",
  pin: "M9 3h6l-1 6 4 4v2H6v-2l4-4-1-6ZM12 15v7",
  search: "M21 21l-5-5M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z",
  grid: "M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 15h6v6h-6z",

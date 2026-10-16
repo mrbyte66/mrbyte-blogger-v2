@@ -1,5 +1,5 @@
 import { useState as requireState, type ReactNode } from "react";
-import { act, fireEvent, render as baseRender, screen } from "@testing-library/react";
+import { act, fireEvent, render as baseRender, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthProvider, useAuth } from "../components/auth/AuthProvider";
 import { SiteDataValues, type ContentState } from "../components/data/SiteData";
@@ -304,4 +304,81 @@ it("pins the quick index, keeps it through jumps and route return, and unpins it
     expect(screen.queryByRole("complementary")).toBeNull();
     expect(container.querySelector(".library-quick")).toBeTruthy();
   } finally { HTMLElement.prototype.scrollIntoView = native; }
+});
+
+
+describe("library side reading", () => {
+  function seedPreview() {
+    me().collections.push({id:"c-default",name:"Genel",isDefault:true,version:0});
+    for (const a of articles.slice(0,2)) me().bookmarks.push({articleId:a.id!,collectionId:"c-default",savedAt:"2026-10-01T10:00:00Z",version:0});
+  }
+  function desktop() { vi.stubGlobal("matchMedia",()=>({matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()})); }
+  it.each(["grid","list"])("opens real content in %s without recording engagement or changing collections",async(view)=>{
+    desktop(); seedPreview(); const {container}=await render(<SavedLibraryPage />);
+    if(view==="list") await click(screen.getByRole("button",{name:"Kompakt liste"}));
+    const before=JSON.stringify(bookmarks()); backend.fetchMock.mockClear();
+    await click(screen.getByRole("button",{name:`Önizle: ${articles[0].title}`}));
+    const pane=screen.getByRole("complementary",{name:articles[0].title});
+    expect(within(pane).getByText(articles[0].paragraphs[0])).toBeTruthy();
+    expect(within(pane).getByRole("link",{name:`Yazıda devam et: ${articles[0].title}`})).toHaveProperty("href",expect.stringContaining(`/yazilar/${articles[0].slug}`));
+    expect(container.querySelector(".library-entry.is-previewed")).toBeTruthy();
+    expect(JSON.stringify(bookmarks())).toBe(before);
+    expect(backend.fetchMock.mock.calls.filter(([,options])=>options?.method && options.method!=="GET")).toHaveLength(0);
+    expect(within(pane).queryByText("Alkışla")).toBeNull();
+    vi.stubGlobal("innerWidth",1400);
+    vi.spyOn(container.querySelector<HTMLElement>(".library-workspace")!,"getBoundingClientRect").mockReturnValue({width:1400} as DOMRect);
+    fireEvent.keyDown(screen.getByRole("separator",{name:"Önizleme genişliği"}),{key:"ArrowLeft"});
+    expect(container.querySelector("main")?.style.getPropertyValue("--library-preview-width")).toBe("424px");
+    await click(screen.getByRole("button",{name:`Önizle: ${articles[1].title}`}));
+    expect(screen.queryByRole("heading",{name:articles[0].title})).toBeNull();
+    expect(screen.getByRole("heading",{name:articles[1].title})).toBeTruthy();
+  });
+  it("drops to preview without moving the saved article and rejects foreign drag payloads",async()=>{
+    desktop();seedPreview();const {container}=await render(<SavedLibraryPage />);
+    const before=JSON.stringify(bookmarks()); const transfer={setData:vi.fn(),getData:()=>articles[0].id!,effectAllowed:"",dropEffect:""};
+    fireEvent.drop(container.querySelector(".library-preview-edge")!,{dataTransfer:transfer});
+    expect(container.querySelector(".library-preview")).toBeNull();
+    fireEvent.dragStart(container.querySelector(".library-entry")!,{dataTransfer:transfer});
+    fireEvent.dragOver(container.querySelector(".library-preview-edge")!,{dataTransfer:transfer});
+    expect(transfer.dropEffect).toBe("copy");
+    await act(async()=>{fireEvent.drop(container.querySelector(".library-preview-edge")!,{dataTransfer:transfer});await settle();});
+    expect(screen.getByRole("heading",{name:articles[0].title})).toBeTruthy();expect(JSON.stringify(bookmarks())).toBe(before);
+  });
+  it("keeps pinned contents and preview together through view changes and route return",async()=>{
+    desktop();seedPreview();
+    function Return() {const [visible,setVisible]=requireState(true);return <><button onClick={()=>setVisible(v=>!v)}>Sayfayı değiştir</button>{visible && <SavedLibraryPage />}</>;}
+    const {container}=await render(<Return />);const details=container.querySelector<HTMLDetailsElement>(".library-quick")!;
+    await act(async()=>{details.open=true;fireEvent(details,new Event("toggle"));await settle();});
+    await click(screen.getByRole("button",{name:"Hızlı listeyi sola sabitle"}));
+    await click(screen.getByRole("button",{name:`Önizle: ${articles[0].title}`}));
+    for(const view of ["Kompakt liste","Kart görünümü"]) {
+      await click(screen.getByRole("button",{name:view}));
+      expect(screen.getByRole("complementary",{name:"Sabit hızlı liste"})).toBeTruthy();
+      expect(screen.getByRole("heading",{name:articles[0].title})).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));fireEvent.click(screen.getByRole("button",{name:"Sayfayı değiştir"}));
+    expect(screen.getByRole("heading",{name:articles[0].title})).toBeTruthy();
+  });
+  it("uses a modal reading sheet on narrow screens and closes with Escape",async()=>{
+    vi.stubGlobal("matchMedia",()=>({matches:false,addEventListener:vi.fn(),removeEventListener:vi.fn()}));seedPreview();await render(<SavedLibraryPage />);
+    await click(screen.getByRole("button",{name:`Önizle: ${articles[0].title}`}));
+    const dialog=screen.getByRole("dialog",{name:articles[0].title});expect(dialog.hasAttribute("open")).toBe(true);
+    expect(document.body.style.overflow).toBe("hidden");
+    fireEvent(dialog,new Event("cancel",{cancelable:true}));
+    await act(async()=>{await new Promise(r=>setTimeout(r,180));});
+    expect(screen.queryByRole("dialog")).toBeNull();expect(document.body.style.overflow).not.toBe("hidden");
+  });
+});
+
+
+it("clears side-reading context when signing out",async()=>{
+ vi.stubGlobal("matchMedia",()=>({matches:true,addEventListener:vi.fn(),removeEventListener:vi.fn()}));
+ me().collections.push({id:"c-default",name:"Genel",isDefault:true,version:0});
+ me().bookmarks.push({articleId:articles[0].id!,collectionId:"c-default",savedAt:"2026-10-01T10:00:00Z",version:0});
+ await render(<><SavedLibraryPage /><SignOut /></>);
+ await click(screen.getByRole("button",{name:`Önizle: ${articles[0].title}`}));
+ expect(screen.getByRole("heading",{name:articles[0].title})).toBeTruthy();
+ await click(screen.getByRole("button",{name:"Çıkış"}));
+ expect(screen.queryByRole("heading",{name:articles[0].title})).toBeNull();
+ expect(screen.queryByRole("button",{name:"Yazı önizlemesi aç"})).toBeNull();
 });

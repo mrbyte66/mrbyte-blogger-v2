@@ -32,12 +32,12 @@ function ParagraphContent({article,index,text,preview}: {article:Article;index:n
   // In the Studio canvas the paragraph is edited in place, so React hands over its children (escaped HTML).
   return <>{preview ? <Tag {...identity} dangerouslySetInnerHTML={{__html:markedHtml(text,marks)}} /> : <Tag {...identity}><MarkedText text={text} marks={marks} /></Tag>}{format?.kind==="quote" && format.attribution && <cite className="article-quote-attribution">{format.attribution}</cite>}</>;
 }
-export function ArticleContent({ article, fullPage = false, preview = false }: { article: Article; fullPage?: boolean; preview?: boolean }) {
-  usePermalinkView(article.slug, fullPage && !preview);
-  const Heading = fullPage ? "h1" : "h2";
+export function ArticleContent({ article, fullPage = false, preview = false, readingPreview = false }: { article: Article; fullPage?: boolean; preview?: boolean; readingPreview?: boolean }) {
+  usePermalinkView(article.slug, fullPage && !preview && !readingPreview);
+  const Heading = fullPage && !readingPreview ? "h1" : "h2";
   return <><article className="article-view" data-edit-field="body">
     <p className="eyebrow" data-edit-field="meta">{article.eyebrow}</p>
-    <Heading id="panel-title" data-edit-field="title">{article.title}</Heading>
+    <Heading id={readingPreview ? "library-preview-title" : "panel-title"} data-edit-field="title">{article.title}</Heading>
     {article.presentation?.showMeta !== false && <div className="article-meta" data-edit-field="meta"><span>{articleCategories(article).join(" · ")}</span><time dateTime={articleDate(article)}>{formatArticleDate(article)}</time><span>{article.minutes} dk okuma</span></div>}
     <p className="article-lead" data-edit-field="excerpt" data-reading-anchor="excerpt">{article.excerpt}</p>
     {article.paragraphs.map((paragraph, index) => <div key={index}>
@@ -46,8 +46,8 @@ export function ArticleContent({ article, fullPage = false, preview = false }: {
       {index === Math.min(2, article.paragraphs.length - 1) && article.code && <CodeBlock code={article.code} />}
       {index === Math.min(2, article.paragraphs.length - 1) && article.table && <div className="article-table-scroll" data-edit-field="table" role="region" tabIndex={0} aria-label={`${article.table.caption}. Dar ekranda yatay kaydırılabilir.`}><table><caption>{article.table.caption}</caption><thead><tr>{article.table.columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr></thead><tbody>{article.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>}
     </div>)}
-    {!article.authored && <div className="article-end"><span aria-hidden="true">✳</span><p>Şimdilik bu kadar.<br />Bir sonraki satırda görüşürüz.</p></div>}
-    {!fullPage && <SlideLink className="reading-permalink" href={`/yazilar/${article.slug}`}>Bu yazının kalıcı bağlantısını aç ↗</SlideLink>}
-    {!article.authored && <p className="sample-note">Bu metin, okuma deneyimini göstermek için hazırlanmış bir örnektir.</p>}
-  </article><ArticleEngagement key={article.slug} slug={article.slug} title={article.title} preview={preview} /></>;
+    {!readingPreview && !article.authored && <div className="article-end"><span aria-hidden="true">✳</span><p>Şimdilik bu kadar.<br />Bir sonraki satırda görüşürüz.</p></div>}
+    {!readingPreview && !fullPage && <SlideLink className="reading-permalink" href={`/yazilar/${article.slug}`}>Bu yazının kalıcı bağlantısını aç ↗</SlideLink>}
+    {!readingPreview && !article.authored && <p className="sample-note">Bu metin, okuma deneyimini göstermek için hazırlanmış bir örnektir.</p>}
+  </article>{!readingPreview && <ArticleEngagement key={article.slug} slug={article.slug} title={article.title} preview={preview} />}</>;
 }

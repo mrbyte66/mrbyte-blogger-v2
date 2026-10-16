@@ -5,7 +5,7 @@ import { AuthCard } from "../components/auth/AuthCard";
 import { AccountMenu } from "../components/auth/AccountMenu";
 import { AccountPage } from "../components/auth/AccountPage";
 import { SavedProvider, useSavedLibrary } from "../components/saved/SavedProvider";
-import { SaveArticleButton } from "../components/saved/SaveArticleButton";
+import { SaveArticleButton, SavedLibraryLink } from "../components/saved/SaveArticleButton";
 import { fakeBackend, settle } from "./support/fake-backend";
 import { SiteDataValues } from "../components/data/SiteData";
 import { EngagementProvider } from "../components/engagement/EngagementProvider";
@@ -231,4 +231,18 @@ describe("server-backed membership", () => {
     expect(screen.getByRole("heading", { name: "Hesabına giriş yap." })).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Hesap bölümleri" })).toBeNull();
   });
+});
+
+
+it("keeps guest library and avatar controls visible and opens registration from the library", async () => {
+  fakeBackend();
+  const { container } = render(<AuthProvider><header className="site-header"><SavedLibraryLink /><AccountMenu /></header></AuthProvider>);
+  await act(settle);
+  const library = screen.getByRole("button", { name: "Kitaplığım" });
+  expect(container.querySelector(".site-header>.saved-library-link+.account-menu .account-avatar .profile-avatar")).not.toBeNull();
+  expect(container.querySelector(".account-access")).toBeNull();
+  fireEvent.click(library);
+  await act(settle);
+  expect(screen.getByRole("tab", { name: "Üye ol" }).getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("heading", { name: "Hesap oluştur" })).toBeTruthy();
 });

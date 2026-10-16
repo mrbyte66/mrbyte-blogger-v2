@@ -73,4 +73,6 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 
 - 2026-10-16: Bundan sonra sunulan tasarım önerilerine ayırt edici isim verilir; revizyonlarda isim korunup tasarım sürümü ilerletilir. Bunlar ürün release adları değildir.
 
-- 16 Ekim 2026: #11 giriş cümlesi için “Satır Dalgası” seçildi; harf yükselişi 8 px. Kelimeler bölünmez; ilk dalga pencere açıldıktan 2 saniye sonra başlar, harf başına hareket 1400 ms sürer ve dalga tamamen bittikten sonra 4 saniye mola vererek tekrarlanır; reduced-motion/hareket kapalı tercihinde sabittir. Koleksiyon adı hataları alan altında erişilebilir açıklamayla gösterilir ve düzenlemede temizlenir.
+- 16 Ekim 2026: #11 giriş cümlesi için “Satır Dalgası” seçildi; harf yükselişi 8 px. Kelimeler bölünmez; ilk dalga pencere açıldıktan 2 saniye sonra başlar, harf başına hareket 1400 ms sürer ve dalga tamamen bittikten sonra 3 saniye mola vererek tekrarlanır; reduced-motion/hareket kapalı tercihinde sabittir. Koleksiyon adı hataları alan altında erişilebilir açıklamayla gösterilir ve düzenlemede temizlenir.
+
+- 16 Ekim 2026: Ana sayfa hesap düğmesi misafirde de aynı yuvarlak avatar düzenini kullanır. Kitaplığım ikonu her zaman görünür; misafir tıklayınca Üye ol paneli açılır. Sahne kontrollerinin konumu giriş durumuyla değişmez.

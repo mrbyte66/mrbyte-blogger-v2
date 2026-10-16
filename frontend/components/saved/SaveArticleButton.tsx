@@ -53,6 +53,6 @@ export function SaveArticleButton({ slug, title, preview = false }: { slug: stri
   </div>;
 }
 export function SavedLibraryLink() {
-  const { member } = useSavedLibrary();
-  return member ? <SlideLink className="saved-library-link" href="/kaydedilenler" aria-label="Kitaplığım" title="Kitaplığım"><EngagementIcon kind="save" /></SlideLink> : null;
+  const { session, ready, openAuth } = useAuth();
+  return session ? <SlideLink className="saved-library-link" href="/kaydedilenler" aria-label="Kitaplığım" title="Kitaplığım"><EngagementIcon kind="save" /></SlideLink> : <button type="button" className="saved-library-link" aria-label="Kitaplığım" title="Kitaplığım" disabled={!ready} onClick={() => openAuth("register")}><EngagementIcon kind="save" /></button>;
 }

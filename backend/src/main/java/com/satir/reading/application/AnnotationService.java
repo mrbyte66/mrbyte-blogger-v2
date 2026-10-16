@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class AnnotationService {
 
     public record AnnotationView(UUID id, String kind, UUID revisionId, List<Fragment> fragments, String note,
-            Instant createdAt, long version) {
+            Instant createdAt, long version, String color, AudioInfo audio) {
     }
 
     public record Unavailable(UUID id, boolean available) {
@@ -50,14 +50,17 @@ public class AnnotationService {
     public record ArticleAnnotations(UUID articleId, Boolean available, UUID revisionId, List<?> items) {
     }
 
-    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note) {
+    public record AudioInput(String data, String mime, int durationMs) { }
+    public record AudioInfo(String mime, int durationMs) { }
+    public record AudioContent(byte[] data, String mime) { }
+    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note, String color, AudioInput audio) {
     }
 
     public record Saved(AnnotationView annotation, boolean created) {
     }
 
     public record ImportItem(UUID articleId, UUID revisionId, String kind, List<Fragment> fragments, String note,
-            Instant createdAt) {
+            Instant createdAt, String color) {
     }
 
     public record ImportReport(UUID clientImportId, List<Accepted> accepted, List<Rejected> rejected) {
@@ -104,6 +107,7 @@ public class AnnotationService {
      */
     @Transactional
     public Saved put(UUID userId, UUID articleId, UUID markId, String ifMatch, String ifNoneMatch, Write write) {
+        repository.lockOwner(userId);
         boolean create = ifNoneMatch != null && "*".equals(ifNoneMatch.strip());
         if (!create && (ifMatch == null || ifMatch.isBlank())) {
             Preconditions.requireVersion(ifMatch);
@@ -112,9 +116,18 @@ public class AnnotationService {
         String note = write.note() == null ? "" : write.note();
         RevisionText text = anchoredText(articleId, write.revisionId());
         Annotation.validate(kind, write.fragments(), note, text.anchors());
+        String color = validColor(write.color());
+        byte[] audio = audioBytes(write.audio());
+        if (kind != Kind.AUDIO && write.audio() != null) throw new ValidationException("audio", "INVALID");
+        if (audio != null && repository.audioBytes(userId) - repository.audioLength(userId, markId) + audio.length > 25_000_000) {
+            throw new ApiException(HttpStatus.CONFLICT, "AUDIO_LIMIT", "Sesli not alanın doldu; bir kaydı silip tekrar dene");
+        }
         Instant now = clock.instant();
         String fragments = json.writeValueAsString(write.fragments());
         Optional<AnnotationRow> existing = repository.lockAnnotation(userId, markId);
+        if (kind == Kind.AUDIO && audio == null && (existing.isEmpty() || existing.get().audioMime() == null))
+            throw new ValidationException("audio", "REQUIRED");
+        if (kind == Kind.BOOKMARK) repository.removeOtherBookmarks(userId, articleId, markId);
         if (create) {
             if (existing.isPresent()) {
                 throw new ApiException(HttpStatus.PRECONDITION_FAILED, "ALREADY_EXISTS", "Bu işaret zaten kayıtlı; sayfayı yenile");
@@ -131,6 +144,8 @@ public class AnnotationService {
             Preconditions.check(Preconditions.requireVersion(ifMatch), row.version());
             repository.updateAnnotation(userId, markId, text.revisionId(), kind.name(), fragments, note, now);
         }
+        repository.presentation(userId, markId, color, audio, write.audio() == null ? null : write.audio().mime(),
+                write.audio() == null ? null : write.audio().durationMs());
         AnnotationRow saved = repository.lockAnnotation(userId, markId).orElseThrow();
         return new Saved(view(saved), create);
     }
@@ -155,6 +170,7 @@ public class AnnotationService {
         if (items == null || items.isEmpty() || items.size() > MAX_IMPORT_ITEMS) {
             throw new ValidationException("items", items == null || items.isEmpty() ? "REQUIRED" : "LENGTH");
         }
+        repository.lockOwner(userId);
         String hash = sha256(json.writeValueAsString(items));
         Optional<ReadingRepository.StoredImport> stored = repository.lockImport(userId, clientImportId);
         if (stored.isPresent()) {
@@ -191,6 +207,8 @@ public class AnnotationService {
         String note = item.note() == null ? "" : item.note();
         try {
             kind = Annotation.kind(item.kind());
+            if (kind == Kind.AUDIO) return Optional.of("AUDIO_REQUIRES_UPLOAD");
+            validColor(item.color());
             Annotation.validate(kind, item.fragments(), note, text.get().anchors());
         } catch (ValidationException invalid) {
             return Optional.of(invalid.code());
@@ -206,6 +224,8 @@ public class AnnotationService {
         if (!inserted) {
             return Optional.of("DUPLICATE");
         }
+        if (kind == Kind.BOOKMARK) repository.removeOtherBookmarks(userId, item.articleId(), id);
+        repository.presentation(userId, id, validColor(item.color()), null, null, null);
         accepted.add(new Accepted(index, id, item.articleId()));
         return Optional.empty();
     }
@@ -223,7 +243,39 @@ public class AnnotationService {
 
     private AnnotationView view(AnnotationRow row) {
         return new AnnotationView(row.id(), row.kind().toLowerCase(Locale.ROOT), row.revisionId(),
-                json.readValue(row.fragmentsJson(), FRAGMENTS), row.note(), row.createdAt(), row.version());
+                json.readValue(row.fragmentsJson(), FRAGMENTS), row.note(), row.createdAt(), row.version(), row.color(),
+                row.audioMime() == null ? null : new AudioInfo(row.audioMime(), row.audioDuration()));
+    }
+
+    public static String validColor(String color) {
+        if (color == null) return "lavender";
+        if (!List.of("lavender", "mint", "peach", "blue", "yellow").contains(color)) throw new ValidationException("color", "INVALID");
+        return color;
+    }
+
+    private static byte[] audioBytes(AudioInput audio) {
+        if (audio == null) return null;
+        if (audio.data() == null || audio.data().length() > 1_400_000 || audio.durationMs() < 1 || audio.durationMs() > 120_000
+                || audio.mime() == null || !List.of("audio/webm", "audio/ogg", "audio/mp4").contains(audio.mime())) throw new ValidationException("audio", "INVALID");
+        byte[] bytes;
+        try { bytes = java.util.Base64.getDecoder().decode(audio.data()); }
+        catch (IllegalArgumentException e) { throw new ValidationException("audio", "FORMAT"); }
+        if (bytes.length < 12 || bytes.length > 1_000_000) throw new ValidationException("audio", "LENGTH");
+        boolean valid = switch (audio.mime()) {
+            case "audio/webm" -> (bytes[0] & 255) == 0x1a && (bytes[1] & 255) == 0x45 && (bytes[2] & 255) == 0xdf && (bytes[3] & 255) == 0xa3;
+            case "audio/ogg" -> bytes[0]=='O' && bytes[1]=='g' && bytes[2]=='g' && bytes[3]=='S';
+            case "audio/mp4" -> bytes[4]=='f' && bytes[5]=='t' && bytes[6]=='y' && bytes[7]=='p';
+            default -> false;
+        };
+        if (!valid) throw new ValidationException("audio", "FORMAT");
+        return bytes;
+    }
+
+    @Transactional
+    public AudioContent audio(UUID userId, UUID articleId, UUID id) {
+        AnnotationRow row = repository.lockAnnotation(userId, id).filter(r -> r.articleId().equals(articleId) && r.audioMime() != null).orElseThrow(AnnotationService::notFound);
+        if (content.currentPublicRevision(articleId).isEmpty()) throw notFound();
+        return new AudioContent(repository.audio(userId, id), row.audioMime());
     }
 
     private static ApiException notFound() {

@@ -229,4 +229,42 @@ class ReadingIntegrationTest extends IntegrationTest {
         return api.post("/api/v1/me/visits", Map.of("eventId", UUID.randomUUID().toString(), "articleId", articleId,
                 "revisionId", revision, "visitedAt", at.toString()), Map.of());
     }
+    @Test
+    void coloredAudioNotesArePrivateUpdatableAndBounded() {
+        ApiClient alice=member("audio-alice@example.test");
+        ApiClient bob=member("audio-bob@example.test");
+        UUID id=UUID.randomUUID();
+        byte[] webm=new byte[]{0x1a,0x45,(byte)0xdf,(byte)0xa3,1,2,3,4,5,6,7,8};
+        var audio=Map.of("data",java.util.Base64.getEncoder().encodeToString(webm),"mime","audio/webm","durationMs",18000);
+        var body=new java.util.HashMap<String,Object>(mark("audio",0,8,"Kısa açıklama"));body.put("audio",audio);body.put("color","mint");
+        Response saved=alice.put(path(id),body,Map.of("If-None-Match","*"));assertThat(saved.status()).as(String.valueOf(saved.json())).isEqualTo(201);
+        assertThat(saved.text("color")).isEqualTo("mint");assertThat(saved.json().get("audio").get("durationMs").asInt()).isEqualTo(18000);
+        Response playback=alice.get(path(id)+"/audio");assertThat(playback.status()).isEqualTo(200);assertThat(playback.bytes()).containsExactly(webm);assertThat(playback.header("Cache-Control")).contains("no-store");
+        assertThat(bob.get(path(id)+"/audio").status()).isEqualTo(404);assertThat(client().get(path(id)+"/audio").status()).isEqualTo(401);
+        body.remove("audio");body.put("note","Yeni başlık");body.put("color","blue");
+        Response edited=alice.put(path(id),body,Map.of("If-Match",saved.etag()));assertThat(edited.status()).isEqualTo(200);assertThat(edited.text("note")).isEqualTo("Yeni başlık");assertThat(alice.get(path(id)+"/audio").bytes()).containsExactly(webm);
+        body.put("audio",Map.of("data","not-base64!","mime","audio/webm","durationMs",100));
+        assertThat(alice.put(path(id),body,Map.of("If-Match",edited.etag())).status()).isEqualTo(422);
+        body.put("audio",Map.of("data",java.util.Base64.getEncoder().encodeToString(webm),"mime","text/html","durationMs",100));
+        assertThat(alice.put(path(id),body,Map.of("If-Match",edited.etag())).status()).isEqualTo(422);
+        unpublish(owner,published);assertThat(alice.get(path(id)+"/audio").status()).isEqualTo(404);
+        assertThat(alice.delete(path(id),null,Map.of()).status()).isEqualTo(204);
+    }
+
+    @Test
+    void notebookIsAccountPrivateAndChecksVersions() {
+        ApiClient alice=member("notes-alice@example.test");ApiClient bob=member("notes-bob@example.test");
+        String path="/api/v1/me/notes/"+UUID.randomUUID();
+        var body=Map.of("body","Kendi düşüncem #java #okuma","color","peach");
+        assertThat(client().get("/api/v1/me/notes").status()).isEqualTo(401);
+        assertThat(alice.put(path,body,Map.of()).status()).isEqualTo(428);
+        Response saved=alice.put(path,body,Map.of("If-None-Match","*"));assertThat(saved.status()).as(String.valueOf(saved.json())).isEqualTo(201);
+        assertThat(bob.get("/api/v1/me/notes").json().get("items")).isEmpty();assertThat(bob.delete(path,null,Map.of()).status()).isEqualTo(404);
+        assertThat(bob.put(path,body,Map.of("If-Match",saved.etag())).status()).isEqualTo(404);
+        Response changed=alice.put(path,Map.of("body","Güncel düşüncem #java","color","mint"),Map.of("If-Match",saved.etag()));assertThat(changed.status()).isEqualTo(200);
+        assertThat(alice.put(path,body,Map.of("If-Match",saved.etag())).status()).isEqualTo(412);
+        assertThat(alice.get("/api/v1/me/notes").json().get("items").get(0).get("body").asString()).isEqualTo("Güncel düşüncem #java");
+        assertThat(alice.put("/api/v1/me/notes/"+UUID.randomUUID(),Map.of("body"," "),Map.of("If-None-Match","*")).status()).isEqualTo(422);
+        assertThat(alice.delete(path,null,Map.of()).status()).isEqualTo(204);assertThat(alice.get("/api/v1/me/notes").json().get("items")).isEmpty();
+    }
 }

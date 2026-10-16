@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public class ReadingRepository {
 
     public record AnnotationRow(UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson, String note,
-            Instant createdAt, long version) {
+            Instant createdAt, long version, String color, String audioMime, Integer audioDuration) {
     }
 
     public record NewAnnotation(UUID userId, UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson,
@@ -33,7 +33,7 @@ public class ReadingRepository {
     }
 
     private static final String ANNOTATION_COLUMNS =
-            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version FROM annotation";
+            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version, color, audio_mime, audio_duration FROM annotation";
 
     private final JdbcClient jdbc;
 
@@ -42,6 +42,8 @@ public class ReadingRepository {
     }
 
     // ---------------------------------------------------------------- annotations
+
+    public void lockOwner(UUID userId) { jdbc.sql("SELECT id FROM app_user WHERE id = :user FOR UPDATE").param("user", userId).query(UUID.class).single(); }
 
     public List<AnnotationRow> annotations(UUID userId, UUID articleId) {
         return jdbc.sql("SELECT " + ANNOTATION_COLUMNS + " WHERE user_id = :user AND article_id = :article ORDER BY created_at, id")
@@ -80,6 +82,33 @@ public class ReadingRepository {
                 """)
                 .param("user", userId).param("id", id).param("revision", revisionId).param("kind", kind)
                 .param("fragments", fragmentsJson).param("note", note).param("now", Timestamp.from(now)).update();
+    }
+
+    public void presentation(UUID userId, UUID id, String color, byte[] audio, String mime, Integer duration) {
+        jdbc.sql("UPDATE annotation SET color = :color WHERE user_id = :user AND id = :id")
+            .param("color", color).param("user", userId).param("id", id).update();
+        if (audio != null) jdbc.sql("UPDATE annotation SET audio_data = :data, audio_mime = :mime, audio_duration = :duration WHERE user_id = :user AND id = :id")
+            .param("data", audio).param("mime", mime).param("duration", duration).param("user", userId).param("id", id).update();
+    }
+
+    public byte[] audio(UUID userId, UUID id) {
+        return jdbc.sql("SELECT audio_data FROM annotation WHERE user_id = :user AND id = :id")
+            .param("user", userId).param("id", id).query(byte[].class).single();
+    }
+
+    public int audioLength(UUID userId, UUID id) {
+        return jdbc.sql("SELECT COALESCE(octet_length(audio_data),0) FROM annotation WHERE user_id = :user AND id = :id")
+            .param("user",userId).param("id",id).query(Integer.class).optional().orElse(0);
+    }
+
+    public long audioBytes(UUID userId) {
+        return jdbc.sql("SELECT COALESCE(sum(octet_length(audio_data)),0) FROM annotation WHERE user_id = :user")
+            .param("user", userId).query(Long.class).single();
+    }
+
+    public void removeOtherBookmarks(UUID userId, UUID articleId, UUID id) {
+        jdbc.sql("DELETE FROM annotation WHERE user_id=:user AND article_id=:article AND kind='BOOKMARK' AND id<>:id")
+            .param("user",userId).param("article",articleId).param("id",id).update();
     }
 
     public boolean deleteAnnotation(UUID userId, UUID articleId, UUID id) {
@@ -158,6 +187,7 @@ public class ReadingRepository {
 
     public void deleteAll(UUID userId) {
         jdbc.sql("DELETE FROM annotation WHERE user_id = :user").param("user", userId).update();
+        jdbc.sql("DELETE FROM personal_note WHERE user_id = :user").param("user", userId).update();
         jdbc.sql("DELETE FROM annotation_import WHERE user_id = :user").param("user", userId).update();
         jdbc.sql("DELETE FROM reading_history WHERE user_id = :user").param("user", userId).update();
     }
@@ -165,6 +195,6 @@ public class ReadingRepository {
     private static AnnotationRow annotation(ResultSet rs, int row) throws SQLException {
         return new AnnotationRow(rs.getObject("id", UUID.class), rs.getObject("article_id", UUID.class),
                 rs.getObject("revision_id", UUID.class), rs.getString("kind"), rs.getString("fragments"), rs.getString("note"),
-                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"));
+                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"), rs.getString("color"), rs.getString("audio_mime"), rs.getObject("audio_duration", Integer.class));
     }
 }

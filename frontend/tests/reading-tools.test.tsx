@@ -106,6 +106,7 @@ describe("browser-local reading tools", () => {
     await user.type(input, "<script>Keep thinking</script>");
     await user.click(screen.getByRole("button", { name: "Notu kaydet" }));
     expect(saved()?.marks[0]).toMatchObject({ kind: "note", note: "<script>Keep thinking</script>" });
+    await user.click(screen.getByRole("button", { name: /Notlar/ }));
     const panel = screen.getByRole("region", { name: "Bu yazıdaki okuma notların" });
     expect(within(panel).getByText("<script>Keep thinking</script>")).toBeTruthy();
     expect(panel.querySelector("script")).toBeNull();
@@ -182,4 +183,32 @@ describe("browser-local reading tools", () => {
     expect(screen.queryByRole("region", { name: "Bu yazıdaki okuma notların" })).toBeNull();
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
   });
+});
+
+it("edits an existing note without changing its ID and keeps it after closing the card", async()=>{
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"İlk düşünce",color:"mint"}]}));
+ const user=userEvent.setup();renderReader();await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Düzenle"}));
+ const field=screen.getByLabelText("Bu alıntı için notun");await user.clear(field);await user.type(field,"Düzeltilen düşünce");await user.click(screen.getByRole("button",{name:"Notu kaydet"}));
+ expect(saved()?.marks).toHaveLength(1);expect(saved()?.marks[0]).toMatchObject({id:"mark-1",note:"Düzeltilen düşünce",color:"mint"});
+ await user.click(screen.getByRole("button",{name:"Notu kapat"}));expect(saved()?.marks).toHaveLength(1);
+});
+it("hides note UI without deleting personal data and preserves resume position", async()=>{
+ const bookmark={...mark,id:"resume",kind:"bookmark",note:""};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Düşünce"},bookmark]}));
+ const user=userEvent.setup();renderReader();await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Düzenle"}));
+ const toggle=screen.getByRole("switch",{name:"Notları göster"});await user.click(toggle);
+ expect(toggle.getAttribute("aria-checked")).toBe("false");expect(screen.queryByLabelText("Notu kapat")).toBeNull();expect(saved()?.marks).toHaveLength(2);
+ expect(screen.getByRole("button",{name:"Kaldığın yere dön"})).toBeTruthy();
+ await user.click(toggle);expect(toggle.getAttribute("aria-checked")).toBe("true");
+});
+it("updates the single saved reading position rather than accumulating bookmarks", async()=>{
+ const user=userEvent.setup();renderReader();selectText();await user.click(screen.getByRole("button",{name:"Burada kaldım"}));const first=saved()?.marks[0].id;
+ const second=document.querySelector('[data-reading-anchor="paragraph-1"]')!.firstChild!;const range=document.createRange();range.setStart(second,0);range.setEnd(second,7);
+ act(()=>{window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);document.dispatchEvent(new Event("selectionchange"));});
+ await user.click(screen.getByRole("button",{name:"Burada kaldım"}));expect(saved()?.marks).toHaveLength(1);expect(saved()?.marks[0]).toMatchObject({id:first,kind:"bookmark",fragments:[expect.objectContaining({anchorId:"paragraph-1"})]});
+});
+it("represents closed text and audio notes with distinct labelled buttons", async()=>{
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Metin"},{...mark,id:"audio",kind:"audio",note:"",audio:{mime:"audio/webm",durationMs:1000}}]}));
+ renderReader();await act(async()=>{await new Promise(r=>setTimeout(r,40));});
+ expect(screen.getByRole("button",{name:"1. Metin notu aç"})).toBeTruthy();expect(screen.getByRole("button",{name:"2. Sesli not aç"})).toBeTruthy();
 });

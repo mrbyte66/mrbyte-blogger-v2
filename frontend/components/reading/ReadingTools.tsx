@@ -1,216 +1,172 @@
 "use client";
-
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../auth/AuthProvider";
+import { SlideLink } from "../SlideLink";
 import { scrollBehavior } from "../../lib/motion";
-
-import { useEffect, useRef, useState } from "react";
-import { anchorRange, findAnchor, maxMarks, maxNoteLength, selectionAnchors, type ReadingMark, type ReadingMarkKind, type TextAnchor } from "../../lib/reading/model";
+import { anchorRange, findAnchor, maxMarks, maxNoteLength, noteColors, selectionAnchors, type NoteColor, type ReadingMark, type ReadingMarkKind, type TextAnchor } from "../../lib/reading/model";
 import { readReadingDocument, readingStorageKey, writeReadingDocument } from "../../lib/reading/storage";
-import { createServerMark, deleteServerMark, importGuestMarks, loadServerMarks, type ServerArticle } from "../../lib/reading/server";
-import { describe } from "../../lib/api/http";
+import { deleteServerMark, importGuestMarks, loadServerMarks, saveServerMark, type ServerArticle } from "../../lib/reading/server";
+import { audioInput, readAudio, storeAudio, removeAudio } from "../../lib/reading/audio";
+import { stackNotes } from "../../lib/reading/layout";
+import { api, describe } from "../../lib/api/http";
+import { ReadingIcon as Icon } from "./ReadingIcon";
+import { RecordingButton, VoicePlayback } from "./VoiceNote";
+import { GeneralNotebook } from "./GeneralNotebook";
 
-type HighlightEnvironment = {
-  CSS?: { highlights?: { set: (name: string, highlight: unknown) => void; delete: (name: string) => void } };
-  Highlight?: new (...ranges: Range[]) => unknown;
-};
-const highlightNames = { highlight: "mrbyte-reading-highlight", underline: "mrbyte-reading-underline", note: "mrbyte-reading-note" };
-const kindLabels = { highlight: "Fosforlu işaret", underline: "Alt çizgi", note: "Not" };
-
-/**
- * Guests keep marks in this browser only. A verified member's marks live in their account when the
- * article is a published server article ({@code server}); guest marks are imported only on request.
- */
-export function ReadingTools(props: { articleId: string; contentRootId: string; contentRevision?: string; server?: ServerArticle }) {
-  const { session } = useAuth();
-  const memberId = session?.profile.id;
-  const account = !!(session?.profile.verified && props.server);
-  return <ScopedReadingTools key={`${props.articleId}:${memberId ?? "guest"}:${account}`} {...props} memberId={memberId} server={account ? props.server : undefined} />;
+type Props={articleId:string;contentRootId:string;contentRevision?:string;server?:ServerArticle};
+type Geometry={width:number;articleRight:number;points:Record<string,{x:number;y:number}>;selection:{x:number;y:number}|null;end:number};
+type HighlightEnvironment={CSS?:{highlights?:{set:(name:string,value:unknown)=>void;delete:(name:string)=>void}};Highlight?:new(...ranges:Range[])=>unknown};
+const labels:Record<ReadingMarkKind,string>={highlight:"Fosforlu işaret",underline:"Alt çizgi",note:"Metin notu",audio:"Sesli not",bookmark:"Burada kaldım"};
+const colorNames:Record<NoteColor,string>={lavender:"Lavanta",mint:"Nane",peach:"Şeftali",blue:"Mavi",yellow:"Sarı"};
+const isNote=(m:ReadingMark)=>m.kind==="note"||m.kind==="audio";
+const initialGeometry:Geometry={width:0,articleRight:0,points:{},selection:null,end:0};
+export function ReadingTools(props:Props){
+ const {session}=useAuth();const memberId=session?.profile.id;const account=!!(session?.profile.verified&&props.server);
+ const server=useMemo(()=>account?props.server:undefined,[account,props.server?.id,props.server?.revisionId]);
+ return <ScopedReadingTools key={`${props.articleId}:${memberId??"guest"}:${account}`} {...props} memberId={memberId} server={server}/>;
 }
-function ScopedReadingTools({ articleId, contentRootId, contentRevision = "", memberId, server }: { articleId: string; contentRootId: string; contentRevision?: string; memberId?: string; server?: ServerArticle }) {
-  const [marks, setMarks] = useState<ReadingMark[]>([]);
-  const [fragments, setFragments] = useState<TextAnchor[]>([]);
-  const [open, setOpen] = useState(false);
-  const [writing, setWriting] = useState(false);
-  const [note, setNote] = useState("");
-  const [status, setStatus] = useState("");
-  const [storageError, setStorageError] = useState<string | null>(null);
-  const [supported, setSupported] = useState(false);
-  const [unresolved, setUnresolved] = useState(0);
-  const [ready, setReady] = useState(false);
-  const [undo, setUndo] = useState<{ mark: ReadingMark; index: number } | null>(null);
-  const [guestMarks, setGuestMarks] = useState<ReadingMark[]>([]);
-  const [importing, setImporting] = useState(false);
-  const noteInput = useRef<HTMLTextAreaElement>(null);
-  const toggle = useRef<HTMLButtonElement>(null);
-  const quote = fragments.map((fragment) => fragment.quote).join("\n");
-
-  useEffect(() => {
-    if (server) {
-      let cancelled = false;
-      const loadAccount = () => loadServerMarks(server).then((loaded) => { if (!cancelled) { setMarks(loaded); setStorageError(null); setReady(true); } },
-        (cause) => { if (!cancelled) { setStorageError(`Notların yüklenemedi: ${describe(cause)}`); setReady(false); } });
-      void loadAccount();
-      setGuestMarks(readReadingDocument(articleId).document.marks);
-      // Another device may have changed the marks: re-read when the tab gets focus again.
-      const visible = () => { if (document.visibilityState === "visible") void loadAccount(); };
-      window.addEventListener("focus", visible);
-      return () => { cancelled = true; window.removeEventListener("focus", visible); };
-    }
-    function load() {
-      const loaded = readReadingDocument(articleId, memberId);
-      setMarks(loaded.document.marks); setStorageError(loaded.error); setReady(true);
-      setFragments([]); setWriting(false); setUndo(null); setStatus("");
-    }
-    function sync(event: StorageEvent) { if (event.key === readingStorageKey(articleId, memberId) || event.key === null) load(); }
-    load(); window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, [articleId, memberId, server]);
-  useEffect(() => {
-    function capture() {
-      const root = document.getElementById(contentRootId);
-      if (!root) return;
-      const next = selectionAnchors(root, window.getSelection());
-      if (next.length) { setFragments(next); setStatus(""); }
-      else if (root.contains(document.activeElement)) setFragments([]);
-    }
-    function finishPointerSelection(event: PointerEvent) {
-      const target = event.target;
-      if (!(target instanceof Element) || target.closest(".reading-toolbar, .reading-panel")) return;
-      // A form field (e.g. the login dialog) keeps its caret: WebKit drops it when the document selection is cleared (#38).
-      if (target.closest("input, textarea, select, [contenteditable]")) return;
-      const root = document.getElementById(contentRootId);
-      if (!root) return;
-      const next = root.contains(target) ? selectionAnchors(root, window.getSelection()) : [];
-      setFragments(next);
-      if (!next.length) {
-        setWriting(false);
-        window.getSelection()?.removeAllRanges();
-      }
-    }
-    document.addEventListener("selectionchange", capture);
-    document.addEventListener("pointerup", finishPointerSelection);
-    document.addEventListener("pointercancel", finishPointerSelection);
-    return () => {
-      document.removeEventListener("selectionchange", capture);
-      document.removeEventListener("pointerup", finishPointerSelection);
-      document.removeEventListener("pointercancel", finishPointerSelection);
-    };
-  }, [contentRootId]);
-  useEffect(() => { setFragments([]); setWriting(false); }, [contentRevision]);
-  useEffect(() => { if (writing) noteInput.current?.focus(); }, [writing]);
-  useEffect(() => {
-    if (!open) return;
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      setOpen(false); toggle.current?.focus();
-    }
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [open]);
-  useEffect(() => {
-    const root = document.getElementById(contentRootId);
-    const environment = window as unknown as HighlightEnvironment;
-    const registry = environment.CSS?.highlights;
-    const Constructor = environment.Highlight;
-    const available = Boolean(registry && Constructor);
-    setSupported(available);
-    if (!root) return;
-    let missing = 0;
-    const ranges: Record<ReadingMarkKind, Range[]> = { highlight: [], underline: [], note: [] };
-    for (const mark of marks) {
-      const resolved = mark.fragments.map((fragment) => anchorRange(root, fragment));
-      if (resolved.some((range) => !range)) missing++;
-      ranges[mark.kind].push(...resolved.filter((range): range is Range => range !== null));
-    }
-    setUnresolved(missing);
-    if (registry && Constructor) {
-      for (const kind of Object.keys(highlightNames) as ReadingMarkKind[]) registry.set(highlightNames[kind], new Constructor(...ranges[kind]));
-    }
-    return () => { for (const name of Object.values(highlightNames)) registry?.delete(name); };
-  }, [marks, contentRootId, contentRevision]);
-
-  /** Account mode applies the change optimistically, then confirms it with the server or rolls back. */
-  function persist(next: ReadingMark[], message: string, change: { create?: ReadingMark; remove?: ReadingMark }) {
-    if (server) {
-      const previous = marks;
-      setMarks(next); setStatus(`${message} Kaydediliyor…`);
-      const request = change.create ? createServerMark(server, change.create) : deleteServerMark(server, change.remove!.id);
-      request.then(() => { setStorageError(null); setStatus(`${message} Hesabına kaydedildi.`); },
-        (cause) => { setMarks(previous); setStorageError(`Kaydedilemedi: ${describe(cause)}`); setStatus(""); });
-      return;
-    }
-    const saved = writeReadingDocument({ version: 1, articleId, marks: next }, memberId);
-    setMarks(next);
-    setStorageError(saved ? null : "Tarayıcı kaydı başarısız. Bu değişiklikler sayfa kapanınca kaybolabilir.");
-    setStatus(saved ? `${message} Bu tarayıcıya kaydedildi.` : `${message} Yalnızca bu oturumda tutuluyor.`);
+function ScopedReadingTools({articleId,contentRootId,contentRevision="",memberId,server}:Props&{memberId?:string}){
+ const {openAuth}=useAuth();
+ const [marks,setMarks]=useState<ReadingMark[]>([]);const marksRef=useRef(marks);marksRef.current=marks;
+ const [fragments,setFragments]=useState<TextAnchor[]>([]);const [open,setOpen]=useState(false);const [visible,setVisible]=useState(true);
+ const [expanded,setExpanded]=useState<string[]>([]);const [editing,setEditing]=useState<string|null>(null);const [draftKind,setDraftKind]=useState<"note"|"audio"|null>(null);
+ const [note,setNote]=useState("");const [color,setColor]=useState<NoteColor>("lavender");const [status,setStatus]=useState("");const [error,setError]=useState<string|null>(null);
+ const [ready,setReady]=useState(false);const [pending,setPending]=useState(false);const busy=useRef(false);const alive=useRef(true);const requests=useRef(new AbortController());
+ const [guestMarks,setGuestMarks]=useState<ReadingMark[]>([]);const [undo,setUndo]=useState<{mark:ReadingMark;index:number}|null>(null);
+ const [supported,setSupported]=useState(false);const [unresolved,setUnresolved]=useState(0);const [query,setQuery]=useState("");const [general,setGeneral]=useState(false);
+ const [mount,setMount]=useState<HTMLElement|null>(null);const [geometry,setGeometry]=useState<Geometry>(initialGeometry);const [tick,setTick]=useState(0);
+ const [hover,setHover]=useState<string|null>(null);const [dictionary,setDictionary]=useState(false);
+ const noteInput=useRef<HTMLTextAreaElement>(null);const toggle=useRef<HTMLButtonElement>(null);const cardRefs=useRef(new Map<string,HTMLElement>());
+ const undoAudio=useRef<Blob|null>(null);
+ const scope=`${memberId??"guest"}:${articleId}`;
+ useEffect(()=>{alive.current=true;const controller=new AbortController();requests.current=controller;return()=>{alive.current=false;controller.abort();};},[]);
+ useEffect(()=>{
+  let cancelled=false;
+  if(server){
+   const load=()=>{if(busy.current)return;void loadServerMarks(server,requests.current.signal).then(items=>{if(!cancelled){setMarks(items);setReady(true);setError(null);}},cause=>{if(!cancelled){setReady(false);setError(`Notların yüklenemedi: ${describe(cause)}`);}});};
+   load();setGuestMarks(readReadingDocument(articleId).document.marks);
+   const focus=()=>{if(document.visibilityState==="visible" && !document.activeElement?.closest(".rn-ui"))load();};window.addEventListener("focus",focus);
+   return()=>{cancelled=true;window.removeEventListener("focus",focus);};
   }
-  /** Explicit, member-confirmed import of this browser's guest marks; local copies go only after success. */
-  async function importGuest() {
-    if (!server || !guestMarks.length) return;
-    setImporting(true);
-    const stored = readReadingDocument(articleId).document;
-    // One import ID per local document makes a retried import return the same result.
-    const clientImportId = stored.importId ?? crypto.randomUUID();
-    writeReadingDocument({ ...stored, importId: clientImportId });
-    try {
-      const result = await importGuestMarks(server, stored.marks, clientImportId);
-      const remaining = stored.marks.filter((mark) => !result.accepted.includes(mark.id));
-      writeReadingDocument({ version: 1, articleId, marks: remaining });
-      setGuestMarks(remaining);
-      setMarks(await loadServerMarks(server));
-      setStatus(`${result.accepted.length} misafir kaydı hesabına aktarıldı.${result.rejected ? ` ${result.rejected} kayıt metinle eşleşmediği için bu tarayıcıda bırakıldı.` : ""}`);
-    } catch (cause) { setStorageError(`İçe aktarılamadı: ${describe(cause)}`); }
-    finally { setImporting(false); }
+  function load(){const loaded=readReadingDocument(articleId,memberId);setMarks(loaded.document.marks);setError(loaded.error);setReady(true);}
+  load();const sync=(e:StorageEvent)=>{if(e.key===readingStorageKey(articleId,memberId)||e.key===null)load();};window.addEventListener("storage",sync);return()=>window.removeEventListener("storage",sync);
+ },[articleId,memberId,server]);
+ useEffect(()=>{
+  const root=document.getElementById(contentRootId);if(!root)return;root.classList.add("rn-reading-root");
+  const layer=document.createElement("div");layer.className="rn-ui rn-host";root.append(layer);setMount(layer);
+  return()=>{layer.remove();root.classList.remove("rn-reading-root");};
+ },[contentRootId]);
+ useEffect(()=>{
+  const root=document.getElementById(contentRootId);if(!root)return;
+  function capture(){if(draftKind)return;const next=selectionAnchors(root!,window.getSelection());if(next.length){setFragments(next);setStatus("");}}
+  function finish(e:PointerEvent){if(draftKind)return;const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui,input,textarea,select,[contenteditable]"))return;
+   const next=root!.contains(target)?selectionAnchors(root!,window.getSelection()):[];setFragments(next);
+   if(!next.length&&!draftKind)setDictionary(false);
   }
-  function add(kind: ReadingMarkKind) {
-    if (!ready || !fragments.length || marks.length >= maxMarks || (kind === "note" && !note.trim())) return;
-    const mark: ReadingMark = { id: crypto.randomUUID(), kind, fragments, note: kind === "note" ? note.trim() : "", createdAt: new Date().toISOString() };
-    persist([...marks, mark], `${kindLabels[kind]} eklendi.`, { create: mark });
-    setFragments([]); setNote(""); setWriting(false); setUndo(null);
-    window.getSelection()?.removeAllRanges();
-  }
-  function remove(mark: ReadingMark, index: number) {
-    persist(marks.filter((item) => item.id !== mark.id), "İşaret kaldırıldı.", { remove: mark });
-    setUndo({ mark, index });
-  }
-  function jump(mark: ReadingMark) {
-    const root = document.getElementById(contentRootId);
-    const paragraph = root && findAnchor(root, mark.fragments[0].anchorId);
-    if (!paragraph) { setStatus("Bu alıntının bölümü artık bulunamıyor. Kayıtlı notun listede korunuyor."); return; }
-    if (matchMedia("(max-width: 1100px)").matches) setOpen(false);
-    paragraph.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
-    setStatus("Alıntının bulunduğu bölüme gidildi.");
-  }
-  const disabled = !ready || fragments.length === 0 || marks.length >= maxMarks;
-  return <aside className={`reading-tools ${open ? "is-open" : ""}`} aria-label="Okuma araçları">
-    <div className="reading-toolbar" role="group" aria-label="Metin işaretleme araçları">
-      <button ref={toggle} className="reading-tool reading-toggle" disabled={!ready} aria-expanded={open} aria-controls="reading-notes-panel" onClick={() => setOpen(!open)}><span aria-hidden="true">✎</span><span>{open ? "Kapat" : "Notlar"}<small>{marks.length} kayıt</small></span></button>
-      <button className="reading-tool" disabled={disabled} onClick={() => add("highlight")} aria-label="Seçili metni fosforlu kalemle işaretle"><span aria-hidden="true">▰</span><span>Fosforlu</span></button>
-      <button className="reading-tool" disabled={disabled} onClick={() => add("underline")} aria-label="Seçili metnin altını çiz"><span aria-hidden="true"><u>U</u></span><span>Altını çiz</span></button>
-      <button className="reading-tool" disabled={disabled} onClick={() => { setOpen(true); setWriting(true); setNote(""); }} aria-label="Seçili metne not ekle"><span aria-hidden="true">＋</span><span>Not ekle</span></button>
-    </div>
-    {!open && <p className="reading-hint">Metin seç, işaretle.</p>}
-    {open && <section id="reading-notes-panel" className="reading-panel" aria-label="Bu yazıdaki okuma notların">
-      <header><p className="reading-eyebrow">KİŞİSEL OKUMA ALANI</p><h2>Satır aralarında.</h2><p>{server ? "Notların hesabında saklanır ve giriş yaptığın cihazlarda görünür." : "Notların bu tarayıcıda sana ait."} Site sahibiyle veya diğer okurlarla paylaşılmaz.</p></header>
-      {server && guestMarks.length > 0 && <div className="reading-availability"><p>Bu tarayıcıda hesapsız eklediğin {guestMarks.length} kayıt var. İstersen hesabına aktarabilirsin.</p><button className="reading-text-button" disabled={importing} onClick={() => void importGuest()}>{importing ? "Aktarılıyor…" : "Misafir notlarını hesabıma aktar"}</button></div>}
-      {!supported && <p className="reading-availability">Bu tarayıcı metnin üzerinde renk ve çizgi göstermeyi desteklemiyor. İşaretlerin ve notların bu listede kaydedilir.</p>}
-      {unresolved > 0 && <p className="reading-availability">{unresolved} işaretin metindeki yeri değişmiş olabilir. Kaydettiğin alıntılar burada korunuyor.</p>}
-      {fragments.length > 0 ? <div className="reading-selection"><strong>Seçilen alıntı</strong><blockquote>{quote}</blockquote><button className="reading-text-button" onClick={() => { setFragments([]); setWriting(false); window.getSelection()?.removeAllRanges(); }}>Seçimi temizle</button></div> : <p className="reading-instruction">Yazıdan bir metin seç. Sonra fosforlu kalem, alt çizgi veya not ekle düğmesini kullan.</p>}
-      {writing && <form className="reading-note-form" onSubmit={(event) => { event.preventDefault(); add("note"); }}>
-        <label htmlFor="reading-note-input">Bu alıntı için notun</label><textarea id="reading-note-input" ref={noteInput} rows={4} maxLength={maxNoteLength} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Aklında kalan bir düşünce…" />
-        <div><button type="button" className="reading-text-button" onClick={() => { setWriting(false); setNote(""); }}>Vazgeç</button><button className="reading-save" disabled={disabled || !note.trim()}>Notu kaydet</button></div>
-      </form>}
-      {marks.length >= maxMarks && <p className="reading-availability">Bu yazı için {maxMarks} kayıt sınırına ulaştın. Yeni işaret eklemek için bir kaydı kaldır.</p>}
-      <div className="reading-list-heading"><h3>Kayıtların</h3><span>{marks.length}</span></div>
-      {marks.length === 0 ? <p className="reading-empty">Henüz işaret veya not yok. İlk satırı sen seç.</p> : <ol className="reading-mark-list">{marks.map((mark, index) => <li key={mark.id} className={`reading-mark mark-${mark.kind}`}>
-        <div className="reading-mark-meta"><span>{kindLabels[mark.kind]}</span><button onClick={() => remove(mark, index)} aria-label={`${index + 1}. kaydı kaldır`}>Kaldır</button></div>
-        <button className="reading-quote-link" onClick={() => jump(mark)} aria-label={`${index + 1}. alıntının bulunduğu bölüme git`}><q>{mark.fragments.map((fragment) => fragment.quote).join("\n")}</q><span aria-hidden="true">↗</span></button>
-        {mark.note && <p className="reading-authored-note">{mark.note}</p>}
-      </li>)}</ol>}
-      {undo && <button className="reading-undo" onClick={() => { const restored = [...marks]; restored.splice(undo.index, 0, undo.mark); persist(restored, "Kaldırılan işaret geri alındı.", { create: undo.mark }); setUndo(null); }}>Son kaldırmayı geri al ↶</button>}
-      <footer>{server ? <>Hesabına bağlı · yalnız sen görürsün</> : <>Hesapsız kullanım · yalnızca bu cihaz/tarayıcı<br />Giriş yapıp e-postanı doğrularsan notların hesabında saklanır.</>}</footer>
-    </section>}
-    {storageError && <p className="reading-feedback reading-storage-error" role="alert">{storageError}</p>}
-    <p className={`reading-feedback ${status ? "has-message" : ""}`} role="status">{status}</p>
-  </aside>;
+  function bookmarkHover(e:PointerEvent){const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui"))return;const anchor=target.closest<HTMLElement>("[data-reading-anchor]");setHover(anchor?.dataset.readingAnchor??null);}
+  document.addEventListener("selectionchange",capture);document.addEventListener("pointerup",finish);root.addEventListener("pointermove",bookmarkHover);
+  return()=>{document.removeEventListener("selectionchange",capture);document.removeEventListener("pointerup",finish);root.removeEventListener("pointermove",bookmarkHover);};
+ },[contentRootId,draftKind]);
+ useEffect(()=>{setFragments([]);setDraftKind(null);setDictionary(false);},[contentRevision]);
+ useEffect(()=>{if(!status)return;const timer=setTimeout(()=>setStatus(""),5000);return()=>clearTimeout(timer);},[status]);
+ useEffect(()=>{if(editing||draftKind==="note")noteInput.current?.focus({preventScroll:true});},[editing,draftKind]);
+ useEffect(()=>{
+  const root=document.getElementById(contentRootId);if(!root)return;
+  let frame=0;const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
+   const box=root.getBoundingClientRect();root.dataset.noteLayout=box.width>=880?"wide":"compact";const article=root.querySelector(".article-view")??root.querySelector("[data-reading-anchor]")?.parentElement??root;const ab=article.getBoundingClientRect();
+   const points:Geometry["points"]={};for(const mark of marks){const range=anchorRange(root,mark.fragments[0]);if(!range)continue;const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():findAnchor(root,mark.fragments[0].anchorId)!.getBoundingClientRect();points[mark.id]={x:Math.min(box.width-28,ab.right-box.left+10),y:r.top-box.top};}
+   if(hover){const el=findAnchor(root,hover);if(el){const b=el.getBoundingClientRect();points.hover={x:b.left-box.left-32,y:b.top-box.top};}}
+   let selection:Geometry["selection"]=null;if(fragments.length){const range=anchorRange(root,fragments[0]);if(range){const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():findAnchor(root,fragments[0].anchorId)!.getBoundingClientRect();selection={x:Math.max(8,Math.min(box.width-330,r.left-box.left)),y:Math.max(48,r.top-box.top)};}}
+   const next={width:box.width,articleRight:ab.right-box.left,points,selection,end:ab.bottom-box.top};setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);
+  });};
+  measure();window.addEventListener("resize",measure);document.addEventListener("scroll",measure,true);
+  const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(measure):null;observer?.observe(root);for(const element of cardRefs.current.values())observer?.observe(element);
+  return()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",measure);document.removeEventListener("scroll",measure,true);observer?.disconnect();};
+ },[marks,fragments,contentRootId,contentRevision,expanded,editing,draftKind,hover,tick]);
+ useEffect(()=>{
+  const root=document.getElementById(contentRootId);const env=window as unknown as HighlightEnvironment;const registry=env.CSS?.highlights;const H=env.Highlight;setSupported(!!(registry&&H));if(!root)return;
+  const ranges:Record<string,Range[]>={"mrbyte-reading-underline":[]};for(const c of noteColors)ranges[`satir-reading-${c}`]=[];
+  let missing=0;for(const mark of marks){const resolved=mark.fragments.map(f=>anchorRange(root,f));if(resolved.some(r=>!r))missing++;
+   if(mark.kind==="bookmark"||(!visible&&isNote(mark)))continue;
+   const key=mark.kind==="underline"?"mrbyte-reading-underline":`satir-reading-${mark.color??"lavender"}`;ranges[key].push(...resolved.filter((r):r is Range=>r!==null));
+  }setUnresolved(missing);
+  if(registry&&H)for(const [name,items]of Object.entries(ranges))registry.set(name,new H(...items));
+  return()=>{for(const name of Object.keys(ranges))registry?.delete(name);};
+ },[marks,visible,contentRootId,contentRevision]);
+ async function save(mark:ReadingMark,creating:boolean,blob?:Blob){
+  if(busy.current)return false;busy.current=true;setPending(true);setError(null);
+  try{
+   let saved=mark;
+   if(server)saved=await saveServerMark(server,mark,creating,blob?await audioInput(blob,mark.audio!.durationMs):undefined,requests.current.signal);
+   else if(blob)await storeAudio(scope,mark.id,blob);
+   if(!alive.current)return false;
+   const base=mark.kind==="bookmark"?marksRef.current.filter(m=>m.kind!=="bookmark"||m.id===mark.id):marksRef.current;
+   const next=creating?[...base,saved]:base.map(m=>m.id===mark.id?saved:m);
+   if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId)){setError("Tarayıcı kaydı başarısız. Bu değişiklikler sayfa kapanınca kaybolabilir.");setStatus("Yalnızca bu oturumda tutuluyor.");}else setStatus(server?"Hesabına kaydedildi.":"Bu tarayıcıya kaydedildi.");
+   setMarks(next);return true;
+  }catch(cause){if(alive.current)setError(cause instanceof Error && !("code"in cause)?cause.message:`Kaydedilemedi: ${describe(cause)}`);return false;}
+  finally{busy.current=false;if(alive.current)setPending(false);}
+ }
+ async function remove(mark:ReadingMark,index:number){if(busy.current)return;busy.current=true;setPending(true);try{
+  let recording:Blob|null=null;
+  if(mark.kind==="audio")try{if(server){const response=await fetch(`/api/v1/me/articles/${server.id}/annotations/${mark.id}/audio`,{credentials:"same-origin",cache:"no-store",signal:requests.current.signal});if(response.ok)recording=await response.blob();}else recording=await readAudio(scope,mark.id);}catch{/* Metadata can still be removed if an old recording is unavailable. */}
+  if(server)await deleteServerMark(server,mark.id,requests.current.signal);if(!alive.current)return;const next=marksRef.current.filter(m=>m.id!==mark.id);
+  if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId))throw new Error("Tarayıcı kaydı silinemedi. Tekrar dene.");
+  if(!server&&mark.kind==="audio")try{await removeAudio(scope,mark.id);}catch{/* Stale blob is never exposed without its private mark. */}
+  undoAudio.current=recording;setMarks(next);setUndo(mark.kind!=="audio"||recording?{mark,index}:null);setExpanded(ids=>ids.filter(id=>id!==mark.id));setStatus("Not kaldırıldı.");setError(null);
+ }catch(cause){if(alive.current)setError(cause instanceof Error&&!("code"in cause)?cause.message:describe(cause));}finally{busy.current=false;if(alive.current)setPending(false);}}
+ async function importGuest(){if(!server||busy.current)return;busy.current=true;setPending(true);try{
+  const stored=readReadingDocument(articleId).document;const plain=stored.marks.filter(m=>m.kind!=="audio");const importId=stored.importId??crypto.randomUUID();writeReadingDocument({...stored,importId});
+  const result=plain.length?await importGuestMarks(server,plain,importId,requests.current.signal):{accepted:[],rejected:0};const accepted=new Set(result.accepted);
+  for(const m of stored.marks.filter(m=>m.kind==="audio")){const blob=await readAudio(`guest:${articleId}`,m.id);if(!blob)continue;try{await saveServerMark(server,m,true,await audioInput(blob,m.audio!.durationMs),requests.current.signal);accepted.add(m.id);}catch{ /* Leave failed recordings in guest storage. */ }}
+  if(!alive.current)return;const remaining=stored.marks.filter(m=>!accepted.has(m.id));const cleared=writeReadingDocument({version:1,articleId,marks:remaining});if(!alive.current)return;if(!cleared)setError("Notların hesabına aktarıldı; tarayıcı kopyaları silinemedi.");setGuestMarks(cleared?remaining:stored.marks);setMarks(await loadServerMarks(server,requests.current.signal));setStatus(`${accepted.size} misafir kaydı hesabına aktarıldı.${remaining.length?" Aktarılamayan kayıtlar bu tarayıcıda korundu.":""}`);
+ }catch(cause){if(alive.current)setError(`İçe aktarılamadı: ${describe(cause)}`);}finally{busy.current=false;if(alive.current)setPending(false);}}
+ function jump(mark:ReadingMark){const root=document.getElementById(contentRootId);const range=root&&anchorRange(root,mark.fragments[0]);const paragraph=root&&findAnchor(root,mark.fragments[0].anchorId);if(!range||!paragraph){setStatus("Bu alıntının bölümü artık bulunamıyor. Kayıtlı notun listede korunuyor.");return;}if(matchMedia("(max-width: 1050px)").matches)setOpen(false);paragraph.scrollIntoView({behavior:scrollBehavior(),block:"center"});setStatus("Alıntının bulunduğu bölüme gidildi.");}
+ function showDraft(kind:"note"|"audio"){setDraftKind(kind);setEditing(null);setNote("");setVisible(true);setOpen(false);}
+ async function add(kind:ReadingMarkKind,blob?:Blob,durationMs?:number){
+  if(!ready||!fragments.length||marks.length>=maxMarks||(kind==="note"&&!note.trim()))return;
+  const m:ReadingMark={id:crypto.randomUUID(),kind,fragments:[...fragments],note:kind==="note"?note.trim():"",color,createdAt:new Date().toISOString(),...(blob?{audio:{mime:blob.type.split(";")[0],durationMs:durationMs!}}:{})};
+  if(await save(m,true,blob)){if(isNote(m))setExpanded(ids=>[...ids,m.id]);setDraftKind(null);setNote("");setUndo(null);setFragments([]);window.getSelection()?.removeAllRanges();}
+ }
+ function edit(mark:ReadingMark){setEditing(mark.id);setNote(mark.note);setColor(mark.color??"lavender");setExpanded(ids=>ids.includes(mark.id)?ids:[...ids,mark.id]);setVisible(true);setOpen(false);}
+ async function setBookmark(anchorId?:string){const root=document.getElementById(contentRootId);const id=anchorId??fragments[0]?.anchorId;if(!root||!id)return;const el=findAnchor(root,id);const text=el?.textContent??"";if(!text.length)return;
+  const old=marks.find(m=>m.kind==="bookmark");const fragment:TextAnchor={anchorId:id,start:0,end:Math.min(48,text.length),quote:text.slice(0,48),before:"",after:text.slice(Math.min(48,text.length),96)};
+  const m:ReadingMark={id:old?.id??crypto.randomUUID(),kind:"bookmark",fragments:[fragment],note:"",createdAt:old?.createdAt??new Date().toISOString(),version:old?.version};if(await save(m,!old))setStatus("Kaldığın satır kaydedildi.");
+ }
+ const dictionaryWord=fragments.map(f=>f.quote).join(" ").trim();const dictionaryAllowed=/^[a-zA-Z][a-zA-Z' -]{0,59}$/.test(dictionaryWord);
+ const disabled=!ready||pending||!fragments.length||marks.length>=maxMarks;const bookmark=marks.find(m=>m.kind==="bookmark");
+ const cards=visible?marks.filter(m=>isNote(m)&&expanded.includes(m.id)):[];
+ const positions=stackNotes([...cards.map(m=>({id:m.id,y:geometry.points[m.id]?.y??80,height:cardRefs.current.get(m.id)?.offsetHeight??210})),...(visible&&draftKind?[{id:"draft",y:geometry.selection?.y??80,height:cardRefs.current.get("draft")?.offsetHeight??220}]:[])]);
+ const pos=(id:string)=>positions.find(p=>p.id===id)?.top??80;
+ const rows=marks.filter(m=>m.note.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))||m.fragments.some(f=>f.quote.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))));
+ function cancel(){setEditing(null);setDraftKind(null);setNote("");}
+ function palette(value:NoteColor,onChange:(c:NoteColor)=>void){return <div className="rn-colors" role="group" aria-label="Not rengi">{noteColors.map(c=><button key={c} type="button" className={`rn-color rn-${c}`} aria-label={colorNames[c]} aria-pressed={value===c} onClick={()=>onChange(c)}/>)}</div>;}
+ function editor(){return <form onSubmit={e=>{e.preventDefault();const mark=marks.find(m=>m.id===editing);if(mark)void save({...mark,note:note.trim(),color},false).then(ok=>{if(ok)cancel();});else void add("note");}}><label className="visually-hidden" htmlFor={`reading-note-input-${articleId}`}>Bu alıntı için notun</label><textarea id={`reading-note-input-${articleId}`} ref={noteInput} rows={4} maxLength={maxNoteLength} value={note} onChange={e=>setNote(e.target.value)} placeholder="Aklında kalan bir düşünce…"/><div className="rn-card-footer">{palette(color,setColor)}<span>{note.length}/{maxNoteLength}</span></div><div className="rn-form-actions"><button type="button" onClick={cancel}>Vazgeç</button><button className="rn-save" disabled={pending||(!note.trim()&&marks.find(m=>m.id===editing)?.kind!=="audio")} type="submit">{pending?"Kaydediliyor…":"Notu kaydet"}</button></div></form>;}
+ const layer=<aside className={`reading-tools rn-ui ${visible?"":"rn-hidden"}`} aria-label="Okuma araçları" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();e.preventDefault();setOpen(false);setGeneral(false);setDictionary(false);cancel();toggle.current?.focus();}}}>
+  <div className="rn-controlbar"><button ref={toggle} className="rn-notes-trigger" aria-expanded={open} aria-controls={`reading-notes-panel-${articleId}`} onClick={()=>{setOpen(!open);setGeneral(false);}}><Icon name="note"/>Notlar <small>{marks.length} kayıt</small></button><button type="button" role="switch" aria-checked={visible} className="rn-visibility" onClick={()=>{setVisible(!visible);if(visible)cancel();}}><span className="rn-switch"/>Notları göster</button><button onClick={()=>setGeneral(!general)} aria-expanded={general}><Icon name="plus"/>Genel not</button><SlideLink href="/notlar" aria-label="Notlarım sayfası" title="Notlarım"><Icon name="note"/></SlideLink>{bookmark&&<button title="Kaldığın yere dön" aria-label="Kaldığın yere dön" onClick={()=>jump(bookmark)}><Icon name="bookmark"/></button>}</div>
+  <div className={`rn-selection-toolbar reading-toolbar ${geometry.selection?"is-active":""}`} role="group" aria-label="Metin işaretleme araçları" style={{left:geometry.selection?.x??0,top:(geometry.selection?.y??0)-50}} onPointerDown={e=>e.preventDefault()}>
+   {palette(color,c=>{setColor(c);})}<button title="Fosforlu kalem" disabled={disabled} aria-label="Seçili metni fosforlu kalemle işaretle" onClick={()=>void add("highlight")}><Icon name="highlight"/></button><button className="rn-underline" disabled={disabled} aria-label="Seçili metnin altını çiz" title="Kırmızı alt çizgi" onClick={()=>void add("underline")}><u>U</u></button><button disabled={disabled} aria-label="Seçili metne not ekle" title="Metin notu" onClick={()=>showDraft("note")}><Icon name="note"/></button><button disabled={disabled} aria-label="Seçili metne sesli not ekle" title="Sesli not" onClick={()=>showDraft("audio")}><Icon name="mic"/></button><button disabled={disabled} aria-label="Burada kaldım" title="Burada kaldım" onClick={()=>void setBookmark()}><Icon name="bookmark"/></button><button disabled={disabled||!dictionaryAllowed} aria-label="Seçili kelimenin anlamı" title={dictionaryAllowed?"Anlamı":"Sözlük için kısa bir İngilizce kelime seç"} onClick={()=>setDictionary(!dictionary)}><Icon name="book"/></button>
+  </div>
+  {visible&&<div className="rn-markers">{Array.from(new Set(marks.filter(isNote).map(m=>m.fragments[0].anchorId))).map(anchor=>{
+   const group=marks.filter(m=>isNote(m)&&m.fragments[0].anchorId===anchor);const first=group[0];const pt=geometry.points[first.id];if(!pt)return null;
+   return <div key={anchor} className="rn-marker-group" style={{left:pt.x,top:pt.y}}>{(["note","audio"]as const).map(kind=>{const items=group.filter(m=>m.kind===kind);if(!items.length)return null;const m=items[0];const i=marks.filter(isNote).indexOf(m);return <button key={kind} className={`rn-marker rn-${m.color??"lavender"}`} aria-label={`${i+1}. ${labels[kind]} aç`} title={items.length>1?`${items.length} ${labels[kind].toLowerCase()}`:labels[kind]} aria-expanded={items.some(item=>expanded.includes(item.id))} onClick={()=>{if(items.length>1){setOpen(true);setQuery(m.fragments[0].quote.slice(0,20));}else setExpanded(ids=>ids.includes(m.id)?ids.filter(id=>id!==m.id):[...ids,m.id]);setTick(t=>t+1);}}><Icon name={kind==="audio"?"mic":"note"} size={16}/>{items.length>1&&<small>{items.length}</small>}</button>;})}</div>;
+  })}</div>}
+  {hover&&!bookmark?.fragments.some(f=>f.anchorId===hover)&&geometry.points.hover&&<button className="rn-place-bookmark" style={{left:geometry.points.hover.x,top:geometry.points.hover.y}} aria-label="Bu paragrafta kaldım" title="Burada kaldım" disabled={pending} onClick={()=>void setBookmark(hover)}><Icon name="bookmark" size={16}/></button>}
+  {bookmark&&geometry.points[bookmark.id]&&<button className="rn-bookmark" style={{left:Math.max(0,geometry.articleRight-(document.getElementById(contentRootId)?.querySelector(".article-view")?.clientWidth??geometry.articleRight)-28),top:geometry.points[bookmark.id].y}} title="Burada kaldım · kaldır" aria-label="Burada kaldım ayracını kaldır" disabled={pending} onClick={()=>void remove(bookmark,marks.indexOf(bookmark))}><Icon name="bookmark" size={18}/><span>Burada kaldım</span></button>}
+  <div className="rn-card-lane">{cards.map(m=><section key={m.id} ref={el=>{if(el)cardRefs.current.set(m.id,el);else cardRefs.current.delete(m.id);}} className={`rn-card rn-${m.color??"lavender"}`} style={{top:pos(m.id)}} aria-label={`${labels[m.kind]} · ${m.fragments[0].quote.slice(0,30)}`}><header><Icon name={m.kind==="audio"?"mic":"note"}/><strong>{labels[m.kind]}</strong><button aria-label="Notu düzenle" title="Düzenle" disabled={pending} onClick={()=>edit(m)}><Icon name="edit" size={16}/></button><button aria-label="Notu sil" title="Sil" disabled={pending} onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={16}/></button><button aria-label="Notu kapat" title="Kapat" onClick={()=>{setExpanded(ids=>ids.filter(id=>id!==m.id));if(editing===m.id)cancel();}}><Icon name="down" size={16}/></button></header>{editing===m.id?editor():m.note&&<p className="rn-note-text">{m.note}</p>}{m.kind==="audio"&&<><VoicePlayback key={`${m.id}:${m.version??0}`} label={`${m.id} sesli not`} load={async()=>{if(!server)return readAudio(scope,m.id);const response=await fetch(`/api/v1/me/articles/${server.id}/annotations/${m.id}/audio`,{credentials:"same-origin",cache:"no-store",signal:requests.current.signal});if(!response.ok)throw new Error();return response.blob();}}/>{editing===m.id&&<RecordingButton disabled={pending} onRecorded={(blob,duration)=>{void save({...m,audio:{mime:blob.type,durationMs:duration},note:note.trim(),color},false,blob).then(ok=>{if(ok)cancel();});}}/>}</>}<footer><button title="Alıntıya git" aria-label="Notun kaynağına git" onClick={()=>jump(m)}><Icon name="arrow" size={14}/>Kaynak</button><small>Yalnızca sen</small></footer></section>)}
+  {visible&&draftKind&&<section ref={el=>{if(el)cardRefs.current.set("draft",el);else cardRefs.current.delete("draft");}} className={`rn-card rn-${color} rn-draft`} style={{top:pos("draft")}} aria-label="Yeni not"><header><Icon name={draftKind==="audio"?"mic":"note"}/><strong>{draftKind==="audio"?"Sesli not":"Metin notu"}</strong><button onClick={cancel} aria-label="Yeni notu kapat"><Icon name="close"/></button></header>{draftKind==="note"?editor():<RecordingButton disabled={pending} onRecorded={(blob,duration)=>void add("audio",blob,duration)}/>}</section>}
+  </div>
+  {visible&&geometry.width>=880&&<svg className="rn-connectors" width="100%" height={Math.max(geometry.end,...positions.map(p=>p.top+300))} aria-hidden="true">{cards.map(m=>{const pt=geometry.points[m.id];if(!pt)return null;const to=geometry.width-282;return <path key={m.id} className={`rn-${m.color??"lavender"}`} d={`M${pt.x+15},${pt.y+15} C${pt.x+40},${pt.y+15} ${to-20},${pos(m.id)+28} ${to},${pos(m.id)+28}`}/>;})}{draftKind&&geometry.selection&&<path className={`rn-${color}`} d={`M${geometry.articleRight+10},${geometry.selection.y+15} C${geometry.articleRight+35},${geometry.selection.y+15} ${geometry.width-302},${pos("draft")+28} ${geometry.width-282},${pos("draft")+28}`}/>}</svg>}
+  {open&&<section id={`reading-notes-panel-${articleId}`} className="reading-panel rn-overview" aria-label="Bu yazıdaki okuma notların"><header><h2>Satır aralarında.</h2><button onClick={()=>setOpen(false)} aria-label="Notlar panelini kapat"><Icon name="close"/></button></header><p className="rn-storage-info">{server?"Notların hesabında saklanır; yalnızca sen görürsün.":"Notların bu tarayıcıda saklanır. Tarayıcı verileri temizlenirse notların silinir."}</p>{server&&guestMarks.length>0&&<button className="rn-import" disabled={pending} onClick={()=>void importGuest()}>Misafir notlarını hesabıma aktar</button>}{!server&&<button className="rn-import" onClick={()=>openAuth("register")}>Üye ol, notlarını hesabında sakla</button>}{!supported&&<p className="rn-storage-info">Bu tarayıcı metnin üzerinde renk göstermeyi desteklemiyor; notların bu listede korunur.</p>}{unresolved>0&&<p className="rn-storage-info">{unresolved} işaretin metindeki yeri değişmiş olabilir. Alıntıların korunuyor.</p>}<input aria-label="Bu yazıdaki notlarda ara" placeholder="Not veya alıntı ara" value={query} onChange={e=>setQuery(e.target.value)}/><ol>{rows.map(m=><li key={m.id} className={`rn-list-item rn-${m.color??"lavender"}`}><div><span><Icon name={m.kind==="audio"?"mic":m.kind==="bookmark"?"bookmark":"note"}/>{labels[m.kind]}</span><button disabled={pending} aria-label={`${marks.indexOf(m)+1}. kaydı kaldır`} onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={16}/></button></div><button className="rn-quote-link" aria-label={`${marks.indexOf(m)+1}. alıntının bulunduğu bölüme git`} onClick={()=>jump(m)}><q>{m.fragments.map(f=>f.quote).join("\n")}</q><Icon name="arrow" size={16}/></button>{m.note&&<p>{m.note}</p>}{isNote(m)&&<button className="rn-text-button" onClick={()=>edit(m)}>Düzenle</button>}{!isNote(m)&&m.kind!=="bookmark"&&palette(m.color??"lavender",c=>void save({...m,color:c},false))}</li>)}</ol>{marks.length===0&&<p>Henüz not yok. Bir satır seçerek başlayabilirsin.</p>}{marks.length>=maxMarks&&<p>Bu yazı için {maxMarks} kayıt sınırına ulaştın.</p>}{undo&&<button className="reading-undo" disabled={pending} onClick={()=>void (async()=>{let blob:Blob|undefined;if(undo.mark.kind==="audio"){blob=undoAudio.current??undefined;if(!blob){setError("Ses kaydı geri alınamadı.");return;}}if(await save(undo.mark,true,blob))setUndo(null);})()}>Son kaldırmayı geri al ↶</button>}</section>}
+  {general&&<GeneralNotebook compact onClose={()=>setGeneral(false)}/>}
+  {dictionary&&<DictionaryPreview text={fragments.map(f=>f.quote).join(" ")} onClose={()=>setDictionary(false)}/>}
+  {error&&<p role="alert" className="rn-feedback rn-error">{error}</p>}<p role="status" className={`rn-feedback ${status?"has-message":""}`}>{status}</p>
+ </aside>;
+ return mount?createPortal(<>{layer}<div aria-hidden="true" className="rn-reserve" style={{height:geometry.width>=880?Math.max(0,...positions.map(p=>p.top+(cardRefs.current.get(p.id)?.offsetHeight??220)+20-geometry.end)):0}}/></>,mount):layer;
+}
+function DictionaryPreview({text,onClose}:{text:string;onClose:()=>void}){
+ const [data,setData]=useState<{word:string;definition:string;source:string}|null>(null);const [error,setError]=useState("");
+ useEffect(()=>{const controller=new AbortController();setData(null);setError("");void api<{word:string;definition:string;source:string}>("GET",`/dictionary?word=${encodeURIComponent(text.trim())}`,{signal:controller.signal}).then(r=>{if(!controller.signal.aborted)setData(r.data);}).catch(e=>{if(!controller.signal.aborted)setError(describe(e));});return()=>controller.abort();},[text]);
+ return <section className="rn-dictionary" aria-label="Kelime anlamı"><header><Icon name="book"/><strong>{data?.word??text}</strong><button aria-label="Sözlüğü kapat" onClick={onClose}><Icon name="close"/></button></header>{error?<p role="alert">{error}</p>:data?<><small>İngilizce sözlük</small><p lang="en" style={{whiteSpace:"pre-line"}}>{data.definition}</p><a href={data.source} target="_blank" rel="noopener noreferrer">Kaynak ↗</a></>:<p role="status">Anlam aranıyor…</p>}</section>;
 }

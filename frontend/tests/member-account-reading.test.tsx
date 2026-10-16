@@ -104,3 +104,10 @@ it("keeps private notes isolated when the account changes on the same article", 
   expect(screen.getByText("İkinci hesabın özel notu")).toBeTruthy();
   expect(localStorage.length).toBe(0);
 });
+
+it("updates a member note using its version and keeps the same private record",async()=>{
+ personalOf(backend.state.member,"reader-1").marks.push({id:"edit-mark",articleId:ARTICLE,kind:"note",revisionId:"rev-1",note:"Eski not",createdAt:"2026-10-13T10:00:00Z",version:5,fragments:[{blockId:BLOCK,start:0,end:5,quote:"Hello",before:"",after:""}]});
+ render(<Page/>);await act(settle);fireEvent.click(screen.getByRole("button",{name:/Notlar/}));fireEvent.click(screen.getByRole("button",{name:"Düzenle"}));fireEvent.change(screen.getByLabelText("Bu alıntı için notun"),{target:{value:"Güncel not"}});
+ await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Notu kaydet"}));await settle();});
+ const update=backend.state.calls.find(c=>c.method==="PUT"&&c.path.endsWith("/annotations/edit-mark"));expect(update?.headers["If-Match"]).toBe('"5"');expect(update?.headers["If-None-Match"]).toBeUndefined();expect(personalOf(backend.state.member,"reader-1").marks[0]).toMatchObject({id:"edit-mark",note:"Güncel not",version:6});expect(localStorage.length).toBe(0);
+});

@@ -13,7 +13,7 @@ import com.satir.platform.validation.ValidationException;
  */
 public final class Annotation {
 
-    public enum Kind { HIGHLIGHT, UNDERLINE, NOTE }
+    public enum Kind { HIGHLIGHT, UNDERLINE, NOTE, AUDIO, BOOKMARK }
 
     /** One contiguous piece of a selection inside a single block (or the abstract). */
     public record Fragment(String blockId, int start, int end, String quote, String before, String after) {

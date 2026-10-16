@@ -86,3 +86,9 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 - 16 Ekim 2026: Ana CRT sayfası üst menüsünde “Yüzen Ada” seçildi ve uygulandı. Üçlü renk seçici, doğrudan hareket düğmesi, Kitaplığım ve avatar tek kapsülde; görünüm için ek pencere yok. Yalnız hesap menüsü açılır, lavanta vurgu korunur. Dar telefonda marka ve kapsül iki sıraya geçer; 44 px hedefler ve CRT konumu korunur.
 
 - 16 Ekim 2026: Yüzen Ada ortak üst menü dilidir; Studio, Hesap, Kitaplığım ve diğer site/okuma başlıklarında uygulanır. Studio görünümü düğmesi yerini ve işlevini korur. Ada, hesap menüsü, giriş/üyelik ve diğer açılan panel yüzeyleri tema rengini kullanan buzlu camdır; opak fallback ve ekran içinde kalan dar ekran menüleri korunur.
+
+## Okuma notları — Satır İzi (16 Ekim 2026)
+
+Kullanıcı Satır İzi’ni seçti: satır altındaki büyük editör yerine metne çizgiyle bağlanan renkli kenar kartı. Kapalı metin ve ses notlarının ikonları ayrıdır; notlar düzenlenir/silinir, tek tek kapanır ve genel toggle ile gizlenir. Aynı paragrafta biriken notlar gruplanır, açık kartlar çakışmadan dizilir. Burada kaldım etiketi ayrı içerik satırı oluşturmaz; paragrafa bağlı kenar ayracıdır. Tasarım çizimlerinde telefon görünümü istenmiyor; uygulama dar ekran desteğini korur.
+
+Genel not, alıntıdan bağımsız defter ve hashtag arama içerir; hashtag yalnız genel notta sınıflandırma sağlar. Misafir notları tarayıcıda saklanır ve site verileri temizlenince kaybolur; doğrulanmış üye notları hesabındadır. Aktarım kullanıcı tercihidir. Mini sözlükte Google şartı kaldırıldı; ücretsiz sözlük kaynağı sonucu doğrudan panelde gösterir. AI/flashcard/quiz/public not önerileri seçilmedi.

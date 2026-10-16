@@ -144,9 +144,14 @@ export function memberApi(shared: MemberApiState, method: string, path: string, 
       if (!article(articleId)) return notFound();
       if (headers["If-None-Match"] === "*") {
         if (existing) return problem(412, "ALREADY_EXISTS", "Bu işaret zaten kayıtlı");
-        const created = { id: markId, articleId, kind: String(body?.kind), revisionId: String(body?.revisionId), fragments: body?.fragments as unknown[], note: String(body?.note ?? ""), createdAt: new Date().toISOString(), version: 0 };
+        const created = { id: markId, articleId, kind: String(body?.kind), revisionId: String(body?.revisionId), fragments: body?.fragments as unknown[], note: String(body?.note ?? ""), color: body?.color, audio: body?.audio, createdAt: new Date().toISOString(), version: 0 };
         own.marks.push(created);
         return json(201, created);
+      }
+      if (headers["If-Match"] && existing) {
+        if(headers["If-Match"] !== `"${existing.version}"`) return problem(412,"STALE_VERSION","Bu kayıt başka bir yerde değişti");
+        Object.assign(existing,body,{version:existing.version+1});
+        return json(200,existing);
       }
       return problem(428, "VERSION_REQUIRED", "Sürüm bilgisi gerekli");
     }

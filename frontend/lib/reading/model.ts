@@ -1,4 +1,4 @@
-export type ReadingMarkKind = "highlight" | "underline" | "note";
+export type ReadingMarkKind = "highlight" | "underline" | "note" | "audio" | "bookmark";
 export type TextAnchor = {
   anchorId: string;
   start: number;
@@ -7,12 +7,20 @@ export type TextAnchor = {
   before: string;
   after: string;
 };
+export const noteColors = ["lavender", "mint", "peach", "blue", "yellow"] as const;
+export type NoteColor = typeof noteColors[number];
+export type AudioInfo = { mime: string; durationMs: number };
+export type AudioInput = AudioInfo & { data: string; mime: "audio/webm" | "audio/ogg" | "audio/mp4" };
 export type ReadingMark = {
   id: string;
   kind: ReadingMarkKind;
   fragments: TextAnchor[];
   note: string;
   createdAt: string;
+  color?: NoteColor;
+  audio?: AudioInfo | null;
+  version?: number;
+  revisionId?: string;
 };
 /** {@code importId} is remembered once a guest import starts, so a retry returns the same server result. */
 export type ReadingDocument = { version: 1; articleId: string; marks: ReadingMark[]; importId?: string };
@@ -38,11 +46,14 @@ function validFragment(value: unknown): value is TextAnchor {
 }
 function validMark(value: unknown): value is ReadingMark {
   if (!record(value) || typeof value.id !== "string" || !safeId.test(value.id)) return false;
-  return typeof value.kind === "string" && ["highlight", "underline", "note"].includes(value.kind)
+  return typeof value.kind === "string" && ["highlight", "underline", "note", "audio", "bookmark"].includes(value.kind)
     && Array.isArray(value.fragments) && value.fragments.length > 0 && value.fragments.length <= 30
     && value.fragments.every(validFragment)
     && value.fragments.reduce((sum, fragment) => sum + fragment.quote.length, 0) <= maxQuoteLength
     && boundedText(value.note, maxNoteLength) && (value.kind !== "note" || value.note.trim().length > 0)
+    && (value.color === undefined || noteColors.includes(value.color as NoteColor))
+    && (value.kind !== "audio" || (record(value.audio) && typeof value.audio.mime === "string"))
+    && (value.audio === undefined || value.audio === null || (record(value.audio) && ["audio/webm", "audio/ogg", "audio/mp4"].includes(String(value.audio.mime)) && typeof value.audio.durationMs === "number" && value.audio.durationMs > 0 && value.audio.durationMs <= 120000))
     && typeof value.createdAt === "string" && value.createdAt.length <= 32 && Number.isFinite(Date.parse(value.createdAt));
 }
 

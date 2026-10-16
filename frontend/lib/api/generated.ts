@@ -614,6 +614,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/articles/{articleId}/annotations/{markId}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                markId: string;
+            };
+            cookie?: never;
+        };
+        /** Private recording; authenticated owner only, no-store; hidden articles return 404 */
+        get: operations["getAnnotationAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dictionary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Explicit selected English word lookup; public free dictionary, bounded cache and provider response */
+        get: operations["lookupDictionary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Own general notes; no public access, up to 500 records */
+        get: operations["listPersonalNotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/notes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Create with If-None-Match or update with If-Match; owner determined by session */
+        put: operations["putPersonalNote"];
+        post?: never;
+        delete: operations["deletePersonalNote"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/imports/annotations": {
         parameters: {
             query?: never;
@@ -1642,25 +1715,59 @@ export interface components {
             before?: string;
             after?: string;
         };
+        /** @enum {string} */
+        NoteColor: "lavender" | "mint" | "peach" | "blue" | "yellow";
+        AudioInput: {
+            /** @description Base64 encoded audio; decoded at most 1 MB */
+            data: string;
+            /** @enum {string} */
+            mime: "audio/webm" | "audio/ogg" | "audio/mp4";
+            durationMs: number;
+        };
+        AudioInfo: {
+            mime: string;
+            durationMs: number;
+        };
+        PersonalNoteWrite: {
+            /** @description Freeform personal note; inline hashtags supported by the UI */
+            body: string;
+            color?: components["schemas"]["NoteColor"];
+        };
+        PersonalNote: {
+            /** Format: uuid */
+            id: string;
+            body: string;
+            color: components["schemas"]["NoteColor"];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: int64 */
+            version: number;
+        };
         AnnotationWrite: {
             /** @enum {string} */
-            kind: "highlight" | "underline" | "note";
+            kind: "highlight" | "underline" | "note" | "audio" | "bookmark";
             /** Format: uuid */
             revisionId: string;
             /** @description Total quote length at most 12000 */
             fragments: components["schemas"]["Fragment"][];
             /** @description Required (non-blank) for kind note */
             note?: string;
+            color?: components["schemas"]["NoteColor"];
+            audio?: components["schemas"]["AudioInput"];
         };
         Annotation: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "highlight" | "underline" | "note";
+            kind: "highlight" | "underline" | "note" | "audio" | "bookmark";
             /** Format: uuid */
             revisionId: string;
             fragments: components["schemas"]["Fragment"][];
             note: string;
+            color?: components["schemas"]["NoteColor"];
+            audio?: components["schemas"]["AudioInfo"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: int64 */
@@ -3771,6 +3878,154 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getAnnotationAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                markId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recorded audio bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/webm": string;
+                    "audio/ogg": string;
+                    "audio/mp4": string;
+                };
+            };
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    lookupDictionary: {
+        parameters: {
+            query: {
+                word: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description English definition with source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        word: string;
+                        definition: string;
+                        example: string;
+                        phonetic: string;
+                        /** Format: uri */
+                        source: string;
+                        /** @constant */
+                        language: "en";
+                    };
+                };
+            };
+            404: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    listPersonalNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private notebook */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["PersonalNote"][];
+                    };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    putPersonalNote: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+                "If-None-Match"?: "*";
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalNoteWrite"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalNote"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalNote"];
+                };
+            };
+            412: components["responses"]["Problem"];
+            428: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
+        };
+    };
+    deletePersonalNote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["Problem"];
+            default: components["responses"]["Problem"];
         };
     };
     importAnnotations: {

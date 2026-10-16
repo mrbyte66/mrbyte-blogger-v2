@@ -1,0 +1,4 @@
+export function ReadingIcon({name,size=18}:{name:string;size?:number}){
+ const paths:Record<string,string>={note:"M5 3h10l4 4v14H5zM15 3v4h4M8 11h8M8 15h6",mic:"M9 5a3 3 0 0 1 6 0v6a3 3 0 0 1-6 0zM6 10v1a6 6 0 0 0 12 0v-1M12 17v4M8 21h8",bookmark:"M6 3h12v18l-6-4-6 4z",edit:"m4 16 12-12 4 4-12 12H4zM14 6l4 4",trash:"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6",close:"m6 6 12 12M6 18 18 6",down:"m6 9 6 6 6-6",arrow:"M5 12h14m-6-6 6 6-6 6",book:"M12 5v16M3 4c4-1 6-1 9 1 3-2 5-2 9-1v15c-4-1-6-1-9 2-3-3-5-3-9-2z",search:"M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm9 3-4.5-4.5",plus:"M12 4v16M4 12h16",check:"m5 12 4 4L19 6",highlight:"m9 11-5 5v4h4l5-5M9 11l6-6 4 4-6 6M9 11l4 4M3 21h18",stop:"M5 5h14v14H5z"};
+ return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]??paths.note}/></svg>;
+}

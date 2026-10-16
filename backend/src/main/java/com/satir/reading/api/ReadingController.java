@@ -67,6 +67,13 @@ class ReadingController {
         return response.eTag(Preconditions.etag(saved.annotation().version())).body(saved.annotation());
     }
 
+    @GetMapping("/articles/{articleId}/annotations/{markId}/audio")
+    ResponseEntity<byte[]> audio(@AuthenticationPrincipal SatirPrincipal principal, @PathVariable UUID articleId, @PathVariable UUID markId) {
+        var audio = annotations.audio(principal.userId(), articleId, markId);
+        return ResponseEntity.ok().header("Cache-Control", "private, no-store").header("X-Content-Type-Options", "nosniff")
+            .contentType(org.springframework.http.MediaType.parseMediaType(audio.mime())).body(audio.data());
+    }
+
     @DeleteMapping("/articles/{articleId}/annotations/{markId}")
     ResponseEntity<Void> delete(@AuthenticationPrincipal SatirPrincipal principal, @PathVariable UUID articleId,
             @PathVariable UUID markId) {

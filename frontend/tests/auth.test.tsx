@@ -181,17 +181,17 @@ describe("server-backed membership", () => {
     fireEvent.click(screen.getByRole("button", { name: "Giriş penceresini kapat" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Hesap erişimi" })).toBeNull());
   });
-  it("does not expose Studio to a member", async () => {
+  it.each([undefined, "island"] as const)("does not expose Studio to a member (%s menu)", async appearance => {
     fakeBackend({ signedIn: { email: "alice@example.com", name: "Alice" } });
-    render(<AuthProvider><AccountMenu /></AuthProvider>);
+    render(<AuthProvider><AccountMenu appearance={appearance} /></AuthProvider>);
     await act(settle);
     fireEvent.click(screen.getByRole("button", { name: "Alice · Hesap menüsü" }));
     expect(screen.queryByRole("link", { name: /Studio/ })).toBeNull();
     expect(screen.getByRole("link", { name: "Hesap" }).getAttribute("href")).toBe("/hesap");
   });
-  it("shows Studio only for the server-reported owner role", async () => {
+  it.each([undefined, "island"] as const)("shows Studio only for the server-reported owner role (%s menu)", async appearance => {
     fakeBackend({ signedIn: { email: "owner@example.com", name: "Sahip", role: "owner" } });
-    render(<AuthProvider><AccountMenu /></AuthProvider>);
+    render(<AuthProvider><AccountMenu appearance={appearance} /></AuthProvider>);
     await act(settle);
     fireEvent.click(screen.getByRole("button", { name: "Sahip · Hesap menüsü" }));
     expect(screen.getByRole("link", { name: "Studio" }).getAttribute("href")).toBe("/studio");

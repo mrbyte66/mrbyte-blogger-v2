@@ -8,7 +8,7 @@ import { SceneFeatured } from "./SceneFeatured";
 import { useSeriesWorkspace } from "../lib/series/use-series-workspace";
 import { publishedSeries } from "../lib/series/model";
 import { useEffect, useReducer } from "react";
-import { useSitePreferences } from "./SitePreferences";
+import { ThemeToggle, useSitePreferences } from "./SitePreferences";
 import { AmbientAudioToggle } from "./audio/AmbientAudio";
 import { Character } from "./Character";
 import { ContentPanel } from "./ContentPanel";
@@ -35,18 +35,20 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
     window.addEventListener("satir:open-section", receive);
     return () => window.removeEventListener("satir:open-section", receive);
   }, [editing]);
-  const { colorMode: preference, setColorMode, motionEnabled, setMotionEnabled } = useSitePreferences();
+  const { colorMode: preference, motionEnabled, setMotionEnabled } = useSitePreferences();
   const dark = preference ? preference === "dark" : colorMode === "dark";
-  // The scene's light switch walks through the three modes: lights on → reading lamp → lights off.
-  const mode = preference ?? (dark ? "dark" : "light");
-  const nextMode = mode === "light" ? "reading" : mode === "reading" ? "dark" : "light";
-  const lightLabel = mode === "reading" ? "Okuma ışığı" : dark ? "Işıklar kapalı" : "Işıklar açık";
-  const nextLabel = nextMode === "reading" ? "Okuma" : nextMode === "dark" ? "Gece" : "Gündüz";
+
 
   return <section aria-label="Karakterli evren" className={`experience ${dark ? "theme-dark" : "theme-light"} ${motionEnabled ? "motion-on" : "motion-off"} ${navigation.section ? "panel-open" : ""}`}>
     <a tabIndex={editing ? -1 : undefined} aria-disabled={editing || undefined} className="skip-link" href="#scene-navigation">İçeriklere geç</a>
     <div className="stage-texture" aria-hidden="true" />
-    <header className="site-header"><button disabled={editing} className="wordmark" aria-label={`${siteName} ana sahne`} onClick={() => dispatch({ type: "close" })}>{siteName}<span>.</span></button><span className="header-description">KİŞİSEL BİR EVREN</span>{!editing && <><SavedLibraryLink /><AccountMenu /></>}</header>
+    <header className="site-header"><button disabled={editing} className="wordmark" aria-label={`${siteName} ana sahne`} onClick={() => dispatch({ type: "close" })}>{siteName}<span>.</span></button><span className="header-description">KİŞİSEL BİR EVREN</span><div className="scene-header-island" role="group" aria-label="Sahne araçları" inert={editing}>
+      <ThemeToggle defaultDark={colorMode === "dark"} />
+      <span className="island-divider" aria-hidden="true" />
+      <button type="button" className="island-motion" aria-label="Sahne hareketi" title={motionEnabled ? "Sahne hareketini kapat" : "Sahne hareketini aç"} aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span></button>
+      <span className="island-divider" aria-hidden="true" />
+      {!editing && <><SavedLibraryLink /><AccountMenu appearance="island" /></>}
+    </div></header>
 
     <div className="scene">
       <span className="scene-coordinate" aria-hidden="true">FIG. 001 — İNSAN / MAKİNE</span>
@@ -62,7 +64,7 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
       <div className={`character-caption ${showFeaturedSeries && featuredSeries ? "caption-with-featured-series" : ""}`} aria-hidden="true"><span className="caption-line" /><span>Kıvırcık düşünceler.<br />Düzenli satırlar.</span></div>
     </div>
 
-    <footer className="site-footer"><span className="footer-signature">HER ŞEY BİR MERAKLA BAŞLAR.</span><span className="scene-indicator"><span aria-hidden="true">✳</span> BURADASIN</span><div className="scene-controls" inert={editing}><button aria-label={`Renk modu: ${lightLabel}. ${nextLabel} moduna geç`} onClick={() => setColorMode(nextMode)}><span className="sun-icon" aria-hidden="true">{mode === "reading" ? "◐" : "☼"}</span><span className="light-label">{lightLabel}</span></button><span className="control-divider" /><button aria-label="Sahne hareketi" aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span><span className="motion-label">{motionEnabled ? "Hareket açık" : "Hareket kapalı"}</span></button><span className="control-divider" /><AmbientAudioToggle scene /></div></footer>
+    <footer className="site-footer"><span className="footer-signature">HER ŞEY BİR MERAKLA BAŞLAR.</span><span className="scene-indicator"><span aria-hidden="true">✳</span> BURADASIN</span><div className="scene-controls" inert={editing}><AmbientAudioToggle scene /></div></footer>
     <ContentPanel navigation={navigation} dispatch={dispatch} siteName={siteName} />
   </section>;
 }

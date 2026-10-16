@@ -1,5 +1,6 @@
 "use client";
 import { SavedLibraryLink } from "./saved/SaveArticleButton";
+import { UtilityIsland } from "./UtilityIsland";
 import { AccountMenu } from "./auth/AccountMenu";
 
 import { publicArticles } from "../lib/editorial/store";
@@ -42,13 +43,13 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
   return <section aria-label="Karakterli evren" className={`experience ${dark ? "theme-dark" : "theme-light"} ${motionEnabled ? "motion-on" : "motion-off"} ${navigation.section ? "panel-open" : ""}`}>
     <a tabIndex={editing ? -1 : undefined} aria-disabled={editing || undefined} className="skip-link" href="#scene-navigation">İçeriklere geç</a>
     <div className="stage-texture" aria-hidden="true" />
-    <header className="site-header"><button disabled={editing} className="wordmark" aria-label={`${siteName} ana sahne`} onClick={() => dispatch({ type: "close" })}>{siteName}<span>.</span></button><span className="header-description">KİŞİSEL BİR EVREN</span><div className="scene-header-island" role="group" aria-label="Sahne araçları" inert={editing}>
+    <header className="site-header"><button disabled={editing} className="wordmark" aria-label={`${siteName} ana sahne`} onClick={() => dispatch({ type: "close" })}>{siteName}<span>.</span></button><span className="header-description">KİŞİSEL BİR EVREN</span><UtilityIsland className="scene-header-island" label="Sahne araçları" inert={editing}>
       <ThemeToggle defaultDark={colorMode === "dark"} />
       <span className="island-divider" aria-hidden="true" />
       <button type="button" className="island-motion" aria-label="Sahne hareketi" title={motionEnabled ? "Sahne hareketini kapat" : "Sahne hareketini aç"} aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span></button>
       <span className="island-divider" aria-hidden="true" />
       {!editing && <><SavedLibraryLink /><AccountMenu appearance="island" /></>}
-    </div></header>
+    </UtilityIsland></header>
 
     <div className="scene">
       <span className="scene-coordinate" aria-hidden="true">FIG. 001 — İNSAN / MAKİNE</span>

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
+import { UtilityIsland } from "../UtilityIsland";
 import { AccountMenu } from "../auth/AccountMenu";
 import { ThemeToggle } from "../SitePreferences";
 import { openStudioLibrary, useStudioShell } from "../../lib/studio/shell";
@@ -98,7 +99,7 @@ export function StudioHeader({ navigation, actions, status, center, section }: {
       <div className="studio-location">{navigation}<div className="studio-header-state">{status}</div></div>
       {center}
       {view === "marjinalya" && <time className="studio-dateline" suppressHydrationWarning>{dateline()}</time>}
-      <div className="studio-top-actions">{actions}<div className="studio-personal"><ThemeToggle /><StudioViewMenu /><AccountMenu /></div></div>
+      <div className="studio-top-actions">{actions}<UtilityIsland className="studio-personal" label="Studio araçları"><ThemeToggle /><StudioViewMenu /><AccountMenu /></UtilityIsland></div>
     </header>
   </>;
 }

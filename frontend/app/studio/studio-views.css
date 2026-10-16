@@ -1029,3 +1029,22 @@ html[data-tone="reading"] .studio[data-view="kontakt"] { --sv-primary:#38547d; -
  html .studio[data-view]>.studio-workspace { min-width:0; max-width:100%; }
  html .studio[data-view] :is(.studio-location,.studio-page-picker,.studio-preview) { min-width:0; max-width:100%; }
 }
+
+/* Shared island shell; keep the view picker and the Studio command bar in their existing order. */
+html .studio[data-view] .studio-personal.utility-island { padding:5px 7px; gap:6px; border:1px solid var(--sv-glass-line); border-radius:999px; --glass-tint:var(--sv-glass); background:var(--sv-card); -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:0 4px 18px #0000000a; }
+html .studio[data-view] .studio-personal.utility-island .color-mode-switch { background:transparent; }
+html .studio[data-view] .studio-personal.utility-island .color-mode-thumb { background:#d7c8f5; box-shadow:none; border-radius:13px; }
+html .studio[data-view] .studio-personal.utility-island .color-mode-switch button[aria-pressed=true] { color:#302546; }
+html .studio[data-view] .studio-personal.utility-island .studio-icon-button { border:0; background:transparent; }
+html .studio[data-view] .studio-personal.utility-island .studio-icon-button:hover,
+html .studio[data-view] .studio-personal.utility-island .studio-icon-button[aria-expanded=true] { background:var(--sv-accent-soft); color:var(--sv-ink); }
+html .studio[data-view] .studio-personal .account-dropdown--island { --panel:var(--sv-card); --surface:var(--sv-sunk); width:280px; border-radius:18px; background:var(--sv-glass); }
+@media(max-width:600px) { html .studio[data-view] .studio-personal.utility-island { padding:4px; gap:2px; } }
+
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) { html .studio[data-view] .studio-personal.utility-island { background:transparent; } }
+
+html .studio[data-view] :is(.studio-confirm,.studio-series-dialog,.studio-page-dialog) { background:var(--sv-glass); border-color:var(--sv-glass-line); -webkit-backdrop-filter:blur(22px) saturate(1.15); backdrop-filter:blur(22px) saturate(1.15); }
+html .studio[data-view] .studio-page-dialog .studio-page-menu { background:transparent; }
+@media(max-width:700px) {
+ html .studio[data-view] .studio-personal .account-dropdown--island { position:fixed; top:128px; right:12px; left:auto; width:min(280px,calc(100vw - 24px)); max-height:calc(100dvh - 144px); overflow-y:auto; }
+}

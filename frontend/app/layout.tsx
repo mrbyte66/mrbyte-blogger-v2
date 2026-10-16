@@ -12,6 +12,7 @@ import "./scene-featured.css";
 import "./auth.css";
 import "./appearance.css";
 import "./personal-space.css";
+import "./floating-surfaces.css";
 import { PublicFrame } from "../components/PublicFrame";
 import { AuthProvider } from "../components/auth/AuthProvider";
 import { AuthNavigation } from "../components/auth/AuthNavigation";

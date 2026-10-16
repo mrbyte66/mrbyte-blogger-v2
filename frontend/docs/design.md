@@ -13,3 +13,5 @@ Formlarda hatalı alan kırmızı çerçeve ve alanın altındaki kısa açıkla
 Studio’da değişiklik en az tıklama ve kısa mouse yolu ile yapılır. Metin tuvalde düzenlenir; ikincil panel seçilen alanın/araç düğmesinin yanında açılır. Kayıt ve yayın komutları sayfa ve görünüm değişiminde aynı yerde kalır.
 
 - Sürekli yazma akışında panel açıp kapatma zorunluluğu azaltılır. Ara başlık ve alıntı seçili metnin yanında uygulanır; açık çalışma paneli tuvale dönünce kendiliğinden kapanmaz. Geniş ekranda panel yazının üstünü örtmez. Escape metni geri almaz; geri alma ayrı ve açık bir eylemdir. Bu kolaylıklar mevcut tema, tipografi ve görsel bütünlük korunarak sağlanır.
+
+Üst menü araçları ortak `UtilityIsland` kabuğunu kullanır; Studio görünümü düğmesi Studio adasında kalır. Açılan menü ve pencere yüzeylerinde ortak buzlu cam tonu/blur kullanılır, içerik alanı okunur kalır. Ada blur’u ayrı arka plan katmanındadır; fixed alt pencereler için containing block oluşturulmaz.

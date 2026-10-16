@@ -84,3 +84,5 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 - 16 Ekim 2026: Aynı Satır Dalgası Üye ol ekranındaki “Sevdiğin yazıları kendi düzeninde sakla.” metnine de uygulandı. Sekme değişiminde 2 sn bekleme yeniden başlar; uzun metinde de son harften sonra 3 sn mola korunur.
 
 - 16 Ekim 2026: Ana CRT sayfası üst menüsünde “Yüzen Ada” seçildi ve uygulandı. Üçlü renk seçici, doğrudan hareket düğmesi, Kitaplığım ve avatar tek kapsülde; görünüm için ek pencere yok. Yalnız hesap menüsü açılır, lavanta vurgu korunur. Dar telefonda marka ve kapsül iki sıraya geçer; 44 px hedefler ve CRT konumu korunur.
+
+- 16 Ekim 2026: Yüzen Ada ortak üst menü dilidir; Studio, Hesap, Kitaplığım ve diğer site/okuma başlıklarında uygulanır. Studio görünümü düğmesi yerini ve işlevini korur. Ada, hesap menüsü, giriş/üyelik ve diğer açılan panel yüzeyleri tema rengini kullanan buzlu camdır; opak fallback ve ekran içinde kalan dar ekran menüleri korunur.

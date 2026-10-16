@@ -5,7 +5,7 @@ import { AuthIcon } from "./AuthIcon";
 import { LibraryIcon } from "../library/LibraryIcon";
 import { ProfileAvatar } from "./ProfileAvatar";
 import { useAuth } from "./AuthProvider";
-export function AccountMenu({ appearance }: { appearance?: "island" } = {}) {
+export function AccountMenu({ appearance = "island" }: { appearance?: "island" } = {}) {
   const island = appearance === "island";
   const { session, ready, openAuth, signOut, error } = useAuth();
   const [open, setOpen] = useState(false);

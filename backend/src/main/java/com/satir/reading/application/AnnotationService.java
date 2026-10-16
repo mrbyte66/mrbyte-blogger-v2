@@ -81,13 +81,15 @@ public class AnnotationService {
     private final JsonMapper json;
     private final IdGenerator ids;
     private final Clock clock;
+    private final com.satir.reading.infrastructure.NotebookRepository notebook;
 
-    AnnotationService(ReadingRepository repository, PublicContentQuery content, JsonMapper json, IdGenerator ids, Clock clock) {
+    AnnotationService(ReadingRepository repository, PublicContentQuery content, JsonMapper json, IdGenerator ids, Clock clock, com.satir.reading.infrastructure.NotebookRepository notebook) {
         this.repository = repository;
         this.content = content;
         this.json = json;
         this.ids = ids;
         this.clock = clock;
+        this.notebook = notebook;
     }
 
     @Transactional(readOnly = true)
@@ -119,7 +121,7 @@ public class AnnotationService {
         String color = validColor(write.color());
         byte[] audio = audioBytes(write.audio());
         if (kind != Kind.AUDIO && write.audio() != null) throw new ValidationException("audio", "INVALID");
-        if (audio != null && repository.audioBytes(userId) - repository.audioLength(userId, markId) + audio.length > 25_000_000) {
+        if (audio != null && repository.audioBytes(userId) + notebook.audioBytes(userId) - repository.audioLength(userId, markId) + audio.length > 25_000_000) {
             throw new ApiException(HttpStatus.CONFLICT, "AUDIO_LIMIT", "Sesli not alanın doldu; bir kaydı silip tekrar dene");
         }
         Instant now = clock.instant();
@@ -253,7 +255,7 @@ public class AnnotationService {
         return color;
     }
 
-    private static byte[] audioBytes(AudioInput audio) {
+    static byte[] audioBytes(AudioInput audio) {
         if (audio == null) return null;
         if (audio.data() == null || audio.data().length() > 1_400_000 || audio.durationMs() < 1 || audio.durationMs() > 120_000
                 || audio.mime() == null || !List.of("audio/webm", "audio/ogg", "audio/mp4").contains(audio.mime())) throw new ValidationException("audio", "INVALID");

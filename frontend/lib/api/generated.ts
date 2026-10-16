@@ -668,6 +668,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notes/{id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPersonalNoteAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/notes/{id}": {
         parameters: {
             query?: never;
@@ -1732,12 +1748,14 @@ export interface components {
             /** @description Freeform personal note; inline hashtags supported by the UI */
             body: string;
             color?: components["schemas"]["NoteColor"];
+            audio?: components["schemas"]["AudioInput"];
         };
         PersonalNote: {
             /** Format: uuid */
             id: string;
             body: string;
             color: components["schemas"]["NoteColor"];
+            audio?: components["schemas"]["AudioInfo"] | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -3963,6 +3981,32 @@ export interface operations {
                 };
             };
             default: components["responses"]["Problem"];
+        };
+    };
+    getPersonalNoteAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private personal note recording */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/webm": string;
+                    "audio/ogg": string;
+                    "audio/mp4": string;
+                };
+            };
+            401: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     putPersonalNote: {

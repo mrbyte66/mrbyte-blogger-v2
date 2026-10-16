@@ -844,6 +844,23 @@ paths:
                 required: [items]
                 properties:
                   items: {type: array, items: {$ref: '#/components/schemas/PersonalNote'}}
+  /me/notes/{id}/audio:
+    get:
+      operationId: getPersonalNoteAudio
+      tags: [Reading]
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Private personal note recording
+          content:
+            audio/webm: {schema: {type: string, format: binary}}
+            audio/ogg: {schema: {type: string, format: binary}}
+            audio/mp4: {schema: {type: string, format: binary}}
+        '401': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+
   /me/notes/{id}:
     parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
     put:
@@ -2277,6 +2294,7 @@ components:
       properties:
         body: {type: string, minLength: 1, maxLength: 12000, description: Freeform personal note; inline hashtags supported by the UI}
         color: {$ref: '#/components/schemas/NoteColor'}
+        audio: {$ref: '#/components/schemas/AudioInput'}
     PersonalNote:
       type: object
       required: [id, body, color, createdAt, updatedAt, version]
@@ -2284,6 +2302,10 @@ components:
         id: {type: string, format: uuid}
         body: {type: string, maxLength: 12000}
         color: {$ref: '#/components/schemas/NoteColor'}
+        audio:
+          oneOf:
+            - {$ref: '#/components/schemas/AudioInfo'}
+            - {type: 'null'}
         createdAt: {type: string, format: date-time}
         updatedAt: {type: string, format: date-time}
         version: {type: integer, format: int64}

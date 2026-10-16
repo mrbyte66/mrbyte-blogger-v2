@@ -25,6 +25,8 @@ class NotebookController {
         Note note=service.put(principal.userId(),id,match,none,body);
         return ResponseEntity.status("*".equals(none)?201:200).eTag(Preconditions.etag(note.version())).body(note);
     }
+    @GetMapping("/{id}/audio")
+    ResponseEntity<byte[]> audio(@AuthenticationPrincipal SatirPrincipal principal,@PathVariable UUID id) { var audio=service.audio(principal.userId(),id); return ResponseEntity.ok().header("Cache-Control","private, no-store").header("X-Content-Type-Options","nosniff").contentType(org.springframework.http.MediaType.parseMediaType(audio.mime())).body(audio.data()); }
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@AuthenticationPrincipal SatirPrincipal principal,@PathVariable UUID id) { service.delete(principal.userId(),id); return ResponseEntity.noContent().build(); }
 }

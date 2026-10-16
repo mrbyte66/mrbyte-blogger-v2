@@ -92,3 +92,7 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 Kullanıcı Satır İzi’ni seçti: satır altındaki büyük editör yerine metne çizgiyle bağlanan renkli kenar kartı. Kapalı metin ve ses notlarının ikonları ayrıdır; notlar düzenlenir/silinir, tek tek kapanır ve genel toggle ile gizlenir. Aynı paragrafta biriken notlar gruplanır, açık kartlar çakışmadan dizilir. Burada kaldım etiketi ayrı içerik satırı oluşturmaz; paragrafa bağlı kenar ayracıdır. Tasarım çizimlerinde telefon görünümü istenmiyor; uygulama dar ekran desteğini korur.
 
 Genel not, alıntıdan bağımsız defter ve hashtag arama içerir; hashtag yalnız genel notta sınıflandırma sağlar. Misafir notları tarayıcıda saklanır ve site verileri temizlenince kaybolur; doğrulanmış üye notları hesabındadır. Aktarım kullanıcı tercihidir. Mini sözlükte Google şartı kaldırıldı; ücretsiz sözlük kaynağı sonucu doğrudan panelde gösterir. AI/flashcard/quiz/public not önerileri seçilmedi.
+
+### 2026-10-17 — Defter Ayracı / İnce Dizin
+
+Onaylanan okuma notu revizyonu: sivri fihrist yerine sade, pinlenebilir ve kendi içinde kaydırılan/aranan not dizini. Genel notun kullanıcı adı **Serbest Not**; liste /notlar’da, header tek **Defterim | +** kapsülü. + seçili metin gerektirmeden büyük Serbest Not panelini açar. Panel yazdıkça yumuşak büyür, ekran sınırında içeride kayar. Misafir kaydı/uyarısı ve özel üye kaydı korunur. Aynı paragrafın notları tek kart ve geçişle gösterilir; silinen kaynak kartı tozlaşır, geri alma kalır.

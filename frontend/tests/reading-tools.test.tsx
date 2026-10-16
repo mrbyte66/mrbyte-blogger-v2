@@ -212,3 +212,14 @@ it("represents closed text and audio notes with distinct labelled buttons", asyn
  renderReader();await act(async()=>{await new Promise(r=>setTimeout(r,40));});
  expect(screen.getByRole("button",{name:"1. Metin notu aç"})).toBeTruthy();expect(screen.getByRole("button",{name:"2. Sesli not aç"})).toBeTruthy();
 });
+
+it("pins and searches a fifteen-note index and opens only the requested note",async()=>{
+ const marks=Array.from({length:15},(_,i)=>({...mark,id:`many-${i}`,kind:"note",note:`Düşünce ${i+1}`,color:"lavender"}));
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks}));
+ const user=userEvent.setup();renderReader();await user.click(screen.getByRole("button",{name:/Notlar/}));
+ await user.click(screen.getByRole("button",{name:"Not dizinini sabitle"}));expect(localStorage.getItem("satir:note-index-pinned")).toBe("true");
+ await user.type(screen.getByLabelText("Bu yazıdaki notlarda ara"),"Düşünce 15");
+ const panel=screen.getByRole("region",{name:"Bu yazıdaki okuma notların"});expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
+ await user.click(screen.getByRole("button",{name:"15. alıntının bulunduğu bölüme git"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);
+ await user.click(screen.getByRole("button",{name:"Sonraki not"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);expect(screen.getByText("Düşünce 1")).toBeTruthy();
+});

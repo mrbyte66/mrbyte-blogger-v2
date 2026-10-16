@@ -1,6 +1,6 @@
 "use client";
 import { SlideLink } from "./SlideLink";
-import { ReadingIcon } from "./reading/ReadingIcon";
+import { NotebookControl } from "./reading/NotebookControl";
 import { SavedLibraryLink } from "./saved/SaveArticleButton";
 import { UtilityIsland } from "./UtilityIsland";
 import { AccountMenu } from "./auth/AccountMenu";
@@ -50,7 +50,7 @@ export function Experience({ editing = false, siteName = "SATIR", title = "Kod y
       <span className="island-divider" aria-hidden="true" />
       <button type="button" className="island-motion" aria-label="Sahne hareketi" title={motionEnabled ? "Sahne hareketini kapat" : "Sahne hareketini aç"} aria-pressed={motionEnabled} onClick={() => setMotionEnabled(!motionEnabled)}><span className={`motion-icon ${motionEnabled ? "playing" : ""}`} aria-hidden="true"><i /><i /><i /></span></button>
       <span className="island-divider" aria-hidden="true" />
-      {!editing && <><SavedLibraryLink /><SlideLink className="saved-library-link" href="/notlar" aria-label="Notlarım" title="Notlarım"><ReadingIcon name="note"/></SlideLink><AccountMenu appearance="island" /></>}
+      {!editing && <><SavedLibraryLink /><NotebookControl /><AccountMenu appearance="island" /></>}
     </UtilityIsland></header>
 
     <div className="scene">

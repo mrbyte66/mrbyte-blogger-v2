@@ -267,4 +267,22 @@ class ReadingIntegrationTest extends IntegrationTest {
         assertThat(alice.put("/api/v1/me/notes/"+UUID.randomUUID(),Map.of("body"," "),Map.of("If-None-Match","*")).status()).isEqualTo(422);
         assertThat(alice.delete(path,null,Map.of()).status()).isEqualTo(204);assertThat(alice.get("/api/v1/me/notes").json().get("items")).isEmpty();
     }
+    @Test
+    void personalAudioIsPrivateValidatedAndRetainedOnTextUpdate() {
+        ApiClient alice=member("free-audio@example.test");ApiClient bob=member("free-audio-other@example.test");
+        String path="/api/v1/me/notes/"+UUID.randomUUID();
+        byte[] bytes=new byte[32];bytes[0]=0x1a;bytes[1]=0x45;bytes[2]=(byte)0xdf;bytes[3]=(byte)0xa3;
+        var audio=Map.of("data",java.util.Base64.getEncoder().encodeToString(bytes),"mime","audio/webm","durationMs",1000);
+        Response created=alice.put(path,Map.of("body","Sesli düşünce #okuma","color","mint","audio",audio),Map.of("If-None-Match","*"));
+        assertThat(created.status()).as(String.valueOf(created.json())).isEqualTo(201);
+        assertThat(created.json().get("audio").get("durationMs").asInt()).isEqualTo(1000);
+        assertThat(alice.get(path+"/audio").status()).isEqualTo(200);
+        assertThat(client().get(path+"/audio").status()).isEqualTo(401);
+        assertThat(bob.get(path+"/audio").status()).isEqualTo(404);
+        Response changed=alice.put(path,Map.of("body","Düzenlenen ses başlığı","color","lavender"),Map.of("If-Match",created.etag()));
+        assertThat(changed.status()).isEqualTo(200);assertThat(changed.json().get("audio").get("mime").asString()).isEqualTo("audio/webm");
+        assertThat(alice.put(path,Map.of("body","Bozuk kayıt","audio",Map.of("data","bad","mime","audio/webm","durationMs",1000)),Map.of("If-Match",changed.etag())).status()).isEqualTo(422);
+        assertThat(alice.delete(path,null,Map.of()).status()).isEqualTo(204);assertThat(alice.get(path+"/audio").status()).isEqualTo(404);
+    }
+
 }

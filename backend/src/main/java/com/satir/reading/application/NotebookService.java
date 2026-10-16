@@ -14,11 +14,12 @@ import com.satir.reading.infrastructure.NotebookRepository;
 
 @Service
 public class NotebookService {
-    public record Note(UUID id, String body, String color, java.time.Instant createdAt, java.time.Instant updatedAt, long version) { }
-    public record Write(String body, String color) { }
+    public record Note(UUID id, String body, String color, java.time.Instant createdAt, java.time.Instant updatedAt, long version, AnnotationService.AudioInfo audio) { }
+    public record Write(String body, String color, AnnotationService.AudioInput audio) { }
     private final NotebookRepository repository;
     private final Clock clock;
-    NotebookService(NotebookRepository repository, Clock clock) { this.repository=repository; this.clock=clock; }
+    private final com.satir.reading.infrastructure.ReadingRepository annotations;
+    NotebookService(NotebookRepository repository, Clock clock, com.satir.reading.infrastructure.ReadingRepository annotations) { this.repository=repository; this.clock=clock; this.annotations=annotations; }
     @Transactional(readOnly=true)
     public List<Note> list(UUID user) { return repository.list(user).stream().map(NotebookService::view).toList(); }
     @Transactional
@@ -35,11 +36,16 @@ public class NotebookService {
             long expected=Preconditions.requireVersion(match);
             Preconditions.check(expected,existing.orElseThrow(NotebookService::notFound).version());
         }
+        byte[] audio=AnnotationService.audioBytes(write.audio());
+        if(audio!=null && repository.audioBytes(user)+annotations.audioBytes(user)-repository.audioLength(user,id)+audio.length>25_000_000) throw new ApiException(HttpStatus.CONFLICT,"AUDIO_LIMIT","Ses alanın doldu. Eski ses notlarını silebilirsin.");
         repository.save(user,id,write.body().strip(),color,clock.instant(),create);
+        if(audio!=null) repository.audio(user,id,audio,write.audio().mime(),write.audio().durationMs());
         return view(repository.get(user,id).orElseThrow());
     }
     @Transactional
     public void delete(UUID user, UUID id) { if(!repository.delete(user,id)) throw notFound(); }
-    private static Note view(NotebookRepository.Note n) { return new Note(n.id(),n.body(),n.color(),n.createdAt(),n.updatedAt(),n.version()); }
+    @Transactional(readOnly=true)
+    public AnnotationService.AudioContent audio(UUID user,UUID id) { var note=repository.get(user,id).filter(n->n.audioMime()!=null).orElseThrow(NotebookService::notFound);return new AnnotationService.AudioContent(repository.audio(user,id),note.audioMime()); }
+    private static Note view(NotebookRepository.Note n) { return new Note(n.id(),n.body(),n.color(),n.createdAt(),n.updatedAt(),n.version(),n.audioMime()==null?null:new AnnotationService.AudioInfo(n.audioMime(),n.audioDuration())); }
     private static ApiException notFound() { return new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","Bulunamadı"); }
 }

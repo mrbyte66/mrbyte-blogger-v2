@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import { useAuth } from "../auth/AuthProvider";
 import { useContent } from "../data/SiteData";
 import { useEngagement } from "../engagement/EngagementProvider";
-import { allPages, api, describe } from "../../lib/api/http";
+import { allPages, api, ApiError, describe } from "../../lib/api/http";
 
 /**
  * The signed-in member's private library, stored on the server (API contract §5). Nothing is kept
@@ -22,8 +22,8 @@ type MemberLibrary = {
   entryFor: (slug: string) => SavedEntry | undefined;
   save: (slug: string, collectionId?: string) => Promise<boolean>;
   remove: (slugOrArticleId: string) => Promise<boolean>;
-  create: (name: string, slug?: string) => Promise<boolean>;
-  rename: (id: string, name: string) => Promise<boolean>;
+  create: (name: string, slug?: string, onNameError?: (message: string) => void) => Promise<boolean>;
+  rename: (id: string, name: string, onNameError?: (message: string) => void) => Promise<boolean>;
   deleteCategory: (id: string) => Promise<boolean>;
   move: (articleId: string, collectionId: string) => Promise<boolean>;
   restore: (entry: SavedEntry) => Promise<boolean>;
@@ -92,11 +92,14 @@ export function SavedProvider({ children }: { children: ReactNode }) {
   const defaultId = visible.collections.find((c) => c.isDefault)?.id ?? "";
   const idOf = (slug: string) => articles.find((article) => article.slug === slug)?.id ?? visible.entries.find((entry) => entry.slug === slug)?.articleId;
 
-  async function run(task: (signal: AbortSignal) => Promise<unknown>, articleId?: string): Promise<boolean> {
+  async function run(task: (signal: AbortSignal) => Promise<unknown>, articleId?: string, onNameError?: (message: string) => void): Promise<boolean> {
     const scope = requests.current;
     if (!member || !ready || identity.current !== userId || scope?.userId !== userId) return false;
     try { await task(scope.controller.signal); if (scope.controller.signal.aborted || identity.current !== userId) return false; setError(""); return true; }
-    catch (cause) { if (!scope.controller.signal.aborted && identity.current === userId) setError(describe(cause)); return false; }
+    catch (cause) { if (!scope.controller.signal.aborted && identity.current === userId) {
+        if (onNameError && cause instanceof ApiError && (cause.code === "DUPLICATE_COLLECTION" || cause.errors.some(e => e.field === "name"))) { setError(""); onNameError(cause.code === "DUPLICATE_COLLECTION" ? "Bu isimde bir koleksiyonun zaten var. Başka bir ad seç." : describe(cause)); }
+        else setError(describe(cause));
+      } return false; }
     finally { if (!scope.controller.signal.aborted && identity.current === userId) { await load(); if (articleId) refreshStats(articleId); } }
   }
   const value: MemberLibrary = {
@@ -113,12 +116,12 @@ export function SavedProvider({ children }: { children: ReactNode }) {
       const id = idOf(key) ?? key;
       return run(signal => api("DELETE", `/me/bookmarks/${id}`, { signal }), id);
     },
-    create: (name, slug) => run(async signal => {
+    create: (name, slug, onNameError) => run(async signal => {
       const { data } = await api<SavedCollection>("POST", "/me/collections", { signal, body: ({ name: name.trim() } satisfies Input<"createCollection">), idempotent: true });
       const id = slug ? idOf(slug) : undefined;
       if (id) { await api("PUT", `/me/bookmarks/${id}`, { signal, body: ({ collectionId: data.id } satisfies Input<"saveBookmark">) }); refreshStats(id); }
-    }),
-    rename: (id, name) => run(signal => api("PATCH", `/me/collections/${id}`, { signal, body: ({ name: name.trim() } satisfies Input<"renameCollection">), ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
+    }, undefined, onNameError),
+    rename: (id, name, onNameError) => run(signal => api("PATCH", `/me/collections/${id}`, { signal, body: ({ name: name.trim() } satisfies Input<"renameCollection">), ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 }), undefined, onNameError),
     deleteCategory: (id) => run(signal => api("DELETE", `/me/collections/${id}`, { signal, ifMatch: visible.collections.find((c) => c.id === id)?.version ?? 0 })),
     move: (articleId, collectionId) => {
       if (!visible.entries.some(entry => entry.articleId === articleId) || !visible.collections.some(collection => collection.id === collectionId)) return Promise.resolve(false);

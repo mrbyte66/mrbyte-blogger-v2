@@ -72,3 +72,5 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 - 2026-10-15: Kitaplığım/Hesap için onaylanan tasarım V1.1, V1’in klasör biçimli koleksiyon sekmeleriyle uygulanır. Bu adlar tasarım alternatifidir. Kitaplıkta kart/kompakt liste, koleksiyona sürükle-bırak, Hızlı git, 24’lü gösterim ve dönüş bağlamı korunur. Hesapta e-posta değiştirme, yinelenen renk modu ve animasyon anahtarı bulunmaz. Mozart footer kapsülü beğenildi. Footer zorunlu; karakterli ana sayfada CRT’nin tam ekran konumunu değiştirmeden alt köşelere yerleşir, ayrı bant veya kaydırma eklemez. İletişim, bulanık arka planlı gerçek e-posta formudur. Ayrıntılar: [kişisel alan](features/personal-space.md), takip #6 ve #11.
 
 - 2026-10-16: Bundan sonra sunulan tasarım önerilerine ayırt edici isim verilir; revizyonlarda isim korunup tasarım sürümü ilerletilir. Bunlar ürün release adları değildir.
+
+- 16 Ekim 2026: #11 giriş cümlesi için “Satır Dalgası” seçildi; harf yükselişi 8 px. Kelimeler bölünmez, döngüler arasında duraklama olur; reduced-motion/hareket kapalı tercihinde sabittir. Koleksiyon adı hataları alan altında erişilebilir açıklamayla gösterilir ve düzenlemede temizlenir.

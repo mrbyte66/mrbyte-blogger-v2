@@ -104,3 +104,6 @@
 .library-empty-steps strong { font-size:15px; font-weight:500; }
 .library-empty-steps span { font-size:13px; color:var(--muted); line-height:1.6; }
 @media(max-width:640px) { .library-tools { flex-wrap:wrap; gap:8px; }.library-search { flex-basis:100%; }.library-sort { flex:1; }.library-empty-steps { grid-template-columns:1fr; gap:20px; } }
+
+:is(.saved-category-form,.save-new-form) input[aria-invalid=true] { border-color:var(--form-error); }
+:is(.saved-category-form,.save-new-form) input[aria-invalid=true]:focus { outline:2px solid color-mix(in srgb,var(--form-error) 65%,transparent); outline-offset:2px; }

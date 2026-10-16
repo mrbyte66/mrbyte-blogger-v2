@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type DragEvent, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type DragEvent, type CSSProperties } from "react";
 import { SitePageHeader } from "../SitePageHeader";
 import { useAuth } from "../auth/AuthProvider";
 import { useArticles } from "../../lib/articles/use-articles";
@@ -26,6 +26,10 @@ function SavedLibraryView() {
   const appearance = themeAppearance(workspace.applied);
   const [settings, setSettings] = useState(saved.recallView);
   const { selected, query, sort, view, limit, quickPinned, previewId, previewWidth } = settings;
+  const nameErrorId = useId();
+  const nameInput = useRef<HTMLInputElement>(null);
+  const [nameError, setNameError] = useState("");
+  const showNameError = (message: string) => { setNameError(message); nameInput.current?.focus(); };
   const [name, setName] = useState(""); const [editing, setEditing] = useState(false); const [busy, setBusy] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null); const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [wide, setWide] = useState(false); const [desktopPreview, setDesktopPreview] = useState(false);
@@ -35,6 +39,7 @@ function SavedLibraryView() {
   const [quickQuery, setQuickQuery] = useState(""); const [quickOpen, setQuickOpen] = useState(false); const [compact, setCompact] = useState(false); const [jump, setJump] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; undo?: () => Promise<boolean> } | null>(null);
   const root = useRef<HTMLDivElement>(null); const quick = useRef<HTMLDetailsElement>(null); const quickInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (nameError && !busy) nameInput.current?.focus(); }, [nameError, busy]);
   const remember = useRef(saved.rememberView); remember.current = saved.rememberView;
   const current = useRef(settings); current.current = settings;
   const restored = useRef(false); const operation = useRef(false);
@@ -56,7 +61,7 @@ function SavedLibraryView() {
   const quickEntries = library.entries.filter(entry => { const a = articleFor(entry); return a && (!quickSearch || a.title.toLocaleLowerCase("tr").includes(quickSearch)); });
   const quickCollections = library.collections.filter(c => !quickSearch || c.name.toLocaleLowerCase("tr").includes(quickSearch));
   function update(patch: Partial<typeof settings>) { setSettings(s => ({ ...s, ...patch, limit: 24, scroll: 0 })); }
-  function select(id: string) { update({ selected: id }); setEditing(false); setDropTarget(null); }
+  function select(id: string) { update({ selected: id }); setEditing(false); setNameError(""); setDropTarget(null); }
   async function act(task: () => Promise<boolean>, after: () => void) {
     if (operation.current) return;
     operation.current = true; setBusy(true);
@@ -154,8 +159,8 @@ function SavedLibraryView() {
             {!showPinned && <details ref={quick} className="library-quick" onToggle={e => { setQuickOpen(e.currentTarget.open); if (e.currentTarget.open) requestAnimationFrame(() => quickInput.current?.focus()); }}><summary title="Hızlı git · ⌘ / Ctrl K"><Icon kind="list" /><span>Hızlı git</span></summary>{quickOpen && quickPanel}</details>}
           </div>
         </div>
-        <div className="library-meta"><span role="status">{items.length} kayıt</span>{custom && <button type="button" className="saved-manage" aria-expanded={editing} onClick={() => { setName(custom?.name ?? ""); setEditing(!editing); }}>Koleksiyonu düzenle</button>}</div>
-        {editing && <form className="saved-category-form" onSubmit={e => { e.preventDefault(); void act(() => custom ? rename(custom.id,name) : create(name), () => { setName(""); setEditing(false); }); }}><label>Koleksiyon adı<input autoFocus value={name} maxLength={60} onChange={e => setName(e.target.value)} /></label><button type="submit" disabled={busy || !name.trim()}>Kaydet</button><button type="button" onClick={() => setEditing(false)}>Vazgeç</button>{custom && <button type="button" disabled={busy} onClick={() => void act(() => deleteCategory(custom.id), () => { select(defaultId || "all"); setToast({ text: "Yazılar Genel koleksiyonuna taşındı" }); })}>Koleksiyonu kaldır</button>}</form>}
+        <div className="library-meta"><span role="status">{items.length} kayıt</span>{custom && <button type="button" className="saved-manage" aria-expanded={editing} onClick={() => { setName(custom?.name ?? ""); setNameError(""); setEditing(!editing); }}>Koleksiyonu düzenle</button>}</div>
+        {editing && <form className="saved-category-form" onSubmit={e => { e.preventDefault(); if (!name.trim()) { showNameError("Koleksiyonuna bir ad ver."); return; } setNameError(""); void act(() => custom ? rename(custom.id,name,showNameError) : create(name,undefined,showNameError), () => { setName(""); setEditing(false); }); }}><label>Koleksiyon adı<input ref={nameInput} autoFocus value={name} disabled={busy} maxLength={60} aria-label="Koleksiyon adı" aria-invalid={!!nameError} aria-describedby={nameError ? nameErrorId : undefined} onChange={e => { setName(e.target.value); setNameError(""); }} />{nameError && <span id={nameErrorId} className="auth-field-error" role="alert">{nameError}</span>}</label><button type="submit" disabled={busy}>Kaydet</button><button type="button" disabled={busy} onClick={() => setEditing(false)}>Vazgeç</button>{custom && <button type="button" disabled={busy} onClick={() => void act(() => deleteCategory(custom.id), () => { select(defaultId || "all"); setToast({ text: "Yazılar Genel koleksiyonuna taşındı" }); })}>Koleksiyonu kaldır</button>}</form>}
         {!items.length ? <section className="saved-empty"><Icon kind="bookmark" /><h2>{search ? "Aradığın satır henüz burada değil." : library.entries.length ? "Bu koleksiyon henüz boş." : "İlk satırını sakla."}</h2>{search ? <button type="button" onClick={() => update({ query: "", selected: "all" })}>Aramayı temizle</button> : <SlideLink href="/" direction="back">Yazıları keşfet ↗</SlideLink>}</section> : <div className={`saved-articles library-${view}`}>{shown.map(entry => {
           const article = articleFor(entry); const collection = library.collections.find(c => c.id === entry.collectionId);
           return <article id={`saved-${entry.articleId}`} className={`saved-item library-entry${hasPreview && previewId === entry.articleId ? " is-previewed" : ""}${dragging === entry.articleId ? " is-dragging" : ""}`} key={entry.articleId} draggable={!busy} onDragStart={e => { if ((e.target as HTMLElement).closest("button,summary,select") || busy) { e.preventDefault(); return; } setDragging(entry.articleId); e.dataTransfer.setData(dragType,entry.articleId); e.dataTransfer.effectAllowed = "copyMove"; const box=e.currentTarget.getBoundingClientRect(); e.dataTransfer.setDragImage?.(e.currentTarget,Math.max(0,e.clientX-box.left),Math.max(0,e.clientY-box.top)); }} onDragEnd={() => { setDragging(null); setDropTarget(null); setPreviewDrop(false); }}>

@@ -274,3 +274,11 @@ html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dia
 
 .auth-mail-help { display:block; margin:16px 0 0; line-height:1.6; }
 .auth-message-actions>.auth-text-button { margin-top:16px; }
+
+/* A short travelling wave, followed by a quiet pause; words keep natural wrapping. */
+.auth-wave { color:var(--ink); }
+.auth-wave-word { display:inline-block; white-space:pre; }
+.auth-wave-word>span { display:inline-block; animation:auth-letter-wave 7s cubic-bezier(.37,0,.25,1) infinite; animation-delay:calc(var(--letter) * 34ms); }
+@keyframes auth-letter-wave { 0%,13%,100% { transform:translateY(0); } 5% { transform:translateY(-8px); } 8.5% { transform:translateY(1px); } }
+@media(prefers-reduced-motion:reduce) { .auth-wave-word>span { animation:none; } }
+html[data-motion=off] .auth-wave-word>span { animation:none; }

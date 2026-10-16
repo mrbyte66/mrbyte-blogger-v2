@@ -382,3 +382,42 @@ it("clears side-reading context when signing out",async()=>{
  expect(screen.queryByRole("heading",{name:articles[0].title})).toBeNull();
  expect(screen.queryByRole("button",{name:"Yazı önizlemesi aç"})).toBeNull();
 });
+
+
+it("associates duplicate collection errors with the name, clears on edit, and keeps names on failure", async () => {
+  me().collections.push({ id: "c-default", name: "Genel", isDefault: true, version: 0 });
+  await render(<SavedLibraryPage />);
+  await click(screen.getByRole("button", { name: "Yeni koleksiyon" }));
+  const input = screen.getByRole("textbox", { name: "Koleksiyon adı" });
+  fireEvent.change(input, { target: { value: "Genel" } });
+  await click(screen.getByRole("button", { name: "Kaydet" }));
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(input).toBe(document.activeElement);
+  expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toContain("Başka bir ad seç");
+  expect((input as HTMLInputElement).value).toBe("Genel");
+  fireEvent.change(input, { target: { value: "Notlar" } });
+  expect(input.getAttribute("aria-invalid")).toBe("false");
+  expect(screen.queryByRole("alert")).toBeNull();
+  await click(screen.getByRole("button", { name: "Kaydet" }));
+  expect(collections().some(c => c.name === "Notlar")).toBe(true);
+});
+
+it("explains empty collection names without sending a request", async () => {
+  await render(<SavedLibraryPage />);
+  await click(screen.getByRole("button", { name: "Yeni koleksiyon" }));
+  await click(screen.getByRole("button", { name: "Kaydet" }));
+  expect(screen.getByRole("alert").textContent).toContain("Koleksiyonuna bir ad ver");
+  expect(backend.state.calls.some(c => c.method === "POST" && c.path === "/me/collections")).toBe(false);
+});
+
+it("shows duplicate name errors in the article save popover as well", async () => {
+  await render(<SaveArticleButton slug={articles[0].slug} title={articles[0].title} />);
+  await click(screen.getByRole("button", { name: `Yazıyı kaydet: ${articles[0].title}` }));
+  await click(screen.getByRole("button", { name: "Yeni koleksiyon" }));
+  const input = screen.getByRole("textbox", { name: "Koleksiyon adı" });
+  fireEvent.change(input, { target: { value: "Genel" } });
+  await click(screen.getByRole("button", { name: "Oluştur ve taşı" }));
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect(document.getElementById(input.getAttribute("aria-describedby")!)?.textContent).toContain("Başka bir ad seç");
+  expect(input).toBe(document.activeElement);
+});

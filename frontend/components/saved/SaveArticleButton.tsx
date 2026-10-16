@@ -14,6 +14,8 @@ export function SaveArticleButton({ slug, title, preview = false }: { slug: stri
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
+  const showNameError = (message: string) => { setNameError(message); nameInput.current?.focus(); };
   const [creating, setCreating] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   const [collectionId, setCollectionId] = useState("");
@@ -27,6 +29,7 @@ export function SaveArticleButton({ slug, title, preview = false }: { slug: stri
   }, []);
   useEffect(() => { setOpen(false); setCreating(false); setName(""); setCollectionId(""); }, [auth.session?.profile.id, preview]);
   useEffect(() => { if (creating) nameInput.current?.focus(); }, [creating]);
+  useEffect(() => { if (nameError && !busy) nameInput.current?.focus(); }, [nameError, busy]);
   const total = stats ? stats.saves : null;
   const countTitle = "Bu yazıyı kitaplığına kaydeden üyelerin sayısı";
   async function act(task: () => Promise<boolean>, close: boolean) {
@@ -42,8 +45,8 @@ export function SaveArticleButton({ slug, title, preview = false }: { slug: stri
     {open && <div id={id} className="save-popover" role="region" aria-label="Kaydı düzenle">
       <div className="save-popover-heading"><strong>{saved ? "Kaydedildi" : "Yazıyı kaydet"}</strong><button type="button" aria-label="Kaydetme seçeneklerini kapat" onClick={() => setOpen(false)}>×</button></div>
       <form className="save-category-choice" onSubmit={(event) => { event.preventDefault(); void act(() => save(slug, collectionId), true); }}><label>Koleksiyon<select value={collectionId || defaultId} onChange={(event) => setCollectionId(event.target.value)}>{library.collections.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label><button type="submit" disabled={busy || (collectionId || defaultId) === saved?.collectionId}>Taşı</button></form>
-      <button className="save-new-collection" type="button" aria-expanded={creating} onClick={() => setCreating(!creating)}><span aria-hidden="true">{creating ? "−" : "+"}</span> Yeni koleksiyon</button>
-      {creating && <form className="save-new-form" onSubmit={(event) => { event.preventDefault(); void act(async () => { const ok = await create(name, slug); if (ok) setName(""); return ok; }, true); }}><label>Koleksiyon adı<input ref={nameInput} maxLength={60} value={name} onChange={(event) => setName(event.target.value)} placeholder="Örn. Türk edebiyatı" /></label><button className="save-create" type="submit" disabled={busy || !name.trim()}>Oluştur ve taşı</button></form>}
+      <button className="save-new-collection" type="button" aria-expanded={creating} onClick={() => { setNameError(""); setCreating(!creating); }}><span aria-hidden="true">{creating ? "−" : "+"}</span> Yeni koleksiyon</button>
+      {creating && <form className="save-new-form" onSubmit={(event) => { event.preventDefault(); if (!name.trim()) { showNameError("Koleksiyonuna bir ad ver."); return; } setNameError(""); void act(async () => { const ok = await create(name, slug, showNameError); if (ok) setName(""); return ok; }, true); }}><label>Koleksiyon adı<input ref={nameInput} disabled={busy} maxLength={60} value={name} aria-label="Koleksiyon adı" aria-invalid={!!nameError} aria-describedby={nameError ? `${id}-name-error` : undefined} onChange={(event) => { setName(event.target.value); setNameError(""); }} placeholder="Örn. Türk edebiyatı" />{nameError && <span id={`${id}-name-error`} className="auth-field-error" role="alert">{nameError}</span>}</label><button className="save-create" type="submit" disabled={busy}>Oluştur ve taşı</button></form>}
       <div className="save-popover-links"><SlideLink href="/kaydedilenler">Kitaplığım ↗</SlideLink><button type="button" disabled={busy} onClick={() => void act(() => remove(slug), true)}>Kaydı kaldır</button></div>
       {error && <p role="alert">{error}</p>}
     </div>}

@@ -171,6 +171,9 @@ html[data-theme=light] .surface-night .account-danger { color:#944c5b; border-co
 
 /* One shared shell for member pages and standalone reading destinations. */
 .site-page-header { width:100%; max-width:1100px; min-height:88px; margin:0 auto; padding:20px 32px; display:flex; align-items:center; justify-content:space-between; gap:20px; border-bottom:1px solid var(--line); position:relative; z-index:12; }
+/* Lift the header's stacking context while its account menu is open.
+   The sticky library tools live at layer 30; raising only the child cannot cross it. */
+:is(.site-page-header,.theme-header,.reading-header):has(.account-dropdown) { z-index:40; }
 .site-page-wordmark { color:var(--ink); font-size:26px; font-weight:650; letter-spacing:-.06em; }
 .site-page-header>nav { display:flex; align-items:center; gap:16px; }
 .site-page-back { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); white-space:nowrap; }

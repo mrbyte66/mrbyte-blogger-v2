@@ -80,3 +80,5 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 - 16 Ekim 2026: Satır Dalgası inişi daha tok: hızlanan düşüş, tabanda kısa ve hafif sıkışma, küçük geri sekme. 8 px yükseliş, ilk 2 sn bekleme ve tamamlanan dalgadan sonra 3 sn mola korunur.
 
 - 16 Ekim 2026: Satır Dalgası hızı %15 azaltıldı (hareket ve harfler arası gecikme birlikte ölçeklenir). Harf hareketi yaklaşık 1647 ms, harf aralığı 40 ms; ilk 2 sn bekleme ve dalga sonrası 3 sn mola değişmez.
+
+- 16 Ekim 2026: Aynı Satır Dalgası Üye ol ekranındaki “Sevdiğin yazıları kendi düzeninde sakla.” metnine de uygulandı. Sekme değişiminde 2 sn bekleme yeniden başlar; uzun metinde de son harften sonra 3 sn mola korunur.

@@ -288,5 +288,15 @@ html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dia
   19.984% { transform:translateY(.5px) scale(1.008,.975); animation-timing-function:ease-out; }
   27.978%,100% { transform:translateY(0) scale(1); }
 }
+/* Registration has four more letters; keep the same motion speed and full 3s pause. */
+.auth-wave[data-screen=register] .auth-wave-word>span { animation-name:auth-letter-wave-register; animation-duration:6047.059ms; }
+@keyframes auth-letter-wave-register {
+  0% { transform:translateY(0) scale(1); animation-timing-function:cubic-bezier(.2,.8,.3,1); }
+  7.393% { transform:translateY(-8px) scale(1); animation-timing-function:cubic-bezier(.65,0,.9,.3); }
+  10.506% { transform:translateY(1.5px) scale(1.025,.9); animation-timing-function:cubic-bezier(.15,.7,.3,1); }
+  15.564% { transform:translateY(-2.5px) scale(1); animation-timing-function:cubic-bezier(.65,0,.9,.3); }
+  19.455% { transform:translateY(.5px) scale(1.008,.975); animation-timing-function:ease-out; }
+  27.237%,100% { transform:translateY(0) scale(1); }
+}
 @media(prefers-reduced-motion:reduce) { .auth-wave-word>span { animation:none; } }
 html[data-motion=off] .auth-wave-word>span { animation:none; }

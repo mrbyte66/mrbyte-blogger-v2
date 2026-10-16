@@ -369,3 +369,21 @@ html[data-motion=off] :is(.public-frame,.library-v11,.personal-account) * { anim
 }
 @media(hover:none) { .library-peek { opacity:1; } }
 html[data-motion=off] .library-v11 :is(.library-preview,.library-preview-scroll,.library-tooltip,.library-preview-plus,.library-preview-edge) { animation:none; transition:none; }
+
+/* Keep library entry points beside the controls they belong to. */
+.site-header>.saved-library-link { margin-left:auto; flex-shrink:0; }
+.site-header>.saved-library-link+.account-menu { margin-left:0; }
+.public-home-scene:has(.site-header>.saved-library-link) .site-footer { right:calc(4.5vw + 140px); }
+.saved-category-tabs .collection-add { width:36px; height:36px; min-width:36px; min-height:36px; border-radius:10px; padding:0; margin:0 2px 4px 4px; align-self:end; position:sticky; right:0; z-index:1; box-shadow:0 0 0 5px var(--panel); }
+.series-index-content { max-width:1100px; margin:auto; padding:36px 32px 40px; }
+.series-index-content>h1 { font:600 clamp(36px,4vw,54px)/1.1 'DM Sans',sans-serif; letter-spacing:-.055em; margin:0 0 32px; }
+@media(max-width:800px) {
+ .public-home-scene .public-footer nav { gap:10px; }
+ .public-home-scene .public-footer nav :is(a,button) { font-size:10px; }
+}
+@media(max-width:600px) {
+ .public-home-scene:has(.site-header>.saved-library-link) .site-footer { right:calc(6% + 128px); }
+ .public-home-scene .public-footer nav { gap:8px; }
+ .public-home-scene .public-footer nav [aria-hidden=true] { display:none; }
+ .series-index-content { padding:24px 20px 28px; }
+}

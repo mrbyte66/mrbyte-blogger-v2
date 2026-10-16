@@ -33,3 +33,7 @@ Mevcut temanın yüzeyleri, tipografisi, paleti ve klasör sekmeleri korunur. Ka
 - 900 px ve altında yerel modal dialog alt pencere olur; arka plan inert ve kaydırma kilitlidir. Escape, kapat düğmesi ve dış alan kapatır; kapanıştan sonra göz düğmesine odak döner. Masaüstünde dış tıklama açık paneli kapatmaz.
 - Panel tercihi, genişliği ve seçili yazı mevcut hesaba ait provider belleğinde yazıya gidip dönüşte korunur; çıkış/hesap değişimi temizler. Özel kayıt veya seçim tarayıcı storage’ına yazılmaz.
 - Panel açılışı 220 ms, içerik geçişi/kapanışı 160 ms; reduced-motion ve mevcut hareket tercihi korunur. Tema rengi veya karakter değiştirilmez.
+
+## Gezinme girişleri
+
+Ana CRT sahnesinde doğrulanmış üyenin Kitaplığım ikonu hesap simgesinin yanındadır; Studio önizlemesinde gösterilmez. Yeni koleksiyon + düğmesi başlıktan koleksiyon sekmelerinin sonuna taşınmıştır; yatay taşmada kenarda erişilebilir kalır. Ortak footer Seriler bağlantısını içerir. `/seriler`, mevcut public seri kataloğunu mevcut temayla gösterir; temada seri bloğu bulunmasına bağlı değildir. Ana sayfa yüksekliği ve CRT yerleşimi korunur.

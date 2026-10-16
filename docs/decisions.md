@@ -78,3 +78,5 @@ Kullanıcı bir değişikliği mümkün olan en az tıklamayla ve mouse’u az g
 - 16 Ekim 2026: Ana sayfa hesap düğmesi misafirde de aynı yuvarlak avatar düzenini kullanır. Kitaplığım ikonu her zaman görünür; misafir tıklayınca Üye ol paneli açılır. Sahne kontrollerinin konumu giriş durumuyla değişmez.
 
 - 16 Ekim 2026: Satır Dalgası inişi daha tok: hızlanan düşüş, tabanda kısa ve hafif sıkışma, küçük geri sekme. 8 px yükseliş, ilk 2 sn bekleme ve tamamlanan dalgadan sonra 3 sn mola korunur.
+
+- 16 Ekim 2026: Satır Dalgası hızı %15 azaltıldı (hareket ve harfler arası gecikme birlikte ölçeklenir). Harf hareketi yaklaşık 1647 ms, harf aralığı 40 ms; ilk 2 sn bekleme ve dalga sonrası 3 sn mola değişmez.

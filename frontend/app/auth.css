@@ -279,7 +279,14 @@ html[data-motion=off] .auth-dialog.is-dismissing,html[data-motion=off] .auth-dia
    The first wave starts after 2000ms; each subsequent wave waits for every letter. */
 .auth-wave { color:var(--ink); }
 .auth-wave-word { display:inline-block; white-space:pre; }
-.auth-wave-word>span { display:inline-block; animation:auth-letter-wave 5454ms cubic-bezier(.37,0,.25,1) infinite; animation-delay:calc(2000ms + var(--letter) * 34ms); }
-@keyframes auth-letter-wave { 0%,25.669%,100% { transform:translateY(0); } 10.268% { transform:translateY(-8px); } 16.685% { transform:translateY(1px); } }
+.auth-wave-word>span { display:inline-block; transform-origin:50% 100%; animation:auth-letter-wave 5454ms linear infinite; animation-delay:calc(2000ms + var(--letter) * 34ms); }
+@keyframes auth-letter-wave {
+  0% { transform:translateY(0) scale(1); animation-timing-function:cubic-bezier(.2,.8,.3,1); }
+  6.968% { transform:translateY(-8px) scale(1); animation-timing-function:cubic-bezier(.65,0,.9,.3); }
+  9.901% { transform:translateY(1.5px) scale(1.025,.9); animation-timing-function:cubic-bezier(.15,.7,.3,1); }
+  14.669% { transform:translateY(-2.5px) scale(1); animation-timing-function:cubic-bezier(.65,0,.9,.3); }
+  18.335% { transform:translateY(.5px) scale(1.008,.975); animation-timing-function:ease-out; }
+  25.669%,100% { transform:translateY(0) scale(1); }
+}
 @media(prefers-reduced-motion:reduce) { .auth-wave-word>span { animation:none; } }
 html[data-motion=off] .auth-wave-word>span { animation:none; }

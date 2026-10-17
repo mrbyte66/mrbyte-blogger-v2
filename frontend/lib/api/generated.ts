@@ -668,6 +668,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/notes/{id}/recordings/{clipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPersonalRecording"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/notes/{id}/audio": {
         parameters: {
             query?: never;
@@ -1749,6 +1765,10 @@ export interface components {
             body: string;
             color?: components["schemas"]["NoteColor"];
             audio?: components["schemas"]["AudioInput"];
+            title?: string;
+            tags?: string[];
+            /** @description Full desired recording list; omitted preserves existing recordings */
+            recordings?: components["schemas"]["PersonalRecordingWrite"][];
         };
         PersonalNote: {
             /** Format: uuid */
@@ -1756,12 +1776,26 @@ export interface components {
             body: string;
             color: components["schemas"]["NoteColor"];
             audio?: components["schemas"]["AudioInfo"] | null;
+            title?: string;
+            tags?: string[];
+            recordings?: components["schemas"]["PersonalRecording"][];
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
             /** Format: int64 */
             version: number;
+        };
+        PersonalRecordingWrite: {
+            /** Format: uuid */
+            id: string;
+            audio?: components["schemas"]["AudioInput"];
+        };
+        PersonalRecording: {
+            /** Format: uuid */
+            id: string;
+            mime: string;
+            durationMs: number;
         };
         AnnotationWrite: {
             /** @enum {string} */
@@ -1773,6 +1807,8 @@ export interface components {
             /** @description Required (non-blank) for kind note */
             note?: string;
             color?: components["schemas"]["NoteColor"];
+            /** @description Whether the source receives a visual highlight; disabling preserves the note */
+            emphasized?: boolean;
             audio?: components["schemas"]["AudioInput"];
         };
         Annotation: {
@@ -1785,6 +1821,8 @@ export interface components {
             fragments: components["schemas"]["Fragment"][];
             note: string;
             color?: components["schemas"]["NoteColor"];
+            /** @description Whether the source receives a visual highlight; disabling preserves the note */
+            emphasized?: boolean;
             audio?: components["schemas"]["AudioInfo"] | null;
             /** Format: date-time */
             createdAt: string;
@@ -3978,6 +4016,32 @@ export interface operations {
                     "application/json": {
                         items: components["schemas"]["PersonalNote"][];
                     };
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getPersonalRecording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                clipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private recording; authenticated owner only, no-store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/webm": string;
+                    "audio/ogg": string;
+                    "audio/mp4": string;
                 };
             };
             default: components["responses"]["Problem"];

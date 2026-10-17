@@ -96,3 +96,7 @@ Genel not, alıntıdan bağımsız defter ve hashtag arama içerir; hashtag yaln
 ### 2026-10-17 — Defter Ayracı / İnce Dizin
 
 Onaylanan okuma notu revizyonu: sivri fihrist yerine sade, pinlenebilir ve kendi içinde kaydırılan/aranan not dizini. Genel notun kullanıcı adı **Serbest Not**; liste /notlar’da, header tek **Defterim | +** kapsülü. + seçili metin gerektirmeden büyük Serbest Not panelini açar. Panel yazdıkça yumuşak büyür, ekran sınırında içeride kayar. Misafir kaydı/uyarısı ve özel üye kaydı korunur. Aynı paragrafın notları tek kart ve geçişle gösterilir; silinen kaynak kartı tozlaşır, geri alma kalır.
+
+### 2026-10-17 — Not Atlası
+
+Kullanıcı Not Atlası tasarımının uygulanmasını seçti. Defterim renkli kart/liste, geniş düzenleyici, açık etiket ekleme ve çoklu bağımsız ses kayıtlarıyla yenilenir. Defterim | + kapsülü korunur; + büyük Serbest Not editörünü açar. Alıntı işareti doğrudan metin üzerinden kaldırılabilir; bağlı özel not silinmez. Üye/misafir saklama ve mevcut temalar korunur. #15 kullanıcı incelemesi tamamlanana kadar In Progress kalır.

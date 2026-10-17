@@ -16,8 +16,18 @@ Mini sözlük kullanıcı seçimiyle ücretsiz Dictionary API / Wiktionary kayna
 
 ## Defter Ayracı / İnce Dizin
 
-Header’daki ortak `NotebookControl`, Defterim bağlantısıyla `/notlar` sayfasını, + ile seçimsiz Serbest Not dialog’unu açar. Genişlik 760 px ile sınırlıdır. `AutoGrowTextarea` ayrı gizli ölçüm alanıyla görünür textarea’yı sıçratmadan 280 ms’de büyütür/küçültür; üst sınır viewport’a bağlıdır, uzun içerik kendi içinde kayar. Dar ekranda dialog ekran sınırını korur. Kaydedilmeyen taslak kapanışta uyarılır.
+Header’daki ortak `NotebookControl`, Defterim bağlantısıyla `/notlar` sayfasını, + ile seçimsiz Serbest Not dialog’unu açar. Not Atlası hızlı paneli en fazla 840 px genişler. `AutoGrowTextarea` ayrı gizli ölçüm alanıyla görünür textarea’yı sıçratmadan 280 ms’de büyütür/küçültür; üst sınır viewport’a bağlıdır, uzun içerik kendi içinde kayar. Dar ekranda dialog ekran sınırını korur. Kaydedilmeyen taslak kapanışta uyarılır.
 
 Not dizini sol tarafa sabitlenebilir; tercih tarayıcıda saklanır. Uzun not listesi kendi içinde kayar ve aranır. Seçilen kaynak notu sağdaki alanda tek kart açar; aynı paragrafta önceki/sonraki kullanılabilir. Kaynak kartı ancak silme işlemi başarılı olduktan sonra tozlaşır; abort/unmount tüm animasyonları temizler. Motion kapalıysa anında kaldırılır. /notlar, Serbest Notları arama/hashtag ve seçili not düzenleyicisiyle listeler. Yazı notları sekmesi erişilebilir yayınlardaki özel notları toplar; seçilen kayıt doğrudan yazının notuna döner.
 
 Serbest Notlara da private ses eklenebilir (V16): metin güncellenince ses korunur. `/me/notes/{id}/audio` yalnız sahibine no-store yanıt verir; ses doğrulama ve hesap başına toplam 25 MB sınırı yazı notlarıyla ortaktır. Misafir sesi IndexedDB’dedir; üyeliğe aktarım açık tercihle sesle birlikte yapılır.
+
+## Not Atlası — 17 Ekim 2026
+
+Defterim renkli kart ve sıkı liste görünümü, başlık/metin araması, açık Etiket ekle kontrolü ve etiket filtreleri içerir. Seçili Serbest Not geniş yan editörde açılır; başlık, büyüyen metin alanı, kaldırılabilir etiketler ve bağımsız ses kayıtları aynı taslağın parçalarıdır. Header Defterim | + kontrolünü korur; hızlı panel de aynı editörü kullanır. Kaydedilmeyen değişiklikte geçiş/kapanış uyarılır.
+
+Bir Serbest Nota en fazla 10 ses kaydı eklenebilir; her kayıt ayrı oynatılır, ileri alınır ve kaldırılır. Yeni kayıt sırasında önceki kayıtlar görünür kalır; kayıt sürerken kaydetme kapalıdır. Eski tek sesli notlar V17 ile kayıt listesine taşınır; legacy audio endpoint ilk kaydı döndürür. Yeni private recording endpoint not sahibini doğrular ve no-store yanıt verir. 2 dakika/1 MB kayıt ve toplam 25 MB hesap sınırı korunur.
+
+Metindeki vurgulu yere tıklamak veya işaretli aralığı seçmek kaldırma araçlarını açar. Vurguyu kaldır ve Alt çizgiyi kaldır ayrı işlemlerdir; alıntıya bağlı metin/ses notu korunur. İşaret kaldırma geri alınabilir. Geniş okuma alanında kenar kartları 360 px olur; pinli dizin ve dar ekran düzeni korunur. Misafir kayıtları tarayıcıdadır ve site verileri temizlenince kaybolur; üyeliğe aktarım açık tercihtir.
+
+Üretim edge’inde yalnız `PUT /api/v1/me/notes/*` için 14 MB JSON sınırı vardır (10 × 1 MB sesin base64 aktarımı + metin). Diğer API istekleri 2 MB sınırını korur.

@@ -18,6 +18,7 @@ export type ReadingMark = {
   note: string;
   createdAt: string;
   color?: NoteColor;
+  emphasized?: boolean;
   audio?: AudioInfo | null;
   version?: number;
   revisionId?: string;
@@ -51,6 +52,7 @@ function validMark(value: unknown): value is ReadingMark {
     && value.fragments.every(validFragment)
     && value.fragments.reduce((sum, fragment) => sum + fragment.quote.length, 0) <= maxQuoteLength
     && boundedText(value.note, maxNoteLength) && (value.kind !== "note" || value.note.trim().length > 0)
+    && (value.emphasized === undefined || typeof value.emphasized === "boolean")
     && (value.color === undefined || noteColors.includes(value.color as NoteColor))
     && (value.kind !== "audio" || (record(value.audio) && typeof value.audio.mime === "string"))
     && (value.audio === undefined || value.audio === null || (record(value.audio) && ["audio/webm", "audio/ogg", "audio/mp4"].includes(String(value.audio.mime)) && typeof value.audio.durationMs === "number" && value.audio.durationMs > 0 && value.audio.durationMs <= 120000))

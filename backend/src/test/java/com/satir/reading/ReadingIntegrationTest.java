@@ -285,4 +285,29 @@ class ReadingIntegrationTest extends IntegrationTest {
         assertThat(alice.delete(path,null,Map.of()).status()).isEqualTo(204);assertThat(alice.get(path+"/audio").status()).isEqualTo(404);
     }
 
+    @Test
+    void notebookAtlasKeepsIndependentRecordingsAndExplicitTags() {
+        ApiClient alice=member("atlas@example.test");ApiClient bob=member("atlas-other@example.test");
+        String path="/api/v1/me/notes/"+UUID.randomUUID();UUID one=UUID.randomUUID(),two=UUID.randomUUID();
+        byte[] bytes=new byte[32];bytes[0]=0x1a;bytes[1]=0x45;bytes[2]=(byte)0xdf;bytes[3]=(byte)0xa3;
+        var audio=Map.of("data",java.util.Base64.getEncoder().encodeToString(bytes),"mime","audio/webm","durationMs",1000);
+        Response first=alice.put(path,Map.of("body","İlk düşünce","title","Atlas başlığı","tags",List.of("#JAVA","okuma"),"recordings",List.of(Map.of("id",one,"audio",audio))),Map.of("If-None-Match","*"));assertThat(first.status()).isEqualTo(201);
+        Response second=alice.put(path,Map.of("body","İkinci düşünce","title","Atlas başlığı","tags",List.of("java","okuma"),"recordings",List.of(Map.of("id",one),Map.of("id",two,"audio",audio))),Map.of("If-Match",first.etag()));assertThat(second.status()).isEqualTo(200);
+        assertThat(second.json().get("recordings").size()).isEqualTo(2);assertThat(second.json().get("tags").get(0).asString()).isEqualTo("java");
+        assertThat(alice.get(path+"/recordings/"+one).status()).isEqualTo(200);assertThat(alice.get(path+"/recordings/"+two).status()).isEqualTo(200);assertThat(bob.get(path+"/recordings/"+one).status()).isEqualTo(404);assertThat(client().get(path+"/recordings/"+one).status()).isEqualTo(401);
+        assertThat(alice.put(path,Map.of("body","Eski sürüm","recordings",List.of()),Map.of("If-Match",first.etag())).status()).isEqualTo(412);
+        Response removed=alice.put(path,Map.of("body","Ses korundu","recordings",List.of(Map.of("id",two))),Map.of("If-Match",second.etag()));assertThat(removed.status()).isEqualTo(200);assertThat(alice.get(path+"/recordings/"+one).status()).isEqualTo(404);assertThat(alice.get(path+"/recordings/"+two).status()).isEqualTo(200);
+        assertThat(alice.put(path,Map.of("body","Hatalı etiket","tags",List.of("bad tag")),Map.of("If-Match",removed.etag())).status()).isEqualTo(422);
+        assertThat(alice.put(path,Map.of("body","Yabancı ses","recordings",List.of(Map.of("id",UUID.randomUUID()))),Map.of("If-Match",removed.etag())).status()).isEqualTo(404);
+        assertThat(alice.delete(path,null,Map.of()).status()).isEqualTo(204);assertThat(alice.get(path+"/recordings/"+two).status()).isEqualTo(404);
+    }
+
+    @Test
+    void removingSourceEmphasisPreservesThePrivateNote() {
+        ApiClient alice=member("unmark@example.test");UUID id=UUID.randomUUID();
+        Response created=alice.put(path(id),Map.of("kind","note","revisionId",revisionId,"fragments",List.of(Map.of("blockId",blockId,"start",0,"end",8,"quote",TEXT.substring(0,8),"before","","after","")),"note","Not silinmemeli","color","lavender"),Map.of("If-None-Match","*"));assertThat(created.status()).isEqualTo(201);
+        Response changed=alice.put(path(id),Map.of("kind","note","revisionId",revisionId,"fragments",List.of(Map.of("blockId",blockId,"start",0,"end",8,"quote",TEXT.substring(0,8),"before","","after","")),"note","Not silinmemeli","color","lavender","emphasized",false),Map.of("If-Match",created.etag()));assertThat(changed.status()).isEqualTo(200);assertThat(changed.json().get("note").asString()).isEqualTo("Not silinmemeli");assertThat(changed.json().get("emphasized").asBoolean()).isFalse();
+        assertThat(alice.get("/api/v1/me/articles/"+published.json().get("id").asString()+"/annotations").json().get("items").get(0).get("emphasized").asBoolean()).isFalse();
+    }
+
 }

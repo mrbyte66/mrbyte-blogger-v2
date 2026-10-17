@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public class ReadingRepository {
 
     public record AnnotationRow(UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson, String note,
-            Instant createdAt, long version, String color, String audioMime, Integer audioDuration) {
+            Instant createdAt, long version, String color, String audioMime, Integer audioDuration, boolean emphasized) {
     }
 
     public record NewAnnotation(UUID userId, UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson,
@@ -33,7 +33,7 @@ public class ReadingRepository {
     }
 
     private static final String ANNOTATION_COLUMNS =
-            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version, color, audio_mime, audio_duration FROM annotation";
+            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version, color, audio_mime, audio_duration, emphasized FROM annotation";
 
     private final JdbcClient jdbc;
 
@@ -91,6 +91,7 @@ public class ReadingRepository {
             .param("data", audio).param("mime", mime).param("duration", duration).param("user", userId).param("id", id).update();
     }
 
+    public void emphasized(UUID user,UUID id,boolean value) { jdbc.sql("UPDATE annotation SET emphasized=:value WHERE user_id=:user AND id=:id").param("user",user).param("id",id).param("value",value).update(); }
     public byte[] audio(UUID userId, UUID id) {
         return jdbc.sql("SELECT audio_data FROM annotation WHERE user_id = :user AND id = :id")
             .param("user", userId).param("id", id).query(byte[].class).single();
@@ -195,6 +196,6 @@ public class ReadingRepository {
     private static AnnotationRow annotation(ResultSet rs, int row) throws SQLException {
         return new AnnotationRow(rs.getObject("id", UUID.class), rs.getObject("article_id", UUID.class),
                 rs.getObject("revision_id", UUID.class), rs.getString("kind"), rs.getString("fragments"), rs.getString("note"),
-                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"), rs.getString("color"), rs.getString("audio_mime"), rs.getObject("audio_duration", Integer.class));
+                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"), rs.getString("color"), rs.getString("audio_mime"), rs.getObject("audio_duration", Integer.class),rs.getBoolean("emphasized"));
     }
 }

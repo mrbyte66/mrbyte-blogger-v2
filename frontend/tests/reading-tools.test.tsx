@@ -223,3 +223,11 @@ it("pins and searches a fifteen-note index and opens only the requested note",as
  await user.click(screen.getByRole("button",{name:"15. alıntının bulunduğu bölüme git"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);
  await user.click(screen.getByRole("button",{name:"Sonraki not"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);expect(screen.getByText("Düşünce 1")).toBeTruthy();
 });
+
+it("removes visual emphasis through selected text while retaining and undoing the linked note",async()=>{
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Bu düşünce korunmalı",color:"mint"},{...mark,id:"line",kind:"underline",note:""}]}));
+ const user=userEvent.setup();renderReader();selectText();await user.click(screen.getByRole("button",{name:"Vurguyu kaldır"}));
+ expect(saved()?.marks.find(m=>m.id===mark.id)).toMatchObject({kind:"note",note:"Bu düşünce korunmalı",emphasized:false});expect(saved()?.marks.some(m=>m.id==="line")).toBe(true);
+ await user.click(screen.getByRole("button",{name:"İşareti geri al ↶"}));expect(saved()?.marks.find(m=>m.id===mark.id)?.emphasized).not.toBe(false);
+ selectText();await user.click(screen.getByRole("button",{name:"Alt çizgiyi kaldır"}));expect(saved()?.marks.map(m=>m.id)).toEqual([mark.id]);expect(saved()?.marks[0].note).toBe("Bu düşünce korunmalı");
+});

@@ -11,3 +11,13 @@ Mini sözlük, ücretsiz Dictionary API ve Wiktionary üzerinden seçilen İngil
 AI, quiz, flashcard ve public notlar bu teslimin kapsamında değildir. Dışa aktarma ayrı Backlog işidir. [Frontend ayrıntıları](../../frontend/docs/reading.md).
 
 Takip: [#7](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/7), [#15](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/15), [#21](https://github.com/mrbyte66/mrbyte-blogger-v2/issues/21).
+
+## Not Atlası — 17 Ekim 2026
+
+Defterim renkli kart ve sıkı liste görünümü, başlık/metin araması, açık Etiket ekle kontrolü ve etiket filtreleri içerir. Seçili Serbest Not geniş yan editörde açılır; başlık, büyüyen metin alanı, kaldırılabilir etiketler ve bağımsız ses kayıtları aynı taslağın parçalarıdır. Header Defterim | + kontrolünü korur; hızlı panel de aynı editörü kullanır. Kaydedilmeyen değişiklikte geçiş/kapanış uyarılır.
+
+Bir Serbest Nota en fazla 10 ses kaydı eklenebilir; her kayıt ayrı oynatılır, ileri alınır ve kaldırılır. Yeni kayıt sırasında önceki kayıtlar görünür kalır; kayıt sürerken kaydetme kapalıdır. Eski tek sesli notlar V17 ile kayıt listesine taşınır; legacy audio endpoint ilk kaydı döndürür. Yeni private recording endpoint not sahibini doğrular ve no-store yanıt verir. 2 dakika/1 MB kayıt ve toplam 25 MB hesap sınırı korunur.
+
+Metindeki vurgulu yere tıklamak veya işaretli aralığı seçmek kaldırma araçlarını açar. Vurguyu kaldır ve Alt çizgiyi kaldır ayrı işlemlerdir; alıntıya bağlı metin/ses notu korunur. İşaret kaldırma geri alınabilir. Geniş okuma alanında kenar kartları 360 px olur; pinli dizin ve dar ekran düzeni korunur. Misafir kayıtları tarayıcıdadır ve site verileri temizlenince kaybolur; üyeliğe aktarım açık tercihtir.
+
+Üretim edge’inde yalnız `PUT /api/v1/me/notes/*` için 14 MB JSON sınırı vardır (10 × 1 MB sesin base64 aktarımı + metin). Diğer API istekleri 2 MB sınırını korur.

@@ -28,6 +28,23 @@
 		reverse_proxy backend:8080
 	}
 
+	# Up to ten private 1 MB clips, base64 JSON plus note metadata.
+	@notebook {
+		method PUT
+		path /api/v1/me/notes/*
+	}
+	handle @notebook {
+		request_body {
+			max_size 14MB
+		}
+		reverse_proxy backend:8080 {
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 60s
+			}
+		}
+	}
+
 	handle /api/* {
 		# Largest JSON body: an article document (1 MiB) plus metadata.
 		request_body {

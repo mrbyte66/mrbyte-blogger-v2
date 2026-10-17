@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class AnnotationService {
 
     public record AnnotationView(UUID id, String kind, UUID revisionId, List<Fragment> fragments, String note,
-            Instant createdAt, long version, String color, AudioInfo audio) {
+            Instant createdAt, long version, String color, AudioInfo audio, boolean emphasized) {
     }
 
     public record Unavailable(UUID id, boolean available) {
@@ -53,14 +53,14 @@ public class AnnotationService {
     public record AudioInput(String data, String mime, int durationMs) { }
     public record AudioInfo(String mime, int durationMs) { }
     public record AudioContent(byte[] data, String mime) { }
-    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note, String color, AudioInput audio) {
+    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note, String color, AudioInput audio, Boolean emphasized) {
     }
 
     public record Saved(AnnotationView annotation, boolean created) {
     }
 
     public record ImportItem(UUID articleId, UUID revisionId, String kind, List<Fragment> fragments, String note,
-            Instant createdAt, String color) {
+            Instant createdAt, String color, Boolean emphasized) {
     }
 
     public record ImportReport(UUID clientImportId, List<Accepted> accepted, List<Rejected> rejected) {
@@ -148,6 +148,7 @@ public class AnnotationService {
         }
         repository.presentation(userId, markId, color, audio, write.audio() == null ? null : write.audio().mime(),
                 write.audio() == null ? null : write.audio().durationMs());
+        if(write.emphasized()!=null)repository.emphasized(userId,markId,write.emphasized());
         AnnotationRow saved = repository.lockAnnotation(userId, markId).orElseThrow();
         return new Saved(view(saved), create);
     }
@@ -228,6 +229,7 @@ public class AnnotationService {
         }
         if (kind == Kind.BOOKMARK) repository.removeOtherBookmarks(userId, item.articleId(), id);
         repository.presentation(userId, id, validColor(item.color()), null, null, null);
+        if(item.emphasized()!=null)repository.emphasized(userId,id,item.emphasized());
         accepted.add(new Accepted(index, id, item.articleId()));
         return Optional.empty();
     }
@@ -246,7 +248,7 @@ public class AnnotationService {
     private AnnotationView view(AnnotationRow row) {
         return new AnnotationView(row.id(), row.kind().toLowerCase(Locale.ROOT), row.revisionId(),
                 json.readValue(row.fragmentsJson(), FRAGMENTS), row.note(), row.createdAt(), row.version(), row.color(),
-                row.audioMime() == null ? null : new AudioInfo(row.audioMime(), row.audioDuration()));
+                row.audioMime() == null ? null : new AudioInfo(row.audioMime(), row.audioDuration()),row.emphasized());
     }
 
     public static String validColor(String color) {

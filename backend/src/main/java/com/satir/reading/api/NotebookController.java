@@ -27,6 +27,8 @@ class NotebookController {
     }
     @GetMapping("/{id}/audio")
     ResponseEntity<byte[]> audio(@AuthenticationPrincipal SatirPrincipal principal,@PathVariable UUID id) { var audio=service.audio(principal.userId(),id); return ResponseEntity.ok().header("Cache-Control","private, no-store").header("X-Content-Type-Options","nosniff").contentType(org.springframework.http.MediaType.parseMediaType(audio.mime())).body(audio.data()); }
+    @GetMapping("/{id}/recordings/{clipId}")
+    ResponseEntity<byte[]> recording(@AuthenticationPrincipal SatirPrincipal principal,@PathVariable UUID id,@PathVariable UUID clipId) { var audio=service.audio(principal.userId(),id,clipId);return ResponseEntity.ok().header("Cache-Control","private, no-store").header("X-Content-Type-Options","nosniff").contentType(org.springframework.http.MediaType.parseMediaType(audio.mime())).body(audio.data()); }
     @DeleteMapping("/{id}")
     ResponseEntity<Void> delete(@AuthenticationPrincipal SatirPrincipal principal,@PathVariable UUID id) { service.delete(principal.userId(),id); return ResponseEntity.noContent().build(); }
 }

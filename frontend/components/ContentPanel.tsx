@@ -1,6 +1,5 @@
 "use client";
 import { NotebookControl } from "./reading/NotebookControl";
-import { ArticleNotesLink } from "./reading/ArticleNotesLink";
 import { ThemeToggle } from "./SitePreferences";
 import { UtilityIsland } from "./UtilityIsland";
 import { AccountMenu } from "./auth/AccountMenu";
@@ -131,7 +130,7 @@ export function ContentPanel({ navigation, dispatch, siteName = "SATIR", default
             event.currentTarget.parentElement?.querySelector<HTMLElement>(`#reader-tab-${next}`)?.focus(); selectTab(next);
           }}>{view === "articles" ? "Yazılar" : "Seriler"}</RippleButton>;
         })}</div></div> : canGoBack ? <button className="panel-back" title="Geri dön (Esc veya Alt + ←)" onClick={() => go({ type: "back" })}><span aria-hidden="true">←</span> {displayedNavigation.seriesSlug ? "Bölümlere dön" : "Bütün yazılar"}</button> : <span className="panel-location">{displayedNavigation.section ? sectionNames[displayedNavigation.section] : ""}</span>}
-        <UtilityIsland className="panel-account-actions"><ThemeToggle defaultDark={defaultDark} /><SavedLibraryLink />{article?<ArticleNotesLink key={article.slug} article={article}/>:<NotebookControl />}<AccountMenu />
+        <UtilityIsland className="panel-account-actions"><ThemeToggle defaultDark={defaultDark} /><SavedLibraryLink />{!article&&<NotebookControl />}<AccountMenu />
         <button className="close-button" aria-label="İçeriği kapat" onClick={() => go({ type: "close" })}><span aria-hidden="true">×</span></button></UtilityIsland></div>
       {displayedNavigation.seriesSlug && !article && <div className="panel-context"><button className="panel-back" onClick={() => go({ type: "back" })}>← Bütün seriler</button><span>Bölüm listesi</span></div>}
       {canGoBack && <div className="panel-swipe-edge" aria-hidden="true" onPointerDown={startSwipe} onPointerMove={moveSwipe} onPointerUp={endSwipe} onPointerCancel={() => { swipe.current = null; setSwipeProgress(0); }}><span style={{ transform: `translateX(${swipeProgress * 24}px)`, opacity: .45 + swipeProgress * .55 }}>‹</span></div>}

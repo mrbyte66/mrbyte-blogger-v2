@@ -84,7 +84,8 @@ describe("reader return shortcuts", () => {
 it("keeps the home reader at preview width with a read-only note count linking to the permalink",async()=>{
  const slug="yapay-zeka-ile-dusunmek";const fragment={anchorId:"paragraph-0",start:0,end:5,quote:"Hello",before:"",after:" world"};
  const mark={id:"guest-note",kind:"note",note:"Özel düşünce",createdAt:"2026-10-17T10:00:00Z",fragments:[fragment]};localStorage.setItem(readingStorageKey(slug),JSON.stringify({version:1,articleId:slug,marks:[mark,{...mark,id:"underline",kind:"underline",note:""}]}));
- const {container}=render(<Reader/>);expect((await screen.findByRole("link",{name:"1 not · Yazının kalıcı bağlantısını aç"})).getAttribute("href")).toBe(`/yazilar/${slug}`);
+ const {container}=render(<Reader/>);expect((await screen.findByRole("link",{name:"2 not · Yazının kalıcı bağlantısını aç"})).getAttribute("href")).toBe(`/yazilar/${slug}`);
+ expect(container.querySelector(".panel-topbar .panel-notes-link")).toBeNull();expect(container.querySelector(".article-view .reading-links .panel-notes-link")).toBeTruthy();
  expect(container.querySelector("#panel-reading-content.rn-reading-root")).toBeNull();expect(screen.queryByRole("complementary",{name:"Okuma araçları"})).toBeNull();expect(screen.queryByRole("button",{name:"Serbest Not oluştur"})).toBeNull();expect(container.querySelector(".rn-reserve")).toBeNull();
  expect(screen.getByRole("link",{name:"Bu yazının kalıcı bağlantısını aç ↗"}).getAttribute("href")).toBe(`/yazilar/${slug}`);
 });

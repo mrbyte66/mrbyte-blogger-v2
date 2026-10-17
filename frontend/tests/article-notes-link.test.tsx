@@ -12,9 +12,9 @@ vi.mock("../components/auth/AuthProvider",()=>({useAuth:()=>auth}));
 vi.mock("../lib/reading/server",()=>({loadServerMarks:load}));
 const article={id:"article-id",slug:"sample"} as Article;
 beforeEach(()=>{auth.session={profile:{id:"reader-a",verified:true}};load.mockReset();});
-it("counts text and audio notes for public summaries without requiring an editing revision",async()=>{
+it("matches the permalink record count for summaries without an editing revision",async()=>{
  load.mockResolvedValue([{kind:"note"},{kind:"audio"},{kind:"underline"},{kind:"bookmark"}]);render(<ArticleNotesLink article={article}/>);
- expect((await screen.findByRole("link",{name:"2 not · Yazının kalıcı bağlantısını aç"})).getAttribute("href")).toBe("/yazilar/sample");expect(load.mock.calls[0][0]).toEqual({id:"article-id"});
+ expect((await screen.findByRole("link",{name:"4 not · Yazının kalıcı bağlantısını aç"})).getAttribute("href")).toBe("/yazilar/sample");expect(load.mock.calls[0][0]).toEqual({id:"article-id"});
 });
 it("does not display a previous account's count after the session changes",async()=>{
  let finish!:(marks:ReadingMark[])=>void;load.mockImplementationOnce(()=>new Promise<ReadingMark[]>(resolve=>{finish=resolve;})).mockResolvedValueOnce([{kind:"note"}]);
@@ -28,4 +28,8 @@ it("reports an unavailable count without presenting it as zero",async()=>{
 it("also lists account source notes from summaries without an editing revision",async()=>{
  load.mockResolvedValue([{id:"private-note",kind:"note",note:"Özel düşünce",fragments:[{anchorId:"excerpt",start:0,end:4,quote:"Özet",before:"",after:""}]}]);render(<SourceNotes/>);
  expect((await screen.findByRole("link",{name:/Deneme Özel düşünce/})).getAttribute("href")).toBe("/yazilar/sample?not=private-note");expect(load.mock.calls[0][0]).toEqual({id:"article-id"});
+});
+
+it("disables an empty note counter instead of linking to a page without notes",async()=>{
+ load.mockResolvedValue([]);render(<ArticleNotesLink article={article}/>);expect(await screen.findByRole("button",{name:"0 not"})).toHaveProperty("disabled",true);expect(screen.queryByRole("link")).toBeNull();
 });

@@ -28,4 +28,6 @@ Metin/ses kartları bağımsız açılır, kapanır ve aynı kaynaktakiler birli
 
 Kaynak düğmesi veya dizinden bir not seçmek, tam alıntıya yumuşak kaydırır ve 3 saniyelik kırmızı çerçeve/etiket gösterir. Metin DOM’u değişmez; çok satırlı alıntı ayrı satır kutularıyla işaretlenir. Çözülemeyen kaynakta yanlış yere gidilmez. Yeni alıntı notuna rastgele varsayılan renk atanır; kullanıcı seçimi ve kayıtlı renk korunur.
 
-Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Üst menü yalnız mevcut yazının özel metin/ses notu adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.
+Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Yazı altındaki sayaç kalıcı okuyucuyla aynı özel kayıt adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.
+
+Önizleme sayacı kalıcı bağlantı satırında, yazının altında yer alır; üst adada gösterilmez. Kalıcı okuyucudaki Notlar toplamıyla aynı kayıtlar sayılır (metin/ses notu, fosfor, alt çizgi ve ayraç). Sıfır, yükleniyor ve hata durumunda kontrol disabled olur; dolu sayaç kalıcı yazıyı açar.

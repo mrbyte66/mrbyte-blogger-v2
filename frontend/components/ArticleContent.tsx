@@ -1,6 +1,7 @@
 "use client";
 import { articleCategories, articleDate, formatArticleDate } from "../lib/articles/metadata";
 
+import { ArticleNotesLink } from "./reading/ArticleNotesLink";
 import { SlideLink } from "./SlideLink";
 import { useState } from "react";
 import type { Article } from "../lib/content";
@@ -47,7 +48,7 @@ export function ArticleContent({ article, fullPage = false, preview = false, rea
       {index === Math.min(2, article.paragraphs.length - 1) && article.table && <div className="article-table-scroll" data-edit-field="table" role="region" tabIndex={0} aria-label={`${article.table.caption}. Dar ekranda yatay kaydırılabilir.`}><table><caption>{article.table.caption}</caption><thead><tr>{article.table.columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr></thead><tbody>{article.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>}
     </div>)}
     {!readingPreview && !article.authored && <div className="article-end"><span aria-hidden="true">✳</span><p>Şimdilik bu kadar.<br />Bir sonraki satırda görüşürüz.</p></div>}
-    {!readingPreview && !fullPage && <SlideLink className="reading-permalink" href={`/yazilar/${article.slug}`}>Bu yazının kalıcı bağlantısını aç ↗</SlideLink>}
+    {!readingPreview && !fullPage && <div className="reading-links"><SlideLink className="reading-permalink" href={`/yazilar/${article.slug}`}>Bu yazının kalıcı bağlantısını aç ↗</SlideLink>{!preview&&<ArticleNotesLink key={article.slug} article={article}/>}</div>}
     {!readingPreview && !article.authored && <p className="sample-note">Bu metin, okuma deneyimini göstermek için hazırlanmış bir örnektir.</p>}
   </article>{!readingPreview && <ArticleEngagement key={article.slug} slug={article.slug} title={article.title} preview={preview} />}</>;
 }

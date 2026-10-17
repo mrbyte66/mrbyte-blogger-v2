@@ -1,6 +1,6 @@
 # Okuma araçları uygulaması
 
-Satır İzi, yalnız kalıcı yazı sayfasında ReadingTools bileşenini kullanır. Ana sayfadaki açılan okuyucu salt okunur; üstteki not adedi aynı yazının kalıcı bağlantısına götürür. Metin seçince toolbox açılır: renkli fosforlu kalem, kırmızı alt çizgi, metin notu, ses notu, okuma ayracı ve kelime anlamı. Studio ve salt okunur kitaplık önizlemesinde yan etki üretmez.
+Satır İzi, yalnız kalıcı yazı sayfasında ReadingTools bileşenini kullanır. Ana sayfadaki açılan okuyucu salt okunur; yazı altındaki not adedi aynı yazının kalıcı bağlantısına götürür. Metin seçince toolbox açılır: renkli fosforlu kalem, kırmızı alt çizgi, metin notu, ses notu, okuma ayracı ve kelime anlamı. Studio ve salt okunur kitaplık önizlemesinde yan etki üretmez.
 
 Seçili metne bağlı notlar geniş alanda kenardaki kartlarda düzenlenir; bağlantı çizgileri kaynakla ilişkiyi gösterir. Ölçülen kart yükseklikleriyle kaynak sırasına göre çakışmadan dizilir. Aynı paragraftaki kapalı metin/ses notları ayrı ikonlar ve adetlerle gruplanır. Dar alanda açık kartlar metnin altında sıralanır. Her kart ayrı kapanır; Notları göster toggle’ı kart/ikon/çizgi/not vurgusunu gizler, kaydı silmez. Bağımsız fosforlu işaretler ve okuma ayracı korunur.
 
@@ -38,4 +38,6 @@ Metin/ses kartları bağımsız açılır, kapanır ve aynı kaynaktakiler birli
 
 Kaynak düğmesi veya dizinden bir not seçmek, tam alıntıya yumuşak kaydırır ve 3 saniyelik kırmızı çerçeve/etiket gösterir. Metin DOM’u değişmez; çok satırlı alıntı ayrı satır kutularıyla işaretlenir. Çözülemeyen kaynakta yanlış yere gidilmez. Yeni alıntı notuna rastgele varsayılan renk atanır; kullanıcı seçimi ve kayıtlı renk korunur.
 
-Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Üst menü yalnız mevcut yazının özel metin/ses notu adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.
+Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Yazı altındaki sayaç kalıcı okuyucuyla aynı özel kayıt adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.
+
+Önizleme sayacı kalıcı bağlantı satırında, yazının altında yer alır; üst adada gösterilmez. Kalıcı okuyucudaki Notlar toplamıyla aynı kayıtlar sayılır (metin/ses notu, fosfor, alt çizgi ve ayraç). Sıfır, yükleniyor ve hata durumunda kontrol disabled olur; dolu sayaç kalıcı yazıyı açar.

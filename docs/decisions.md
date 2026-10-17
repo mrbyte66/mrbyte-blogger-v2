@@ -100,3 +100,7 @@ Onaylanan okuma notu revizyonu: sivri fihrist yerine sade, pinlenebilir ve kendi
 ### 2026-10-17 — Not Atlası
 
 Kullanıcı Not Atlası tasarımının uygulanmasını seçti. Defterim renkli kart/liste, geniş düzenleyici, açık etiket ekleme ve çoklu bağımsız ses kayıtlarıyla yenilenir. Defterim | + kapsülü korunur; + büyük Serbest Not editörünü açar. Alıntı işareti doğrudan metin üzerinden kaldırılabilir; bağlı özel not silinmez. Üye/misafir saklama ve mevcut temalar korunur. #15 kullanıcı incelemesi tamamlanana kadar In Progress kalır.
+
+### 2026-10-17 — Çoklu açık kaynak notları ve kalıcı okuyucu sınırı
+
+Kullanıcı aynı alıntıdaki kartlar dahil tüm yazı notlarının birlikte açılmasını istedi. Tek kart/önceki-sonraki davranışı kaldırıldı. Kaynağa yumuşak dönüş ve geçici kırmızı metin çerçevesi seçildi; kartların gerçek yüksekliği/footer dengesi esas alınır. Rastgele renk yalnız yeni notun başlangıcına uygulanır; kullanıcı seçimi değişmez. Ana sayfadaki açılan okuyucuda not araçları kaldırılır, üstteki not adedi kalıcı yazıya bağlanır ve önceki panel genişliği korunur. Not alma yalnız kalıcı yazıda çalışır.

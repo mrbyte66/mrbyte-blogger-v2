@@ -1,8 +1,8 @@
 # Okuma araçları uygulaması
 
-Satır İzi, gerçek yazı sayfasında ve ana sayfanın açılan okuma panelinde aynı ReadingTools bileşenini kullanır. Metin seçince toolbox açılır: renkli fosforlu kalem, kırmızı alt çizgi, metin notu, ses notu, okuma ayracı ve kelime anlamı. Studio ve salt okunur kitaplık önizlemesinde yan etki üretmez.
+Satır İzi, yalnız kalıcı yazı sayfasında ReadingTools bileşenini kullanır. Ana sayfadaki açılan okuyucu salt okunur; üstteki not adedi aynı yazının kalıcı bağlantısına götürür. Metin seçince toolbox açılır: renkli fosforlu kalem, kırmızı alt çizgi, metin notu, ses notu, okuma ayracı ve kelime anlamı. Studio ve salt okunur kitaplık önizlemesinde yan etki üretmez.
 
-Seçili metne bağlı notlar geniş alanda kenardaki kartlarda düzenlenir; bağlantı çizgileri kaynakla ilişkiyi gösterir. Ölçülen kart yükseklikleriyle kaynak sırasına göre çakışmadan dizilir. Aynı paragraftaki kapalı metin/ses notları ayrı ikonlar ve adetlerle gruplanır. Dar alanda kart metnin yanında açılan kompakt bir yüzey olur. Her kart ayrı kapanır; Notları göster toggle’ı kart/ikon/çizgi/not vurgusunu gizler, kaydı silmez. Bağımsız fosforlu işaretler ve okuma ayracı korunur.
+Seçili metne bağlı notlar geniş alanda kenardaki kartlarda düzenlenir; bağlantı çizgileri kaynakla ilişkiyi gösterir. Ölçülen kart yükseklikleriyle kaynak sırasına göre çakışmadan dizilir. Aynı paragraftaki kapalı metin/ses notları ayrı ikonlar ve adetlerle gruplanır. Dar alanda açık kartlar metnin altında sıralanır. Her kart ayrı kapanır; Notları göster toggle’ı kart/ikon/çizgi/not vurgusunu gizler, kaydı silmez. Bağımsız fosforlu işaretler ve okuma ayracı korunur.
 
 Mevcut not düzenlenir/silinir, silme geri alınabilir. Sunucu güncellemesinde kaydın revisionId/version değeri kullanılır; 412 durumunda taslak korunur. Stable block UUID, UTF-16 aralık ve quote/context ile eşleşmeyen kayıt yanlış metne bağlanmaz; listede ve düzenleme kartında korunur. CSS Highlight API metnin DOM’unu sarmadan renklendirir. Destek yoksa kayıt listesi çalışır.
 
@@ -18,7 +18,7 @@ Mini sözlük kullanıcı seçimiyle ücretsiz Dictionary API / Wiktionary kayna
 
 Header’daki ortak `NotebookControl`, Defterim bağlantısıyla `/notlar` sayfasını, + ile seçimsiz Serbest Not dialog’unu açar. Not Atlası hızlı paneli en fazla 840 px genişler. `AutoGrowTextarea` ayrı gizli ölçüm alanıyla görünür textarea’yı sıçratmadan 280 ms’de büyütür/küçültür; üst sınır viewport’a bağlıdır, uzun içerik kendi içinde kayar. Dar ekranda dialog ekran sınırını korur. Kaydedilmeyen taslak kapanışta uyarılır.
 
-Not dizini sol tarafa sabitlenebilir; tercih tarayıcıda saklanır. Uzun not listesi kendi içinde kayar ve aranır. Seçilen kaynak notu sağdaki alanda tek kart açar; aynı paragrafta önceki/sonraki kullanılabilir. Kaynak kartı ancak silme işlemi başarılı olduktan sonra tozlaşır; abort/unmount tüm animasyonları temizler. Motion kapalıysa anında kaldırılır. /notlar, Serbest Notları arama/hashtag ve seçili not düzenleyicisiyle listeler. Yazı notları sekmesi erişilebilir yayınlardaki özel notları toplar; seçilen kayıt doğrudan yazının notuna döner.
+Not dizini sol tarafa sabitlenebilir; tercih tarayıcıda saklanır. Uzun not listesi kendi içinde kayar ve aranır. Seçilen kaynak notu aynı kaynaktaki kartların tümünü açar; diğer açık kartları kapatmaz. Kaynak kartı ancak silme işlemi başarılı olduktan sonra tozlaşır; abort/unmount tüm animasyonları temizler. Motion kapalıysa anında kaldırılır. /notlar, Serbest Notları arama/hashtag ve seçili not düzenleyicisiyle listeler. Yazı notları sekmesi erişilebilir yayınlardaki özel notları toplar; seçilen kayıt doğrudan yazının notuna döner.
 
 Serbest Notlara da private ses eklenebilir (V16): metin güncellenince ses korunur. `/me/notes/{id}/audio` yalnız sahibine no-store yanıt verir; ses doğrulama ve hesap başına toplam 25 MB sınırı yazı notlarıyla ortaktır. Misafir sesi IndexedDB’dedir; üyeliğe aktarım açık tercihle sesle birlikte yapılır.
 
@@ -31,3 +31,11 @@ Bir Serbest Nota en fazla 10 ses kaydı eklenebilir; her kayıt ayrı oynatılı
 Metindeki vurgulu yere tıklamak veya işaretli aralığı seçmek kaldırma araçlarını açar. Vurguyu kaldır ve Alt çizgiyi kaldır ayrı işlemlerdir; alıntıya bağlı metin/ses notu korunur. İşaret kaldırma geri alınabilir. Geniş okuma alanında kenar kartları 360 px olur; pinli dizin ve dar ekran düzeni korunur. Misafir kayıtları tarayıcıdadır ve site verileri temizlenince kaybolur; üyeliğe aktarım açık tercihtir.
 
 Üretim edge’inde yalnız `PUT /api/v1/me/notes/*` için 14 MB JSON sınırı vardır (10 × 1 MB sesin base64 aktarımı + metin). Diğer API istekleri 2 MB sınırını korur.
+
+### Çoklu açık kart ve kalıcı okuyucu — 17 Ekim 2026
+
+Metin/ses kartları bağımsız açılır, kapanır ve aynı kaynaktakiler birlikte gösterilir. Dizin Tümünü aç / Tümünü kapat sunar. Ölçülen kart yüksekliği ve kaynak sırası çakışmayı önler; reserve yalnız gerçek kart/dizin sonuna kadar alan ayırır. Connector SVG tahmini fazladan yükseklik üretmez. Dar ekranda açık kartlar metnin altına dizilir. Kart konumu ve sayfa alanı geçişle güncellenir; hareket kapalıysa geçiş yoktur.
+
+Kaynak düğmesi veya dizinden bir not seçmek, tam alıntıya yumuşak kaydırır ve 3 saniyelik kırmızı çerçeve/etiket gösterir. Metin DOM’u değişmez; çok satırlı alıntı ayrı satır kutularıyla işaretlenir. Çözülemeyen kaynakta yanlış yere gidilmez. Yeni alıntı notuna rastgele varsayılan renk atanır; kullanıcı seçimi ve kayıtlı renk korunur.
+
+Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Üst menü yalnız mevcut yazının özel metin/ses notu adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.

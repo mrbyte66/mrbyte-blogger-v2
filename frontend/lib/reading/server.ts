@@ -32,7 +32,7 @@ function fragmentsFor(mark: Pick<ReadingMark, "fragments">, article: ServerArtic
   return fragments;
 }
 
-export async function loadServerMarks(article: ServerArticle, signal?: AbortSignal): Promise<ReadingMark[]> {
+export async function loadServerMarks(article: Pick<ServerArticle,"id"> & Partial<ServerArticle>, signal?: AbortSignal): Promise<ReadingMark[]> {
   const { data } = await api<ListDto>("GET", `/me/articles/${article.id}/annotations`, { signal });
   return data.items.filter((item): item is AnnotationDto => "kind" in item).map((item) => ({
     id: item.id, kind: item.kind, note: item.note, createdAt: item.createdAt, color: item.color, emphasized:item.emphasized, audio: item.audio, version: item.version, revisionId: item.revisionId,

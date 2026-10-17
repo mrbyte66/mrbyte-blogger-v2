@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReadingTools } from "../components/reading/ReadingTools";
@@ -97,7 +97,7 @@ describe("browser-local reading tools", () => {
     await user.click(screen.getByRole("button", { name: /Notlar/ }));
     expect(screen.getByRole("button", { name: "1. alıntının bulunduğu bölüme git" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "1. alıntının bulunduğu bölüme git" }));
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    await waitFor(()=>expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" }));
   });
   it("adds a selected-text note safely without interpreting user markup", async () => {
     const user = userEvent.setup(); renderReader(); selectText();
@@ -181,7 +181,7 @@ describe("browser-local reading tools", () => {
     vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: query.includes("max-width") })));
     await user.click(screen.getByRole("button", { name: "1. alıntının bulunduğu bölüme git" }));
     expect(screen.queryByRole("region", { name: "Bu yazıdaki okuma notların" })).toBeNull();
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+    await waitFor(()=>expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" }));
   });
 });
 
@@ -213,15 +213,33 @@ it("represents closed text and audio notes with distinct labelled buttons", asyn
  expect(screen.getByRole("button",{name:"1. Metin notu aç"})).toBeTruthy();expect(screen.getByRole("button",{name:"2. Sesli not aç"})).toBeTruthy();
 });
 
-it("pins and searches a fifteen-note index and opens only the requested note",async()=>{
+it("opens same-source notes together and keeps other cards open, with a fifteen-note index",async()=>{
  const marks=Array.from({length:15},(_,i)=>({...mark,id:`many-${i}`,kind:"note",note:`Düşünce ${i+1}`,color:"lavender"}));
  localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks}));
  const user=userEvent.setup();renderReader();await user.click(screen.getByRole("button",{name:/Notlar/}));
  await user.click(screen.getByRole("button",{name:"Not dizinini sabitle"}));expect(localStorage.getItem("satir:note-index-pinned")).toBe("true");
  await user.type(screen.getByLabelText("Bu yazıdaki notlarda ara"),"Düşünce 15");
  const panel=screen.getByRole("region",{name:"Bu yazıdaki okuma notların"});expect(within(panel).getAllByRole("listitem")).toHaveLength(1);
- await user.click(screen.getByRole("button",{name:"15. alıntının bulunduğu bölüme git"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);
- await user.click(screen.getByRole("button",{name:"Sonraki not"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(1);expect(screen.getByText("Düşünce 1")).toBeTruthy();
+ await user.click(screen.getByRole("button",{name:"15. alıntının bulunduğu bölüme git"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(15);
+ await user.click(screen.getAllByRole("button",{name:"Notu kapat"})[0]);expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(14);
+ await user.click(screen.getByRole("button",{name:"Tümünü aç"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(15);
+ await user.click(screen.getByRole("button",{name:"Tümünü kapat"}));expect(screen.queryByRole("button",{name:"Notu kapat"})).toBeNull();expect(saved()?.marks).toHaveLength(15);
+});
+
+it("adds independent marker groups without closing previous notes and signals the exact source",async()=>{
+ const other={anchorId:"paragraph-1",start:0,end:7,quote:"Another",before:"",after:" paragraph"};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"İlk"},{...mark,id:"second",kind:"note",note:"İkinci"},{...mark,id:"third",kind:"note",note:"Üçüncü",fragments:[other]}]}));
+ const user=userEvent.setup();const {container}=renderReader();await waitFor(()=>expect(screen.getByRole("button",{name:"1. Metin notu aç"})).toBeTruthy());
+ await user.click(screen.getByRole("button",{name:"1. Metin notu aç"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(2);
+ await user.click(screen.getByRole("button",{name:"3. Metin notu aç"}));expect(screen.getAllByRole("button",{name:"Notu kapat"})).toHaveLength(3);
+ await user.click(screen.getAllByRole("button",{name:"Notun kaynağına git"})[0]);await waitFor(()=>expect(container.querySelector(".rn-source-focus>span")).toBeTruthy());
+ await waitFor(()=>expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({behavior:"smooth",block:"center"}));expect(container.querySelector('[data-reading-anchor="paragraph-0"]')?.innerHTML).toBe("Hello <strong>world</strong>");
+});
+
+it("assigns a random new-note color while preserving a manual choice and saved colors",async()=>{
+ vi.spyOn(Math,"random").mockReturnValue(.9);const user=userEvent.setup();renderReader();selectText();await user.click(screen.getByRole("button",{name:"Seçili metne not ekle"}));expect(screen.getByRole("button",{name:"Sarı",pressed:true})).toBeTruthy();
+ await user.click(screen.getByRole("button",{name:"Mavi"}));await user.type(screen.getByLabelText("Bu alıntı için notun"),"Rengim korunsun");await user.click(screen.getByRole("button",{name:"Notu kaydet"}));expect(saved()?.marks[0].color).toBe("blue");
+ await user.click(screen.getByRole("button",{name:"Notu düzenle"}));expect(screen.getByRole("button",{name:"Mavi",pressed:true})).toBeTruthy();
 });
 
 it("removes visual emphasis through selected text while retaining and undoing the linked note",async()=>{
@@ -230,4 +248,15 @@ it("removes visual emphasis through selected text while retaining and undoing th
  expect(saved()?.marks.find(m=>m.id===mark.id)).toMatchObject({kind:"note",note:"Bu düşünce korunmalı",emphasized:false});expect(saved()?.marks.some(m=>m.id==="line")).toBe(true);
  await user.click(screen.getByRole("button",{name:"İşareti geri al ↶"}));expect(saved()?.marks.find(m=>m.id===mark.id)?.emphasized).not.toBe(false);
  selectText();await user.click(screen.getByRole("button",{name:"Alt çizgiyi kaldır"}));expect(saved()?.marks.map(m=>m.id)).toEqual([mark.id]);expect(saved()?.marks[0].note).toBe("Bu düşünce korunmalı");
+});
+
+it("scrolls to the newly requested source when switching between different note cards",async()=>{
+ const other={anchorId:"paragraph-1",start:0,end:7,quote:"Another",before:"",after:" paragraph"};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"İlk"},{...mark,id:"other",kind:"note",note:"Son",fragments:[other]}]}));
+ const destinations:string[]=[];vi.spyOn(Element.prototype,"scrollIntoView").mockImplementation(function(this:HTMLElement){destinations.push(this.style.top);});
+ const user=userEvent.setup();const {container}=renderReader();
+ for(const [index,element]of container.querySelectorAll('[data-reading-anchor]').entries())vi.spyOn(element,"getBoundingClientRect").mockReturnValue({top:100+index*400,bottom:120+index*400,left:0,right:200,width:200,height:20,x:0,y:100+index*400,toJSON:()=>({})});
+ await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Tümünü aç"}));
+ await user.click(screen.getAllByRole("button",{name:"Notun kaynağına git"})[0]);await waitFor(()=>expect(destinations).toEqual(["97px"]));
+ await user.click(screen.getAllByRole("button",{name:"Notun kaynağına git"})[1]);await waitFor(()=>expect(destinations).toEqual(["97px","497px"]));
 });

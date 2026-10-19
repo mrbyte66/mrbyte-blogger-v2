@@ -1,4 +1,4 @@
-# Checks every pull request and every push to main (#14). Images, signing and deployment are separate (#22).
+# Checks every pull request and every push to main (#32). Images, signing and deployment are a separate workflow (#32).
 name: CI
 
 on:

@@ -9,21 +9,22 @@ import { readReadingDocument, readingStorageKey, writeReadingDocument } from "..
 import { deleteServerMark, importGuestMarks, loadServerMarks, saveServerMark, type ServerArticle } from "../../lib/reading/server";
 import { audioInput, readAudio, storeAudio, removeAudio } from "../../lib/reading/audio";
 import { stackNotes } from "../../lib/reading/layout";
-import { api, describe } from "../../lib/api/http";
+import { api, ApiError, describe } from "../../lib/api/http";
 import { ReadingIcon as Icon } from "./ReadingIcon";
 import { RecordingButton, VoicePlayback } from "./VoiceNote";
 import { resolveSource, type SourceBlock } from "../../lib/reading/source-tracking";
+import { SourceReconnect } from "./SourceReconnect";
 import { SourceDetails } from "./SourceDetails";
 import { dissolveNote } from "./dust";
 
 type Props={readOnly?:boolean;articleId:string;contentRootId:string;contentRevision?:string;server?:ServerArticle};
 type SourceRect={left:number;top:number;width:number;height:number};
-type Geometry={width:number;articleRight:number;points:Record<string,{x:number;y:number}>;heights:Record<string,number>;selection:{x:number;y:number}|null;end:number;indexHeight:number;focusSequence:number;focusRects:SourceRect[]};
+type Geometry={targets:Record<string,{x:number;y:number}>;width:number;articleRight:number;points:Record<string,{x:number;y:number}>;heights:Record<string,number>;selection:{x:number;y:number}|null;end:number;indexHeight:number;focusSequence:number;focusRects:SourceRect[]};
 type HighlightEnvironment={CSS?:{highlights?:{set:(name:string,value:unknown)=>void;delete:(name:string)=>void}};Highlight?:new(...ranges:Range[])=>unknown};
 const labels:Record<ReadingMarkKind,string>={highlight:"Fosforlu işaret",underline:"Alt çizgi",note:"Metin notu",audio:"Sesli not",bookmark:"Burada kaldım"};
 const colorNames:Record<NoteColor,string>={lavender:"Lavanta",mint:"Nane",peach:"Şeftali",blue:"Mavi",yellow:"Sarı"};
 const isNote=(m:ReadingMark)=>m.kind==="note"||m.kind==="audio";
-const initialGeometry:Geometry={width:0,articleRight:0,points:{},selection:null,end:0,heights:{},indexHeight:0,focusSequence:0,focusRects:[]};
+const initialGeometry:Geometry={targets:{},width:0,articleRight:0,points:{},selection:null,end:0,heights:{},indexHeight:0,focusSequence:0,focusRects:[]};
 export function ReadingTools(props:Props){
  const {session}=useAuth();const memberId=session?.profile.id;const account=!!(session?.profile.verified&&props.server);
  const server=useMemo(()=>account?props.server:undefined,[account,props.server?.id,props.server?.revisionId]);
@@ -32,6 +33,10 @@ export function ReadingTools(props:Props){
 function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly=false,memberId,server}:Props&{memberId?:string}){
  const {openAuth}=useAuth();
  const [sourceBlocks,setSourceBlocks]=useState<SourceBlock[]>([]);
+ const [reattaching,setReattaching]=useState<string|null>(null);
+ const [reconnectAnchor,setReconnectAnchor]=useState<string|null>(null),[reconnectMount,setReconnectMount]=useState<HTMLElement|null>(null);
+ const reconnectTrigger=useRef<HTMLElement|null>(null);
+ const [sourceUndo,setSourceUndo]=useState<{before:ReadingMark;connected:TextAnchor[];revisionId?:string}|null>(null);
  const [marks,setMarks]=useState<ReadingMark[]>([]);const marksRef=useRef(marks);marksRef.current=marks;
  const [styleUndo,setStyleUndo]=useState<ReadingMark[]>([]);
  const [fragments,setFragments]=useState<TextAnchor[]>([]);const [open,setOpen]=useState(false);const [pinned,setPinned]=useState(false);const [paletteOpen,setPaletteOpen]=useState(false);const [visible,setVisible]=useState(true);
@@ -45,7 +50,7 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
  const [hover,setHover]=useState<string|null>(null);const [dictionary,setDictionary]=useState(false);
  const noteInput=useRef<HTMLTextAreaElement>(null);const toggle=useRef<HTMLButtonElement>(null);const cardRefs=useRef(new Map<string,HTMLElement>());
  const [sourceFocus,setSourceFocus]=useState<{id:string;sequence:number}|null>(null);const focusSequence=useRef(0);const sourceTarget=useRef<HTMLSpanElement>(null);const scrolledFocus=useRef(0);
- const undoAudio=useRef<Blob|null>(null);
+ const undoAudio=useRef<Blob|null>(null);const saveFailure=useRef<unknown>(null);
  const scope=`${memberId??"guest"}:${articleId}`;
  useEffect(()=>{alive.current=true;const controller=new AbortController();requests.current=controller;return()=>{alive.current=false;controller.abort();};},[]);
  useEffect(()=>{
@@ -70,46 +75,67 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
  function pin(){const next=!pinned;setPinned(next);setOpen(true);try{localStorage.setItem("satir:note-index-pinned",String(next));}catch{}}
  useEffect(()=>{
   const root=document.getElementById(contentRootId);if(!root||readOnly)return;
-  function capture(){if(draftKind)return;const next=selectionAnchors(root!,window.getSelection());if(next.length){setFragments(next);setStatus("");}}
+  function capture(){if(draftKind)return;const next=selectionAnchors(root!,window.getSelection());if(next.length||reattaching){setFragments(next);setStatus("");}}
   function finish(e:PointerEvent){if(draftKind)return;const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui,input,textarea,select,[contenteditable]"))return;
-   const next=root!.contains(target)?selectionAnchors(root!,window.getSelection()):[];const hit=!next.length&&root!.contains(target)?marksAtPoint(root!,marksRef.current,e.clientX,e.clientY):[];setFragments(hit.length?hit[0].fragments.flatMap(f=>resolvedAnchors(root!,f,hit[0].anchorMode)):next);
+   const next=root!.contains(target)?selectionAnchors(root!,window.getSelection()):[];const hit=!next.length&&root!.contains(target)?marksAtPoint(root!,marksRef.current,e.clientX,e.clientY):[];setFragments(!reattaching&&hit.length?hit[0].fragments.flatMap(f=>resolvedAnchors(root!,f,hit[0].anchorMode)):next);
+   if(reattaching&&next.length)setReconnectAnchor(next.at(-1)!.anchorId);
    if(!next.length&&!draftKind)setDictionary(false);
   }
+  function keyboardSelection(e:KeyboardEvent){if(reattaching&&["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"].includes(e.key)){const next=selectionAnchors(root!,window.getSelection());if(next.length)setReconnectAnchor(next.at(-1)!.anchorId);}}
   function bookmarkHover(e:PointerEvent){const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui"))return;const anchor=target.closest<HTMLElement>("[data-reading-anchor]");setHover(anchor?.dataset.readingAnchor??null);}
-  document.addEventListener("selectionchange",capture);document.addEventListener("pointerup",finish);root.addEventListener("pointermove",bookmarkHover);
-  return()=>{document.removeEventListener("selectionchange",capture);document.removeEventListener("pointerup",finish);root.removeEventListener("pointermove",bookmarkHover);};
- },[contentRootId,draftKind,readOnly]);
- useEffect(()=>{setFragments([]);setDraftKind(null);setDictionary(false);},[contentRevision]);
+  document.addEventListener("selectionchange",capture);document.addEventListener("pointerup",finish);document.addEventListener("keyup",keyboardSelection);root.addEventListener("pointermove",bookmarkHover);
+  return()=>{document.removeEventListener("selectionchange",capture);document.removeEventListener("pointerup",finish);document.removeEventListener("keyup",keyboardSelection);root.removeEventListener("pointermove",bookmarkHover);};
+ },[contentRootId,draftKind,readOnly,reattaching]);
+ useEffect(()=>{setFragments([]);setDraftKind(null);setDictionary(false);setReattaching(null);setSourceUndo(null);},[contentRevision]);
+ useEffect(()=>{
+  const root=document.getElementById(contentRootId);if(!root||!reattaching)return;
+  const slot=document.createElement("div");slot.className="rn-ui rn-reconnect-slot";
+  const mark=marksRef.current.find(m=>m.id===reattaching);
+  (findAnchor(root,mark?.fragments[0]?.anchorId??"")??root.querySelector("[data-reading-anchor]"))?.after(slot);
+  setReconnectMount(slot);
+  const escape=(e:KeyboardEvent)=>{if(e.key==="Escape"){e.preventDefault();e.stopPropagation();cancelReconnect();}};
+  document.addEventListener("keydown",escape,true);
+  return()=>{slot.remove();setReconnectMount(null);document.removeEventListener("keydown",escape,true);};
+ },[contentRootId,reattaching]);
+ useLayoutEffect(()=>{
+  const root=document.getElementById(contentRootId);if(!reconnectMount||!root)return;
+  const anchor=reconnectAnchor&&findAnchor(root,reconnectAnchor);if(anchor)anchor.after(reconnectMount);
+  setTick(t=>t+1);const frame=requestAnimationFrame(()=>reconnectMount.scrollIntoView({behavior:scrollBehavior(),block:"nearest"}));
+  return()=>cancelAnimationFrame(frame);
+ },[reconnectMount,reconnectAnchor,contentRootId]);
  useEffect(()=>{if(!status)return;const timer=setTimeout(()=>setStatus(""),5000);return()=>clearTimeout(timer);},[status]);
  useEffect(()=>{if(editing||draftKind==="note")noteInput.current?.focus({preventScroll:true});},[editing,draftKind]);
  useEffect(()=>{
   const root=document.getElementById(contentRootId);if(!root)return;
-  let frame=0;const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
+  let frame=0,animationUntil=0;const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
    const box=root.getBoundingClientRect();root.dataset.noteLayout=box.width>=880?"wide":"compact";const article=root.querySelector(".article-view")??root.querySelector("[data-reading-anchor]")?.parentElement??root;const ab=article.getBoundingClientRect();
-   const points:Geometry["points"]={};for(const mark of marks){const range=anchorRange(root,mark.fragments[0],mark.anchorMode);if(!range)continue;const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():(range.startContainer.parentElement??root).getBoundingClientRect();points[mark.id]={x:Math.min(box.width-28,ab.right-box.left+10),y:r.top-box.top};}
+   const points:Geometry["points"]={};for(const mark of marks){const source=reattaching===mark.id&&fragments.length?fragments:mark.fragments;const range=source.map(f=>anchorRange(root,f,reattaching===mark.id&&fragments.length?"exact":mark.anchorMode)).find(Boolean);if(!range)continue;const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():(range.startContainer.parentElement??root).getBoundingClientRect();points[mark.id]={x:Math.min(box.width-28,ab.right-box.left+10),y:r.top-box.top};}
    if(hover){const el=findAnchor(root,hover);if(el){const b=el.getBoundingClientRect();points.hover={x:b.left-box.left-28,y:b.top-box.top};}}
    let selection:Geometry["selection"]=null;if(fragments.length){const range=anchorRange(root,fragments[0]);if(range){const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():findAnchor(root,fragments[0].anchorId)!.getBoundingClientRect();selection={x:Math.max(8,Math.min(box.width-540,r.left-box.left)),y:Math.max(48,r.top-box.top)};}}
-   const heights:Geometry["heights"]={};for(const [id,element]of cardRefs.current)heights[id]=element.offsetHeight;
+   const heights:Geometry["heights"]={},targets:Geometry["targets"]={};for(const [id,element]of cardRefs.current){heights[id]=element.offsetHeight;const b=element.getBoundingClientRect();targets[id]={x:b.left-box.left,y:b.top-box.top+28};}
    const host=root.querySelector<HTMLElement>(".rn-host");const index=root.querySelector<HTMLElement>(".rn-overview");
    const focusRects:SourceRect[]=[];const focused=marks.find(m=>m.id===sourceFocus?.id);if(focused)for(const fragment of focused.fragments){const range=anchorRange(root,fragment,focused.anchorMode);if(!range)continue;const rects=typeof range.getClientRects==="function"?[...range.getClientRects()]:[];if(!rects.length){const paragraph=range.startContainer.parentElement;if(paragraph)rects.push(paragraph.getBoundingClientRect());}for(const r of rects)focusRects.push({left:r.left-box.left,top:r.top-box.top,width:r.width,height:r.height});}
-   const next={width:box.width,articleRight:ab.right-box.left,points,selection,end:host?host.getBoundingClientRect().top-box.top:ab.bottom-box.top,heights,indexHeight:index?.offsetHeight??0,focusSequence:sourceFocus?.sequence??0,focusRects};setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);
+   const next={targets,width:box.width,articleRight:ab.right-box.left,points,selection,end:host?host.getBoundingClientRect().top-box.top:ab.bottom-box.top,heights,indexHeight:index?.offsetHeight??0,focusSequence:sourceFocus?.sequence??0,focusRects};setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);if(performance.now()<animationUntil)measure();
   });};
+  const transition=(e:TransitionEvent)=>{if(e.target instanceof Element&&e.target.matches(".rn-card")){animationUntil=performance.now()+400;measure();}};root.addEventListener("transitionrun",transition);
   measure();window.addEventListener("resize",measure);document.addEventListener("scroll",measure,true);
   const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(measure):null;observer?.observe(root);const articleElement=root.querySelector(".article-view");if(articleElement)observer?.observe(articleElement);for(const element of cardRefs.current.values())observer?.observe(element);const index=root.querySelector(".rn-overview");if(index)observer?.observe(index);
-  return()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",measure);document.removeEventListener("scroll",measure,true);observer?.disconnect();};
- },[marks,fragments,contentRootId,contentRevision,expanded,editing,draftKind,hover,tick,open,pinned,visible,sourceFocus]);
+  return()=>{cancelAnimationFrame(frame);root.removeEventListener("transitionrun",transition);window.removeEventListener("resize",measure);document.removeEventListener("scroll",measure,true);observer?.disconnect();};
+ },[marks,fragments,contentRootId,contentRevision,expanded,editing,draftKind,hover,tick,open,pinned,visible,sourceFocus,reattaching]);
  useEffect(()=>{
   const root=document.getElementById(contentRootId);const env=window as unknown as HighlightEnvironment;const registry=env.CSS?.highlights;const H=env.Highlight;setSupported(!!(registry&&H));if(!root)return;
   const ranges:Record<string,Range[]>={"mrbyte-reading-underline":[]};for(const c of noteColors)ranges[`satir-reading-${c}`]=[];
   let missing=0;for(const mark of marks){const resolved=mark.fragments.map(f=>anchorRange(root,f,mark.anchorMode));if(resolved.some(r=>!r))missing++;
-   if(mark.kind==="bookmark"||mark.emphasized===false||(!visible&&isNote(mark)))continue;
+   if(mark.id===reattaching||mark.kind==="bookmark"||mark.emphasized===false||(!visible&&isNote(mark)))continue;
    const key=mark.kind==="underline"?"mrbyte-reading-underline":`satir-reading-${mark.color??"lavender"}`;ranges[key].push(...resolved.filter((r):r is Range=>r!==null));
   }setUnresolved(missing);
+  const reconnecting=marks.find(m=>m.id===reattaching);
+  if(reconnecting&&visible)ranges[`satir-reading-${reconnecting.color??"lavender"}`].push(...fragments.map(f=>anchorRange(root,f,"exact")).filter((r):r is Range=>r!==null));
   if(registry&&H)for(const [name,items]of Object.entries(ranges))registry.set(name,new H(...items));
   return()=>{for(const name of Object.keys(ranges))registry?.delete(name);};
- },[marks,visible,contentRootId,contentRevision]);
+ },[marks,visible,contentRootId,contentRevision,reattaching,fragments]);
  async function save(mark:ReadingMark,creating:boolean,blob?:Blob){
-  if(readOnly||busy.current)return false;busy.current=true;setPending(true);setError(null);
+  if(readOnly||busy.current)return false;saveFailure.current=null;busy.current=true;setPending(true);setError(null);
   try{
    let saved=mark;
    if(server)saved=await saveServerMark(server,mark,creating,blob?await audioInput(blob,mark.audio!.durationMs):undefined,requests.current.signal);
@@ -119,7 +145,7 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
    const next=creating?[...base,saved]:base.map(m=>m.id===mark.id?saved:m);
    if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId)){setError("Tarayıcı kaydı başarısız. Bu değişiklikler sayfa kapanınca kaybolabilir.");setStatus("Yalnızca bu oturumda tutuluyor.");}else setStatus(server?"Hesabına kaydedildi.":"Bu tarayıcıya kaydedildi.");
    setMarks(next);return true;
-  }catch(cause){if(alive.current)setError(cause instanceof Error && !("code"in cause)?cause.message:`Kaydedilemedi: ${describe(cause)}`);return false;}
+  }catch(cause){saveFailure.current=cause;if(alive.current)setError(cause instanceof Error && !("code"in cause)?cause.message:`Kaydedilemedi: ${describe(cause)}`);return false;}
   finally{busy.current=false;if(alive.current)setPending(false);}
  }
  async function remove(mark:ReadingMark,index:number){if(readOnly||busy.current)return;busy.current=true;setPending(true);try{
@@ -128,7 +154,7 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
   if(server)await deleteServerMark(server,mark.id,requests.current.signal);if(!alive.current)return;const next=marksRef.current.filter(m=>m.id!==mark.id);
   if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId))throw new Error("Tarayıcı kaydı silinemedi. Tekrar dene.");
   if(!server&&mark.kind==="audio")try{await removeAudio(scope,mark.id);}catch{/* Stale blob is never exposed without its private mark. */}
-  await dissolveNote(cardRefs.current.get(mark.id),requests.current.signal);if(!alive.current)return;undoAudio.current=recording;setMarks(next);setUndo(mark.kind!=="audio"||recording?{mark,index}:null);setExpanded(ids=>ids.filter(id=>id!==mark.id));setStatus("Not kaldırıldı.");setError(null);
+  await dissolveNote(cardRefs.current.get(mark.id),requests.current.signal);if(!alive.current)return;undoAudio.current=recording;setMarks(next);setUndo(mark.kind!=="audio"||recording?{mark,index}:null);setExpanded(ids=>ids.filter(id=>id!==mark.id));if(reattaching===mark.id){setReattaching(null);setFragments([]);}setStatus("Not kaldırıldı.");setError(null);
  }catch(cause){if(alive.current)setError(cause instanceof Error&&!("code"in cause)?cause.message:describe(cause));}finally{busy.current=false;if(alive.current)setPending(false);}}
  const contextual=overlappingMarks(typeof document!=="undefined"?document.getElementById(contentRootId):null,marks,fragments);
  async function clearStyle(kind:"highlight"|"underline"){
@@ -147,18 +173,18 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
   if(!alive.current)return;const remaining=stored.marks.filter(m=>!accepted.has(m.id));const cleared=writeReadingDocument({version:1,articleId,marks:remaining});if(!alive.current)return;if(!cleared)setError("Notların hesabına aktarıldı; tarayıcı kopyaları silinemedi.");setGuestMarks(cleared?remaining:stored.marks);setMarks(await loadServerMarks(server,requests.current.signal,readOnly));setStatus(`${accepted.size} misafir kaydı hesabına aktarıldı.${remaining.length?" Aktarılamayan kayıtlar bu tarayıcıda korundu.":""}`);
  }catch(cause){if(alive.current)setError(`İçe aktarılamadı: ${describe(cause)}`);}finally{busy.current=false;if(alive.current)setPending(false);}}
  function expandSource(mark:ReadingMark){setExpanded(ids=>[...new Set([...ids,...marks.filter(m=>isNote(m)&&m.fragments[0].anchorId===mark.fragments[0].anchorId).map(m=>m.id)])]);setVisible(true);}
- function jump(mark:ReadingMark){const root=document.getElementById(contentRootId);const range=root&&anchorRange(root,mark.fragments[0],mark.anchorMode);if(!range){setStatus("Bu alıntının bölümü artık bulunamıyor. Kayıtlı notun listede korunuyor.");return;}if(!pinned)setOpen(false);if(isNote(mark))expandSource(mark);setSourceFocus({id:mark.id,sequence:++focusSequence.current});setStatus("Notun kaynağı kırmızı çerçeveyle gösteriliyor.");}
+ function jump(mark:ReadingMark){const root=document.getElementById(contentRootId);const range=root&&mark.fragments.map(f=>anchorRange(root,f,mark.anchorMode)).find(Boolean);if(!range){setStatus("Bu alıntının bölümü artık bulunamıyor. Kayıtlı notun listede korunuyor.");return;}if(!pinned)setOpen(false);if(isNote(mark))expandSource(mark);setSourceFocus({id:mark.id,sequence:++focusSequence.current});setStatus("Notun kaynağı kırmızı çerçeveyle gösteriliyor.");}
  useEffect(()=>{if(!sourceFocus)return;const timer=setTimeout(()=>setSourceFocus(null),3000);return()=>clearTimeout(timer);},[sourceFocus]);
  useEffect(()=>{if(!sourceFocus||geometry.focusSequence!==sourceFocus.sequence||!geometry.focusRects.length||scrolledFocus.current===sourceFocus.sequence)return;const sequence=sourceFocus.sequence;const frame=requestAnimationFrame(()=>{if(sourceTarget.current){sourceTarget.current.scrollIntoView({behavior:scrollBehavior(),block:"center"});scrolledFocus.current=sequence;}});return()=>cancelAnimationFrame(frame);},[sourceFocus,geometry.focusRects,geometry.focusSequence]);
  const linked=useRef(false);
  useEffect(()=>{if(!ready||linked.current)return;linked.current=true;const id=new URLSearchParams(location.search).get("not");const mark=marks.find(m=>m.id===id);if(mark){requestAnimationFrame(()=>{if(alive.current)jump(mark);});}},[ready,marks]);
- function showDraft(kind:"note"|"audio"){setDraftKind(kind);setEditing(null);setNote("");setColor(noteColors[Math.floor(Math.random()*noteColors.length)]);setVisible(true);setOpen(false);}
+ function showDraft(kind:"note"|"audio"){setReattaching(null);setDraftKind(kind);setEditing(null);setNote("");setColor(noteColors[Math.floor(Math.random()*noteColors.length)]);setVisible(true);setOpen(false);}
  async function add(kind:ReadingMarkKind,blob?:Blob,durationMs?:number){
   if(!ready||!fragments.length||marks.length>=maxMarks||(kind==="note"&&!note.trim()))return;
   const m:ReadingMark={id:crypto.randomUUID(),kind,fragments:fragments.map(f=>{const root=document.getElementById(contentRootId);const element=root&&findAnchor(root,f.anchorId);return {...f,...(element?{sourceText:element.textContent??""}:{})};}),note:kind==="note"?note.trim():"",color,createdAt:new Date().toISOString(),...(blob?{audio:{mime:blob.type.split(";")[0],durationMs:durationMs!}}:{})};
   if(await save(m,true,blob)){if(isNote(m))setExpanded(ids=>[...new Set([...ids,...marksRef.current.filter(n=>isNote(n)&&n.fragments[0].anchorId===m.fragments[0].anchorId).map(n=>n.id),m.id])]);setDraftKind(null);setNote("");setUndo(null);setFragments([]);window.getSelection()?.removeAllRanges();}
  }
- function edit(mark:ReadingMark){setEditing(mark.id);setNote(mark.note);setColor(mark.color??"lavender");expandSource(mark);}
+ function edit(mark:ReadingMark){if(reattaching)cancelReconnect();setReattaching(null);setEditing(mark.id);setNote(mark.note);setColor(mark.color??"lavender");expandSource(mark);}
  async function setBookmark(anchorId?:string){const root=document.getElementById(contentRootId);const id=anchorId??fragments[0]?.anchorId;if(!root||!id)return;const el=findAnchor(root,id);const text=el?.textContent??"";if(!text.length)return;
   const old=marks.find(m=>m.kind==="bookmark");const fragment:TextAnchor={anchorId:id,start:0,end:Math.min(48,text.length),quote:text.slice(0,48),before:"",after:text.slice(Math.min(48,text.length),96),sourceText:text};
   const m:ReadingMark={id:old?.id??crypto.randomUUID(),kind:"bookmark",fragments:[fragment],note:"",createdAt:old?.createdAt??new Date().toISOString(),version:old?.version};if(await save(m,!old))setStatus("Kaldığın satır kaydedildi.");
@@ -169,34 +195,70 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
  const positions=stackNotes([...cards.map(m=>({id:m.id,y:geometry.width>=880?(geometry.points[m.id]?.y??80):geometry.end+16,height:geometry.heights[m.id]??210})),...(visible&&draftKind?[{id:"draft",y:geometry.width>=880?(geometry.selection?.y??80):geometry.end+16,height:geometry.heights.draft??220}]:[])]);
  const pos=(id:string)=>positions.find(p=>p.id===id)?.top??80;
  const rows=marks.filter(m=>m.note.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))||m.fragments.some(f=>f.quote.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))));
+ function startReconnect(mark:ReadingMark){
+  if(readOnly||busy.current)return;
+  reconnectTrigger.current=document.activeElement instanceof HTMLElement?document.activeElement:null;
+  setReconnectAnchor(mark.fragments[0]?.anchorId??null);setReattaching(mark.id);setFragments([]);setError(null);setDraftKind(null);setEditing(null);setDictionary(false);setVisible(true);
+  window.getSelection()?.removeAllRanges();if(!pinned)setOpen(false);
+  if(isNote(mark))setExpanded(ids=>[...new Set([...ids,mark.id])]);
+ }
+ function restoreReconnectFocus(){
+  const target=reconnectTrigger.current?.isConnected?reconnectTrigger.current:cardRefs.current.get(reattaching??"")?.querySelector<HTMLElement>(".rn-source-reconnect")??toggle.current;
+  target?.focus({preventScroll:true});
+ }
+ function cancelReconnect(){if(busy.current)return;setReattaching(null);setFragments([]);setError(null);window.getSelection()?.removeAllRanges();restoreReconnectFocus();}
+ async function confirmReconnect(){
+  const mark=marksRef.current.find(m=>m.id===reattaching);const root=document.getElementById(contentRootId);
+  if(!mark||!root||!fragments.length||pending)return;
+  const next=fragments.map(f=>({...f,sourceText:findAnchor(root,f.anchorId)?.textContent??f.sourceText}));
+  if(await save({...mark,originalQuote:mark.originalQuote??mark.fragments.map(f=>f.quote).join(" "),fragments:next,revisionId:server?.revisionId??mark.revisionId},false)){
+   setSourceUndo({before:mark,connected:next,revisionId:server?.revisionId??mark.revisionId});setStatus("Bağlandı. İstersen geri alabilirsin.");
+   setReattaching(null);setFragments([]);window.getSelection()?.removeAllRanges();
+  }else if(server&&saveFailure.current instanceof ApiError&&saveFailure.current.status===412){
+   try{const latest=await loadServerMarks(server,requests.current.signal);if(!alive.current)return;setMarks(latest);if(latest.some(m=>m.id===mark.id))setError("Not güncellendi. Kontrol edip tekrar bağla.");else{setReattaching(null);setFragments([]);setError("Bu not artık bulunamıyor.");}}catch{if(alive.current)setError("Güncel not yüklenemedi. Tekrar dene.");}
+  }
+ }
+ useEffect(()=>{if(!sourceUndo)return;const frame=requestAnimationFrame(()=>cardRefs.current.get(sourceUndo.before.id)?.querySelector<HTMLElement>(".rn-source-undo")?.focus({preventScroll:true}));return()=>cancelAnimationFrame(frame);},[sourceUndo]);
+ async function undoReconnect(){
+  if(!sourceUndo||busy.current)return;const current=marksRef.current.find(m=>m.id===sourceUndo.before.id);if(!current)return;
+  if(JSON.stringify(current.fragments)!==JSON.stringify(sourceUndo.connected)||current.revisionId!==sourceUndo.revisionId){setError("Bu bağlantı değişti. Notu yeniden aç.");setSourceUndo(null);return;}
+  if(await save({...current,fragments:sourceUndo.before.fragments,revisionId:sourceUndo.before.revisionId??server?.revisionId},false)){setSourceUndo(null);setStatus("Önceki bağlantı geri geldi. Notun korundu.");}
+ }
+ function sourceDetails(mark:ReadingMark){return <SourceDetails mark={mark} blocks={sourceBlocks} readOnly={readOnly} busy={pending} reconnecting={reattaching===mark.id} hasSelection={reattaching===mark.id&&fragments.length>0} onUndo={!reattaching&&sourceUndo?.before.id===mark.id?()=>void undoReconnect():undefined} onReconnect={()=>startReconnect(mark)} onMode={mode=>void save({...mark,anchorMode:mode},false)}/>;}
  function cancel(){setEditing(null);setDraftKind(null);setNote("");}
  function palette(value:NoteColor,onChange:(c:NoteColor)=>void){return <div className="rn-colors" role="group" aria-label="Not rengi">{noteColors.map(c=><button key={c} type="button" className={`rn-color rn-${c}`} data-tip={colorNames[c]} aria-label={colorNames[c]} aria-pressed={value===c} onClick={()=>onChange(c)}/>)}</div>;}
  function editor(){return <form onSubmit={e=>{e.preventDefault();const mark=marks.find(m=>m.id===editing);if(mark)void save({...mark,note:note.trim(),color},false).then(ok=>{if(ok)cancel();});else void add("note");}}><label className="visually-hidden" htmlFor={`reading-note-input-${articleId}`}>Bu alıntı için notun</label><textarea id={`reading-note-input-${articleId}`} ref={noteInput} rows={4} maxLength={maxNoteLength} value={note} onChange={e=>setNote(e.target.value)} placeholder="Aklında kalan bir düşünce…"/><div className="rn-card-footer">{palette(color,setColor)}<span>{note.length}/{maxNoteLength}</span></div><div className="rn-form-actions"><button type="button" onClick={cancel}>Vazgeç</button><button className="rn-save" disabled={pending||(!note.trim()&&marks.find(m=>m.id===editing)?.kind!=="audio")} type="submit">{pending?"Kaydediliyor…":"Notu kaydet"}</button></div></form>;}
- const layer=<aside className={`reading-tools rn-ui ${readOnly?"rn-preview":""} ${visible?"":"rn-hidden"}`} aria-label="Okuma araçları" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();e.preventDefault();setOpen(false);setPaletteOpen(false);setDictionary(false);cancel();toggle.current?.focus();}}}>
+ const reconnectMark=marks.find(m=>m.id===reattaching);
+ const reconnectPoint=reattaching?geometry.points[reattaching]:undefined;
+ const overlapsMarker=reconnectPoint&&marks.some(m=>isNote(m)&&m.id!==reattaching&&geometry.points[m.id]&&Math.abs(geometry.points[m.id].y-reconnectPoint.y)<28);
+ const previewPoint=reconnectPoint?{...reconnectPoint,x:reconnectPoint.x+(overlapsMarker?(geometry.width>=880?32:-32):0)}:undefined;
+ const layer=<aside className={`reading-tools rn-ui ${readOnly?"rn-preview":""} ${visible?"":"rn-hidden"}`} aria-label="Okuma araçları" onKeyDown={e=>{if(e.key==="Escape"){e.stopPropagation();e.preventDefault();cancelReconnect();setOpen(false);setPaletteOpen(false);setDictionary(false);cancel();toggle.current?.focus();}}}>
   <div className="rn-controlbar"><button ref={toggle} className="rn-notes-trigger" aria-expanded={open||pinned} aria-controls={`reading-notes-panel-${articleId}`} onClick={()=>{setOpen(!open);if(pinned){setPinned(false);try{localStorage.setItem("satir:note-index-pinned","false");}catch{}}}}><Icon name="note"/>Notlar <small>{marks.length} kayıt</small></button>{bookmark&&<button title="Kaldığın yere dön" aria-label="Kaldığın yere dön" onClick={()=>jump(bookmark)}><Icon name="bookmark"/></button>}</div>
-  {!readOnly&&<div className={`rn-selection-toolbar reading-toolbar ${geometry.selection?"is-active":""}`} role="group" aria-label="Metin işaretleme araçları" style={{left:geometry.selection?.x??0,top:(geometry.selection?.y??0)-50}} onPointerDown={e=>e.preventDefault()}>
+  {!readOnly&&!reattaching&&<div className={`rn-selection-toolbar reading-toolbar ${geometry.selection?"is-active":""}`} role="group" aria-label="Metin işaretleme araçları" style={{left:geometry.selection?.x??0,top:(geometry.selection?.y??0)-50}} onPointerDown={e=>e.preventDefault()}>
    {contextual.some(m=>m.kind!=="underline"&&m.kind!=="bookmark"&&m.emphasized!==false)&&<button className="na-clear-mark" disabled={pending} onClick={()=>void clearStyle("highlight")}><Icon name="highlight"/>Vurguyu kaldır</button>}{contextual.some(m=>m.kind==="underline")&&<button className="na-clear-mark" aria-label="Alt çizgiyi kaldır" disabled={pending} onClick={()=>void clearStyle("underline")}><u>U</u>Alt çizgiyi kaldır</button>}
    <button className={`rn-highlight-action rn-${color}`} data-tip="Seçili metni vurgula" disabled={disabled} aria-label="Seçili metni fosforlu kalemle işaretle" onClick={()=>void add("highlight")}><i/>Vurgula</button><button className="rn-palette-toggle" aria-label="Vurgu rengi seç" aria-expanded={paletteOpen} onClick={()=>setPaletteOpen(!paletteOpen)}><Icon name="down" size={14}/></button>{paletteOpen&&<div className="rn-palette-popover">{palette(color,c=>{setColor(c);setPaletteOpen(false);})}</div>}<button className="rn-underline" disabled={disabled} aria-label="Seçili metnin altını çiz" data-tip="Kırmızı alt çizgi" onClick={()=>void add("underline")}><u>U</u><span>Altını çiz</span></button><button disabled={disabled} aria-label="Seçili metne not ekle" data-tip="Metin notu ekle" onClick={()=>showDraft("note")}><Icon name="note"/><span>Not</span></button><button disabled={disabled} aria-label="Seçili metne sesli not ekle" data-tip="Sesli not ekle" onClick={()=>showDraft("audio")}><Icon name="mic"/><span>Ses</span></button><button disabled={disabled} aria-label="Burada kaldım" data-tip="Burada kaldım" onClick={()=>void setBookmark()}><Icon name="bookmark"/></button><button disabled={disabled||!dictionaryAllowed} aria-label="Seçili kelimenin anlamı" data-tip={dictionaryAllowed?"Kelimenin anlamı":"Kısa bir İngilizce kelime seç"} onClick={()=>setDictionary(!dictionary)}><Icon name="book"/><span>Anlamı</span></button>
   </div>}
-  {visible&&<div className="rn-markers">{Array.from(new Set(marks.filter(isNote).map(m=>m.fragments[0].anchorId))).map(anchor=>{
-   const group=marks.filter(m=>isNote(m)&&m.fragments[0].anchorId===anchor);const first=group[0];const pt=geometry.points[first.id];if(!pt)return null;
+  {visible&&<div className="rn-markers">{Array.from(new Set(marks.filter(m=>isNote(m)&&m.id!==reattaching).map(m=>m.fragments[0].anchorId))).map(anchor=>{
+   const group=marks.filter(m=>isNote(m)&&m.id!==reattaching&&m.fragments[0].anchorId===anchor);const first=group[0];const pt=geometry.points[first.id];if(!pt)return null;
    return <div key={anchor} className="rn-marker-group" style={{left:pt.x,top:pt.y}}>{(["note","audio"]as const).map(kind=>{const items=group.filter(m=>m.kind===kind);if(!items.length)return null;const m=items[0];const i=marks.filter(isNote).indexOf(m);return <button key={kind} className={`rn-marker rn-${m.color??"lavender"}`} aria-label={`${i+1}. ${labels[kind]} aç`} title={items.length>1?`${items.length} ${labels[kind].toLowerCase()}`:labels[kind]} aria-expanded={items.some(item=>expanded.includes(item.id))} onClick={()=>{setExpanded(ids=>{const groupIds=group.map(n=>n.id);return groupIds.every(id=>ids.includes(id))?ids.filter(id=>!groupIds.includes(id)):[...new Set([...ids,...groupIds])];});setTick(t=>t+1);}}><Icon name={kind==="audio"?"mic":"note"} size={16}/>{items.length>1&&<small>{items.length}</small>}</button>;})}</div>;
   })}</div>}
-  {!readOnly&&hover&&!bookmark?.fragments.some(f=>f.anchorId===hover)&&geometry.points.hover&&<button className="rn-place-bookmark" style={{left:geometry.points.hover.x,top:geometry.points.hover.y}} aria-label="Bu paragrafta kaldım" title="Burada kaldım" disabled={pending} onClick={()=>void setBookmark(hover)}><Icon name="bookmark" size={16}/></button>}
+  {visible&&reconnectMark&&fragments.length>0&&previewPoint&&<span className={`rn-marker rn-preview-marker rn-${reconnectMark.color??"lavender"}`} style={{left:previewPoint.x,top:previewPoint.y}} aria-hidden="true"><Icon name={reconnectMark.kind==="audio"?"mic":"note"} size={16}/></span>}
+  {!readOnly&&!reattaching&&hover&&!bookmark?.fragments.some(f=>f.anchorId===hover)&&geometry.points.hover&&<button className="rn-place-bookmark" style={{left:geometry.points.hover.x,top:geometry.points.hover.y}} aria-label="Bu paragrafta kaldım" title="Burada kaldım" disabled={pending} onClick={()=>void setBookmark(hover)}><Icon name="bookmark" size={16}/></button>}
   {bookmark&&geometry.points[bookmark.id]&&<button className="rn-bookmark" style={{left:Math.max(0,geometry.articleRight-(document.getElementById(contentRootId)?.querySelector(".article-view")?.clientWidth??geometry.articleRight)-28),top:geometry.points[bookmark.id].y}} title="Burada kaldım · kaldır" aria-label="Burada kaldım ayracını kaldır" disabled={pending||readOnly} onClick={()=>void remove(bookmark,marks.indexOf(bookmark))}><Icon name="bookmark" size={18}/><span>Burada kaldım</span></button>}
-  <div className="rn-card-lane">{cards.map(m=><section key={m.id} ref={el=>{if(el)cardRefs.current.set(m.id,el);else cardRefs.current.delete(m.id);}} className={`rn-card rn-${m.color??"lavender"}`} style={{top:pos(m.id)}} aria-label={`${labels[m.kind]} · ${m.fragments[0].quote.slice(0,30)}`}><header><Icon name={m.kind==="audio"?"mic":"note"}/><strong>{labels[m.kind]}</strong><button aria-label="Notu düzenle" data-tip="Düzenle" disabled={pending||readOnly} onClick={()=>edit(m)}><Icon name="edit" size={16}/></button><button aria-label="Notu sil" data-tip="Notu sil" disabled={pending||readOnly} onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={16}/></button><button aria-label="Notu kapat" data-tip="Notu kapat" onClick={()=>{setExpanded(ids=>ids.filter(id=>id!==m.id));if(editing===m.id)cancel();}}><Icon name="down" size={16}/></button></header>{editing===m.id?editor():m.note&&<p className="rn-note-text">{m.note}</p>}{m.kind==="audio"&&<><VoicePlayback key={`${m.id}:${m.version??0}`} label={`${m.id} sesli not`} load={async()=>{if(!server)return readAudio(scope,m.id);const response=await fetch(readOnly?`/api/v1/studio/articles/${server.id}/reading-notes/${m.id}/audio`:`/api/v1/me/articles/${server.id}/annotations/${m.id}/audio`,{credentials:"same-origin",cache:"no-store",signal:requests.current.signal});if(!response.ok)throw new Error();return response.blob();}}/>{editing===m.id&&<RecordingButton disabled={pending} onRecorded={(blob,duration)=>{void save({...m,audio:{mime:blob.type,durationMs:duration},note:note.trim(),color},false,blob).then(ok=>{if(ok)cancel();});}}/>}</>}<SourceDetails mark={m} blocks={sourceBlocks} readOnly={readOnly} canReattach={!pending&&fragments.length>0} onReattach={()=>void save({...m,originalQuote:m.originalQuote??m.fragments.map(f=>f.quote).join(" "),fragments:fragments.map(f=>({...f,sourceText:findAnchor(document.getElementById(contentRootId)!,f.anchorId)?.textContent??f.sourceText})),revisionId:server?.revisionId},false)} onMode={mode=>void save({...m,anchorMode:mode},false)}/><footer><button title="Alıntıya git" aria-label="Notun kaynağına git" onClick={()=>jump(m)}><Icon name="arrow" size={14}/>Kaynak</button><small>Yalnızca sen</small></footer></section>)}
+  <div className="rn-card-lane">{cards.map(m=><section key={m.id} ref={el=>{if(el)cardRefs.current.set(m.id,el);else cardRefs.current.delete(m.id);}} className={`rn-card rn-${m.color??"lavender"}`} style={{top:pos(m.id)}} aria-label={`${labels[m.kind]} · ${m.fragments[0].quote.slice(0,30)}`}><header><Icon name={m.kind==="audio"?"mic":"note"}/><strong>{labels[m.kind]}</strong><button aria-label="Notu düzenle" data-tip="Düzenle" disabled={pending||readOnly} onClick={()=>edit(m)}><Icon name="edit" size={16}/></button><button aria-label="Notu sil" data-tip="Notu sil" disabled={pending||readOnly} onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={16}/></button><button aria-label="Notu kapat" data-tip="Notu kapat" onClick={()=>{setExpanded(ids=>ids.filter(id=>id!==m.id));if(editing===m.id)cancel();if(reattaching===m.id)cancelReconnect();}}><Icon name="down" size={16}/></button></header>{editing===m.id?editor():m.note&&<p className="rn-note-text">{m.note}</p>}{m.kind==="audio"&&<><VoicePlayback key={`${m.id}:${m.version??0}`} label={`${m.id} sesli not`} load={async()=>{if(!server)return readAudio(scope,m.id);const response=await fetch(readOnly?`/api/v1/studio/articles/${server.id}/reading-notes/${m.id}/audio`:`/api/v1/me/articles/${server.id}/annotations/${m.id}/audio`,{credentials:"same-origin",cache:"no-store",signal:requests.current.signal});if(!response.ok)throw new Error();return response.blob();}}/>{editing===m.id&&<RecordingButton disabled={pending} onRecorded={(blob,duration)=>{void save({...m,audio:{mime:blob.type,durationMs:duration},note:note.trim(),color},false,blob).then(ok=>{if(ok)cancel();});}}/>}</>}{sourceDetails(m)}<footer>{m.fragments.some(f=>resolveSource(f,sourceBlocks,m.anchorMode).parts.length>0)?<button title="İşaretli metne git" aria-label="Notun kaynağına git" onClick={()=>jump(m)}><Icon name="arrow" size={14}/>Metinde göster</button>:<span/>}<small>Yalnızca sen</small></footer></section>)}
   {visible&&draftKind&&<section ref={el=>{if(el)cardRefs.current.set("draft",el);else cardRefs.current.delete("draft");}} className={`rn-card rn-${color} rn-draft`} style={{top:pos("draft")}} aria-label="Yeni not"><header><Icon name={draftKind==="audio"?"mic":"note"}/><strong>{draftKind==="audio"?"Sesli not":"Metin notu"}</strong><button onClick={cancel} aria-label="Yeni notu kapat"><Icon name="close"/></button></header>{draftKind==="note"?editor():<RecordingButton disabled={pending} onRecorded={(blob,duration)=>void add("audio",blob,duration)}/>}</section>}
   </div>
-  {visible&&geometry.width>=880&&<svg className="rn-connectors" width="100%" height={Math.max(geometry.end,...positions.map(p=>p.top+(geometry.heights[p.id]??220)))} aria-hidden="true">{cards.map(m=>{const pt=geometry.points[m.id];if(!pt)return null;const to=geometry.width-(geometry.width>=1200?368:282);return <path key={m.id} className={`rn-${m.color??"lavender"}`} d={`M${pt.x+15},${pt.y+15} C${pt.x+40},${pt.y+15} ${to-20},${pos(m.id)+28} ${to},${pos(m.id)+28}`}/>;})}{draftKind&&geometry.selection&&<path className={`rn-${color}`} d={`M${geometry.articleRight+10},${geometry.selection.y+15} C${geometry.articleRight+35},${geometry.selection.y+15} ${geometry.width-(geometry.width>=1200?388:302)},${pos("draft")+28} ${geometry.width-(geometry.width>=1200?368:282)},${pos("draft")+28}`}/>}</svg>}
+  {visible&&geometry.width>=880&&<svg className="rn-connectors" width="100%" height={Math.max(geometry.end,...positions.map(p=>p.top+(geometry.heights[p.id]??220)))} aria-hidden="true">{cards.map(m=>{const pt=reattaching===m.id?previewPoint:geometry.points[m.id],to=geometry.targets[m.id];if(!pt||!to||(reattaching===m.id&&!fragments.length))return null;return <path key={m.id} className={`rn-${m.color??"lavender"} ${reattaching===m.id?"rn-bridge-preview":""}`} d={`M${pt.x+15},${pt.y+15} C${pt.x+40},${pt.y+15} ${to.x-20},${to.y} ${to.x},${to.y}`}/>;})}{draftKind&&geometry.selection&&<path className={`rn-${color}`} d={`M${geometry.articleRight+10},${geometry.selection.y+15} C${geometry.articleRight+35},${geometry.selection.y+15} ${geometry.width-(geometry.width>=1200?388:302)},${pos("draft")+28} ${geometry.width-(geometry.width>=1200?368:282)},${pos("draft")+28}`}/>}</svg>}
   {(open||pinned)&&<section id={`reading-notes-panel-${articleId}`} className={`reading-panel rn-overview ${pinned?"is-pinned":""}`} aria-label="Bu yazıdaki okuma notların"><header><h2>Bu yazı <small>{marks.length}</small></h2><button onClick={pin} aria-label={pinned?"Not dizinini çöz":"Not dizinini sabitle"} aria-pressed={pinned} data-tip={pinned?"Sabitlemeyi kaldır":"Sola sabitle"}><Icon name="pin"/></button><button onClick={()=>{setOpen(false);setPinned(false);try{localStorage.setItem("satir:note-index-pinned","false");}catch{}}} aria-label="Notlar panelini kapat"><Icon name="close"/></button></header>
- <input aria-label="Bu yazıdaki notlarda ara" placeholder="Notlarda ara" value={query} onChange={e=>setQuery(e.target.value)}/><div className="rn-index-view"><button disabled={!marks.some(isNote)} onClick={()=>{setExpanded(marks.filter(isNote).map(m=>m.id));setVisible(true);}}>Tümünü aç</button><button disabled={!expanded.length} onClick={()=>{setExpanded([]);cancel();}}>Tümünü kapat</button></div><ol>{rows.map(m=><li key={m.id} className={`rn-list-item rn-${m.color??"lavender"} ${expanded.includes(m.id)?"is-selected":""}`}><button className="rn-quote-link" aria-label={`${marks.indexOf(m)+1}. alıntının bulunduğu bölüme git`} onClick={()=>jump(m)}><Icon name={m.kind==="audio"?"mic":m.kind==="bookmark"?"bookmark":"note"}/><span><strong>{m.note||m.fragments[0].quote}</strong><small>{labels[m.kind]} · {m.fragments[0].anchorId==="excerpt"?"Giriş":`${marks.indexOf(m)+1}. kayıt`}</small></span></button><div className="rn-index-actions"><button disabled={pending} aria-label={`${marks.indexOf(m)+1}. kaydı kaldır`} hidden={readOnly} data-tip="Kaydı sil" onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={14}/></button>{!readOnly&&isNote(m)&&<button className="rn-text-button" aria-label="Düzenle" data-tip="Düzenle" onClick={()=>edit(m)}><Icon name="edit" size={14}/></button>}{!readOnly&&!isNote(m)&&m.kind!=="bookmark"&&<details><summary aria-label="İşaret rengi">Renk</summary>{palette(m.color??"lavender",c=>void save({...m,color:c},false))}</details>}</div><SourceDetails mark={m} blocks={sourceBlocks} readOnly={readOnly} canReattach={!pending&&fragments.length>0} onReattach={()=>void save({...m,originalQuote:m.originalQuote??m.fragments.map(f=>f.quote).join(" "),fragments:fragments.map(f=>({...f,sourceText:findAnchor(document.getElementById(contentRootId)!,f.anchorId)?.textContent??f.sourceText})),revisionId:server?.revisionId},false)} onMode={mode=>void save({...m,anchorMode:mode},false)}/></li>)}</ol>
- {marks.length===0&&<p>Bir satır seçerek ilk notunu ekle.</p>}{marks.length>0&&rows.length===0&&<p>Bu aramada not bulunamadı.</p>}<footer><small>{rows.length} / {marks.length} kayıt</small><button type="button" role="switch" aria-checked={visible} className="rn-visibility" onClick={()=>{setVisible(!visible);if(visible)cancel();}}><span className="rn-switch"/>Notları göster</button></footer>
+ <input aria-label="Bu yazıdaki notlarda ara" placeholder="Notlarda ara" value={query} onChange={e=>setQuery(e.target.value)}/><div className="rn-index-view"><button disabled={!marks.some(isNote)} onClick={()=>{setExpanded(marks.filter(isNote).map(m=>m.id));setVisible(true);}}>Tümünü aç</button><button disabled={!expanded.length} onClick={()=>{setExpanded([]);cancel();cancelReconnect();}}>Tümünü kapat</button></div><ol>{rows.map(m=><li key={m.id} className={`rn-list-item rn-${m.color??"lavender"} ${expanded.includes(m.id)?"is-selected":""}`}><button className="rn-quote-link" aria-label={`${marks.indexOf(m)+1}. alıntının bulunduğu bölüme git`} onClick={()=>jump(m)}><Icon name={m.kind==="audio"?"mic":m.kind==="bookmark"?"bookmark":"note"}/><span><strong>{m.note||m.fragments[0].quote}</strong><small>{labels[m.kind]} · {m.fragments[0].anchorId==="excerpt"?"Giriş":`${marks.indexOf(m)+1}. kayıt`}</small></span></button><div className="rn-index-actions"><button disabled={pending} aria-label={`${marks.indexOf(m)+1}. kaydı kaldır`} hidden={readOnly} data-tip="Kaydı sil" onClick={()=>void remove(m,marks.indexOf(m))}><Icon name="trash" size={14}/></button>{!readOnly&&isNote(m)&&<button className="rn-text-button" aria-label="Düzenle" data-tip="Düzenle" onClick={()=>edit(m)}><Icon name="edit" size={14}/></button>}{!readOnly&&!isNote(m)&&m.kind!=="bookmark"&&<details><summary aria-label="İşaret rengi">Renk</summary>{palette(m.color??"lavender",c=>void save({...m,color:c},false))}</details>}</div>{sourceDetails(m)}</li>)}</ol>
+ {marks.length===0&&<p>Bir satır seçerek ilk notunu ekle.</p>}{marks.length>0&&rows.length===0&&<p>Bu aramada not bulunamadı.</p>}<footer><small>{rows.length} / {marks.length} kayıt</small><button type="button" role="switch" aria-checked={visible} className="rn-visibility" onClick={()=>{setVisible(!visible);if(visible){cancel();cancelReconnect();}}}><span className="rn-switch"/>Notları göster</button></footer>
  <details className="rn-index-info"><summary>Saklama ve durum</summary><p className="rn-storage-info">{server?"Yalnızca sen · hesabında saklanır.":"Bu tarayıcıda saklanır. Veriler temizlenirse kaybolur."}</p>{!server&&<button onClick={()=>openAuth("register")}>Üye ol, hesabında sakla</button>}{!readOnly&&server&&guestMarks.length>0&&<button disabled={pending} onClick={()=>void importGuest()}>Misafir notlarını hesabıma aktar</button>}{!supported&&<p>Bu tarayıcı metnin üzerinde renk göstermeyi desteklemiyor.</p>}{unresolved>0&&<p>{unresolved} işaretin metindeki yeri değişmiş olabilir. Alıntıların korunuyor.</p>}</details></section>}
  {styleUndo.length>0&&<button className="rn-undo-toast na-style-undo" disabled={pending} onClick={()=>void restoreStyles()}>İşareti geri al ↶</button>}
  {undo&&<button className="reading-undo rn-undo-toast" disabled={pending} onClick={()=>void (async()=>{let blob:Blob|undefined;if(undo.mark.kind==="audio"){blob=undoAudio.current??undefined;if(!blob){setError("Ses kaydı geri alınamadı.");return;}}if(await save(undo.mark,true,blob))setUndo(null);})()}>Son kaldırmayı geri al ↶</button>}
   {dictionary&&<DictionaryPreview text={fragments.map(f=>f.quote).join(" ")} onClose={()=>setDictionary(false)}/>}
   {sourceFocus&&<div key={sourceFocus.sequence} className="rn-source-focus" aria-hidden="true">{geometry.focusRects.map((rect,i)=><span key={i} ref={i===0?sourceTarget:undefined} style={{left:rect.left-4,top:rect.top-3,width:rect.width+8,height:rect.height+6}}>{i===0&&<i>Kaynak</i>}</span>)}</div>}
-  {error&&<p role="alert" className="rn-feedback rn-error">{error}</p>}<p role="status" className={`rn-feedback ${status?"has-message":""}`}>{status}</p>
+  {reattaching&&!readOnly&&reconnectMount&&reconnectMark&&createPortal(<SourceReconnect mark={reconnectMark} fragments={fragments} pending={pending} error={error?.startsWith("Not güncellendi")?error:error?"Bağlanamadı. Yeniden dene.":null} onConfirm={()=>void confirmReconnect()} onCancel={cancelReconnect}/>,reconnectMount)}
+  {error&&!reattaching&&<p role="alert" className="rn-feedback rn-error">{error}</p>}<p role="status" className={`rn-feedback ${status?"has-message":""}`}>{status}</p>
  </aside>;
  return mount?createPortal(<>{layer}<div aria-hidden="true" className="rn-reserve" style={{height:Math.max(0,...positions.map(p=>p.top+(geometry.heights[p.id]??220)-geometry.end),pinned&&geometry.width>=880?geometry.indexHeight+58-geometry.end:0)}}/></>,mount):layer;
 }

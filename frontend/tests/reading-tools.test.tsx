@@ -317,11 +317,78 @@ it("keeps the guest note after a source edit, supports exact mode and explicit r
  render(<><article id="reading-content"><p data-reading-anchor="paragraph-0">{current}</p></article><ReadingTools articleId="sample" contentRootId="reading-content" contentRevision={current}/></>);
  expect(anchorRange(document.getElementById("reading-content")!,anchor)?.toString()).toBe("saatlerde");
  await user.click(screen.getByRole("button",{name:/Notlar/}));
- const select=screen.getByLabelText("Kaynak takibi: saatte");
- fireEvent.change(select,{target:{value:"exact"}});
+ await user.click(screen.getByLabelText("Takip tercihini değiştir"));
+ await user.click(screen.getByRole("button",{name:"Alıntıyı koru"}));
  expect(saved()?.marks[0]).toMatchObject({anchorMode:"exact",fragments:[anchor]});
  expect(anchorRange(document.getElementById("reading-content")!,anchor,"exact")).toBeNull();
+ await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));
+ expect(screen.getByText("Yazıda yeni yeri seç")).toBeTruthy();
+ expect(screen.queryByRole("button",{name:"Bağla"})).toBeNull();
  selectText(0,5);
- await user.click(screen.getByRole("button",{name:"Seçili metne yeniden bağla"}));
+ expect(screen.getByText("Yeni yer seçildi")).toBeTruthy();
+ expect(screen.queryByRole("group",{name:"Metin işaretleme araçları"})).toBeNull();
+ await user.click(screen.getByRole("button",{name:"Bağla"}));
  expect(saved()?.marks[0]).toMatchObject({id:mark.id,note:"Kendi düşüncem",originalQuote:"saatte",fragments:[{quote:"Bugün",start:0,end:5}]});
+});
+
+it("guides a removed note to a new selection, clears stale/collapsed selections, and makes cancellation non-mutating",async()=>{
+ const user=userEvent.setup();
+ const anchor={...fragment,sourceText:"Hello world"};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Kaybolmayan düşünce",fragments:[anchor]}]}));
+ const {container}=render(<><article id="reading-content"><p data-reading-anchor="paragraph-0"> world</p></article><ReadingTools articleId="sample" contentRootId="reading-content"/></>);
+ await user.click(screen.getByRole("button",{name:/Notlar/}));
+ const old=localStorage.getItem(readingStorageKey("sample"));
+ selectText(0,3);
+ await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));
+ expect(screen.queryByRole("button",{name:"Bağla"})).toBeNull();
+ expect(screen.queryByRole("button",{name:"Notun kaynağına git"})).toBeNull();
+ selectText(1,6);
+ expect(screen.getByRole("button",{name:"Bağla"})).toBeTruthy();
+ act(()=>{window.getSelection()?.removeAllRanges();document.dispatchEvent(new Event("selectionchange"));});
+ expect(screen.queryByRole("button",{name:"Bağla"})).toBeNull();
+ await user.click(screen.getByRole("button",{name:"Bağlamaktan vazgeç"}));
+ expect(localStorage.getItem(readingStorageKey("sample"))).toBe(old);
+ expect(container.querySelector(".rn-reconnect-guide")).toBeNull();
+ await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));selectText(1,6);
+ await user.click(screen.getByRole("button",{name:"Bağla"}));
+ expect(saved()?.marks[0]).toMatchObject({id:mark.id,note:"Kaybolmayan düşünce",originalQuote:"Hello",fragments:[{quote:"world"}]});
+ expect(container.querySelector(".rn-reconnect-guide")).toBeNull();
+ expect(screen.getByRole("button",{name:"Notun kaynağına git"})).toBeTruthy();
+});
+
+
+it("previews locally without saving, keeps the original quotation and color, and undoes only the connection after editing the note",async()=>{
+ const user=userEvent.setup();const anchor={...fragment,sourceText:"Hello world"};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Kendi düşüncem",color:"mint",fragments:[anchor]}]}));
+ const {container}=render(<><article id="reading-content"><p data-reading-anchor="paragraph-0"> world</p><p data-reading-anchor="paragraph-1">Another paragraph</p></article><ReadingTools articleId="sample" contentRootId="reading-content"/></>);
+ await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));
+ const before=localStorage.getItem(readingStorageKey("sample"));
+ const node=container.querySelector('[data-reading-anchor="paragraph-1"]')!.firstChild!;const range=document.createRange();range.setStart(node,0);range.setEnd(node,7);
+ act(()=>{window.getSelection()!.addRange(range);document.dispatchEvent(new Event("selectionchange"));});
+ fireEvent.pointerUp(node.parentElement!);
+ const island=screen.getByRole("region",{name:"Notu yeni metne bağla"});
+ expect(island.parentElement?.previousElementSibling).toBe(node.parentElement);
+ expect(island.classList.contains("rn-mint")).toBe(true);
+ expect(within(island).getByText("Hello")).toBeTruthy();expect(within(island).getByText("Another")).toBeTruthy();
+ expect(localStorage.getItem(readingStorageKey("sample"))).toBe(before);
+ await user.click(within(island).getByRole("button",{name:"Bağla"}));
+ expect(saved()?.marks[0]).toMatchObject({id:mark.id,originalQuote:"Hello",color:"mint",fragments:[{quote:"Another"}]});
+ expect(screen.getByRole("button",{name:"Bağlandı"})).toBeTruthy();
+ await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole("button",{name:"Geri al"})));
+ await user.click(screen.getByRole("button",{name:"Notu düzenle"}));
+ await user.clear(screen.getByLabelText("Bu alıntı için notun"));await user.type(screen.getByLabelText("Bu alıntı için notun"),"Düzenlenmiş düşüncem");
+ await user.click(screen.getByRole("button",{name:"Notu kaydet"}));
+ await user.click(screen.getByRole("button",{name:"Geri al"}));
+ expect(saved()?.marks[0]).toMatchObject({id:mark.id,note:"Düzenlenmiş düşüncem",color:"mint",originalQuote:"Hello",fragments:[anchor]});
+ expect(screen.queryByRole("button",{name:"Geri al"})).toBeNull();
+});
+
+it("cancels from the article with Escape and removes the island on revision change without touching notes",async()=>{
+ const user=userEvent.setup();localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Korumalı not",fragments:[{...fragment,sourceText:"Hello world"}]}]}));
+ const content=(revision:string)=><><article id="reading-content"><p data-reading-anchor="paragraph-0"> world</p></article><ReadingTools articleId="sample" contentRootId="reading-content" contentRevision={revision}/></>;
+ const {rerender}=render(content("a"));await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));selectText(1,6);
+ const before=localStorage.getItem(readingStorageKey("sample"));fireEvent.keyDown(document.querySelector("p[data-reading-anchor]")!,{key:"Escape"});
+ expect(screen.queryByRole("region",{name:"Notu yeni metne bağla"})).toBeNull();expect(localStorage.getItem(readingStorageKey("sample"))).toBe(before);
+ await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));selectText(1,6);rerender(content("b"));
+ expect(screen.queryByRole("region",{name:"Notu yeni metne bağla"})).toBeNull();expect(localStorage.getItem(readingStorageKey("sample"))).toBe(before);
 });

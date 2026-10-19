@@ -121,3 +121,5 @@ Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zo
 - 2026-10-19: Not senaryoları için kullanıcı Sürüm Aynası tasarımını seçti; adı Satır Aynası. Tüm 14 örnek önce/sonra düzeninde, tek örnek ve açık dene/geri al akışıyla sunulur. Header/footer birebir korunur; değişiklik yalnız senaryo içeriğindedir.
 
 - 2026-10-19: Kullanıcı Satır Aynası için seçenekleri kaldırıp bilgiyi deneme sonucu üzerinden öğretmeyi, küçük not kartını gerçek kaynak oku ile bağlamayı ve öğretici animasyonları istedi. Sayfa bağımsız chrome yerine sitenin mevcut ortak header/footer bileşenlerini kullanır; bunların tasarımı değiştirilmez. 14 örnek korunur, gerçek notlara yazılmaz.
+
+- 2026-10-19: Kullanıcı 02 / Alıntı Köprüsü — Akış Adası tasarımını seçti. Not kartı ve mevcut ince köprü korunur; kaynak durumu kısa alıntı/eylemle anlatılır. Yeni yer seç → yerel adada önce/yeni alıntı → Bağla açık onayı gerekir. Seçim kayıt yapmaz; iptal/Escape, sürüm çakışmasında yeniden kontrol ve bağlantıyı geri alma vardır. İlk alıntı, kimlik, metin/ses ve renk korunur. Header/footer değişmez; #7 In Progress.

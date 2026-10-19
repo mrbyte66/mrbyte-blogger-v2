@@ -140,5 +140,29 @@ it("previews only the owner's private reader notes in Studio without writing ann
  expect(screen.getByRole("button",{name:"Notu düzenle"}).hasAttribute("disabled")).toBe(true);
  expect(backend.state.calls.some(c=>c.path===`/studio/articles/${ARTICLE}/reading-notes`)).toBe(true);
  expect(backend.state.calls.some(c=>c.method!=="GET"&&c.path.includes("annotations"))).toBe(false);
- expect(screen.getByText("Kaynak değişti")).toBeTruthy();
+ expect(screen.getByText("Alıntı değişti")).toBeTruthy();
+});
+
+
+it("confirms reconnection with the current revision, preserves a 412 draft, and undoes with the latest version",async()=>{
+ vi.stubGlobal("matchMedia",vi.fn(()=>({matches:false})));Object.defineProperty(Element.prototype,"scrollIntoView",{configurable:true,value:vi.fn()});
+ const own=personalOf(backend.state.member,"reader-1");
+ const original={blockId:BLOCK,start:0,end:7,quote:"Missing",before:"",after:"",sourceText:"Missing"};
+ own.marks.push({id:"bridge-note",articleId:ARTICLE,kind:"note",revisionId:"rev-1",note:"Kişisel notum",createdAt:"2026-10-13T10:00:00Z",version:5,originalQuote:"Missing",sourceTexts:{[BLOCK]:"Missing"},fragments:[original]});
+ render(<AuthProvider><article id="reading-content"><p data-reading-anchor={BLOCK}>Hello world</p></article><ReadingTools articleId="sample" contentRootId="reading-content" server={{...server,revisionId:"rev-2"}}/></AuthProvider>);await act(settle);
+ fireEvent.click(screen.getByRole("button",{name:/Notlar/}));fireEvent.click(screen.getByRole("button",{name:"Yeni yer seç"}));
+ const range=document.createRange();const node=document.querySelector(`[data-reading-anchor="${BLOCK}"]`)!.firstChild!;range.setStart(node,6);range.setEnd(node,11);
+ act(()=>{window.getSelection()!.removeAllRanges();window.getSelection()!.addRange(range);document.dispatchEvent(new Event("selectionchange"));});
+ expect(backend.state.calls.some(c=>c.method==="PUT")).toBe(false);
+ own.marks[0].version=6;
+ await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Bağla"}));await settle();});
+ expect(screen.getByRole("region",{name:"Notu yeni metne bağla"})).toBeTruthy();expect(screen.getByText("Not güncellendi. Kontrol edip tekrar bağla.")).toBeTruthy();expect(own.marks[0].fragments).toEqual([original]);
+ // The conflicting current record is refreshed without saving or losing the pending selection.
+ await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Bağla"}));await settle();});
+ const puts=()=>backend.state.calls.filter(c=>c.method==="PUT"&&c.path.endsWith("/annotations/bridge-note"));
+ expect(puts().at(-1)?.headers["If-Match"]).toBe('"6"');expect(puts().at(-1)?.body).toMatchObject({revisionId:"rev-2",note:"Kişisel notum",fragments:[{quote:"world"}]});
+ expect(own.marks[0]).toMatchObject({id:"bridge-note",originalQuote:"Missing",version:7});
+ await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Geri al"}));await settle();});
+ expect(puts().at(-1)?.headers["If-Match"]).toBe('"7"');expect(puts().at(-1)?.body).toMatchObject({revisionId:"rev-1",fragments:[{quote:"Missing"}]});
+ expect(own.marks[0]).toMatchObject({id:"bridge-note",originalQuote:"Missing",note:"Kişisel notum",version:8});expect(localStorage.length).toBe(0);
 });

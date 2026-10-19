@@ -19,12 +19,12 @@ import { dissolveNote } from "./dust";
 
 type Props={readOnly?:boolean;articleId:string;contentRootId:string;contentRevision?:string;server?:ServerArticle};
 type SourceRect={left:number;top:number;width:number;height:number};
-type Geometry={targets:Record<string,{x:number;y:number}>;width:number;articleRight:number;points:Record<string,{x:number;y:number}>;heights:Record<string,number>;selection:{x:number;y:number}|null;end:number;indexHeight:number;focusSequence:number;focusRects:SourceRect[]};
+type Geometry={articleTop:number;targets:Record<string,{x:number;y:number}>;width:number;articleRight:number;points:Record<string,{x:number;y:number}>;heights:Record<string,number>;selection:{x:number;y:number}|null;end:number;indexHeight:number;focusSequence:number;focusRects:SourceRect[]};
 type HighlightEnvironment={CSS?:{highlights?:{set:(name:string,value:unknown)=>void;delete:(name:string)=>void}};Highlight?:new(...ranges:Range[])=>unknown};
 const labels:Record<ReadingMarkKind,string>={highlight:"Fosforlu işaret",underline:"Alt çizgi",note:"Metin notu",audio:"Sesli not",bookmark:"Burada kaldım"};
 const colorNames:Record<NoteColor,string>={lavender:"Lavanta",mint:"Nane",peach:"Şeftali",blue:"Mavi",yellow:"Sarı"};
 const isNote=(m:ReadingMark)=>m.kind==="note"||m.kind==="audio";
-const initialGeometry:Geometry={targets:{},width:0,articleRight:0,points:{},selection:null,end:0,heights:{},indexHeight:0,focusSequence:0,focusRects:[]};
+const initialGeometry:Geometry={articleTop:80,targets:{},width:0,articleRight:0,points:{},selection:null,end:0,heights:{},indexHeight:0,focusSequence:0,focusRects:[]};
 export function ReadingTools(props:Props){
  const {session}=useAuth();const memberId=session?.profile.id;const account=!!(session?.profile.verified&&props.server);
  const server=useMemo(()=>account?props.server:undefined,[account,props.server?.id,props.server?.revisionId]);
@@ -108,14 +108,14 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
  useEffect(()=>{
   const root=document.getElementById(contentRootId);if(!root)return;
   let frame=0,animationUntil=0;const measure=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
-   const box=root.getBoundingClientRect();root.dataset.noteLayout=box.width>=880?"wide":"compact";const article=root.querySelector(".article-view")??root.querySelector("[data-reading-anchor]")?.parentElement??root;const ab=article.getBoundingClientRect();
+   const bounds=root.getBoundingClientRect();const box={width:bounds.width,left:bounds.left+root.clientLeft,top:bounds.top+root.clientTop};root.dataset.noteLayout=box.width>=880?"wide":"compact";const article=root.querySelector(".article-view")??root.querySelector("[data-reading-anchor]")?.parentElement??root;const ab=article.getBoundingClientRect();
    const points:Geometry["points"]={};for(const mark of marks){const source=reattaching===mark.id&&fragments.length?fragments:mark.fragments;const range=source.map(f=>anchorRange(root,f,reattaching===mark.id&&fragments.length?"exact":mark.anchorMode)).find(Boolean);if(!range)continue;const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():(range.startContainer.parentElement??root).getBoundingClientRect();points[mark.id]={x:Math.min(box.width-28,ab.right-box.left+10),y:r.top-box.top};}
    if(hover){const el=findAnchor(root,hover);if(el){const b=el.getBoundingClientRect();points.hover={x:b.left-box.left-28,y:b.top-box.top};}}
    let selection:Geometry["selection"]=null;if(fragments.length){const range=anchorRange(root,fragments[0]);if(range){const r=typeof range.getBoundingClientRect==="function"?range.getBoundingClientRect():findAnchor(root,fragments[0].anchorId)!.getBoundingClientRect();selection={x:Math.max(8,Math.min(box.width-540,r.left-box.left)),y:Math.max(48,r.top-box.top)};}}
    const heights:Geometry["heights"]={},targets:Geometry["targets"]={};for(const [id,element]of cardRefs.current){heights[id]=element.offsetHeight;const b=element.getBoundingClientRect();targets[id]={x:b.left-box.left,y:b.top-box.top+28};}
    const host=root.querySelector<HTMLElement>(".rn-host");const index=root.querySelector<HTMLElement>(".rn-overview");
    const focusRects:SourceRect[]=[];const focused=marks.find(m=>m.id===sourceFocus?.id);if(focused)for(const fragment of focused.fragments){const range=anchorRange(root,fragment,focused.anchorMode);if(!range)continue;const rects=typeof range.getClientRects==="function"?[...range.getClientRects()]:[];if(!rects.length){const paragraph=range.startContainer.parentElement;if(paragraph)rects.push(paragraph.getBoundingClientRect());}for(const r of rects)focusRects.push({left:r.left-box.left,top:r.top-box.top,width:r.width,height:r.height});}
-   const next={targets,width:box.width,articleRight:ab.right-box.left,points,selection,end:host?host.getBoundingClientRect().top-box.top:ab.bottom-box.top,heights,indexHeight:index?.offsetHeight??0,focusSequence:sourceFocus?.sequence??0,focusRects};setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);if(performance.now()<animationUntil)measure();
+   const next={articleTop:Math.max(0,ab.top-box.top),targets,width:box.width,articleRight:ab.right-box.left,points,selection,end:host?host.getBoundingClientRect().top-box.top:ab.bottom-box.top,heights,indexHeight:index?.offsetHeight??0,focusSequence:sourceFocus?.sequence??0,focusRects};setGeometry(old=>JSON.stringify(old)===JSON.stringify(next)?old:next);if(performance.now()<animationUntil)measure();
   });};
   const transition=(e:TransitionEvent)=>{if(e.target instanceof Element&&e.target.matches(".rn-card")){animationUntil=performance.now()+400;measure();}};root.addEventListener("transitionrun",transition);
   measure();window.addEventListener("resize",measure);document.addEventListener("scroll",measure,true);
@@ -192,7 +192,7 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",readOnly
  const dictionaryWord=fragments.map(f=>f.quote).join(" ").trim();const dictionaryAllowed=/^[a-zA-Z][a-zA-Z' -]{0,59}$/.test(dictionaryWord);
  const disabled=!ready||pending||!fragments.length||marks.length>=maxMarks;const bookmark=marks.find(m=>m.kind==="bookmark");
  const cards=visible?marks.filter(m=>isNote(m)&&expanded.includes(m.id)):[];
- const positions=stackNotes([...cards.map(m=>({id:m.id,y:geometry.width>=880?(geometry.points[m.id]?.y??80):geometry.end+16,height:geometry.heights[m.id]??210})),...(visible&&draftKind?[{id:"draft",y:geometry.width>=880?(geometry.selection?.y??80):geometry.end+16,height:geometry.heights.draft??220}]:[])]);
+ const positions=stackNotes([...cards.map(m=>({id:m.id,y:geometry.points[m.id]?.y??80,height:geometry.heights[m.id]??210})),...(visible&&draftKind?[{id:"draft",y:geometry.selection?.y??80,height:geometry.heights.draft??220}]:[])],12,geometry.width>=880?geometry.articleTop:geometry.end+16);
  const pos=(id:string)=>positions.find(p=>p.id===id)?.top??80;
  const rows=marks.filter(m=>m.note.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))||m.fragments.some(f=>f.quote.toLocaleLowerCase("tr").includes(query.toLocaleLowerCase("tr"))));
  function startReconnect(mark:ReadingMark){

@@ -392,3 +392,30 @@ it("cancels from the article with Escape and removes the island on revision chan
  await user.click(screen.getByRole("button",{name:"Yeni yer seç"}));selectText(1,6);rerender(content("b"));
  expect(screen.queryByRole("region",{name:"Notu yeni metne bağla"})).toBeNull();expect(localStorage.getItem(readingStorageKey("sample"))).toBe(before);
 });
+
+it("uses the empty upper column and repacks measured cards after resize and close without changing notes",async()=>{
+ const user=userEvent.setup();let firstHeight=240;
+ vi.spyOn(HTMLElement.prototype,"clientTop","get").mockImplementation(function(this:HTMLElement){return this.id==="reading-content"?4:0;});const observers=new Set<()=>void>();
+ vi.stubGlobal("ResizeObserver",class{constructor(private callback:()=>void){observers.add(callback);}observe(){}disconnect(){observers.delete(this.callback);}});
+ vi.spyOn(HTMLElement.prototype,"offsetHeight","get").mockImplementation(function(this:HTMLElement){return this.classList.contains("rn-card")?(this.textContent?.includes("Uzun not")?firstHeight:160):0;});
+ vi.spyOn(Element.prototype,"getBoundingClientRect").mockImplementation(function(this:Element){
+  let x=0,y=100,width=1100,height=900;
+  if(this.classList.contains("article-view")){y=180;width=700;height=600;}
+  else if(this.matches('[data-reading-anchor="paragraph-0"]')){y=650;width=700;height=24;}
+  else if(this.matches('[data-reading-anchor="paragraph-1"]')){y=700;width=700;height=24;}
+  else if(this.classList.contains("rn-host")){y=800;height=0;}
+  else if(this.classList.contains("rn-card")){x=822;y=104+parseFloat((this as HTMLElement).style.top||"0");width=270;height=this.textContent?.includes("Uzun not")?firstHeight:160;}
+  return {x,y,top:y,left:x,right:x+width,bottom:y+height,width,height,toJSON:()=>({})};
+ });
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Uzun not"},{...mark,id:"second",kind:"note",note:"Kısa not",fragments:[{...fragment,anchorId:"paragraph-1",quote:"Another",start:0,end:7,after:" paragraph"}]}]}));
+ const before=localStorage.getItem(readingStorageKey("sample"));
+ const {container}=render(<><article id="reading-content"><div className="article-view"><p data-reading-anchor="paragraph-0">Hello world</p><p data-reading-anchor="paragraph-1">Another paragraph</p></div></article><ReadingTools articleId="sample" contentRootId="reading-content"/></>);
+ await user.click(screen.getByRole("button",{name:/Notlar/}));await user.click(screen.getByRole("button",{name:"Tümünü aç"}));
+ const cards=()=>[...container.querySelectorAll<HTMLElement>(".rn-card")];
+ await waitFor(()=>expect(cards().map(c=>c.style.top)).toEqual(["76px","328px"]));
+ firstHeight=100;act(()=>observers.forEach(cb=>cb()));
+ await waitFor(()=>expect(cards().map(c=>c.style.top)).toEqual(["76px","188px"]));
+ await user.click(within(cards()[0]).getByRole("button",{name:"Notu kapat"}));
+ await waitFor(()=>expect(cards().map(c=>c.style.top)).toEqual(["76px"]));
+ expect(localStorage.getItem(readingStorageKey("sample"))).toBe(before);
+});

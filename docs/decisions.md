@@ -119,3 +119,5 @@ Kullanıcı onayı: güvenle eşleşen kaynaklar otomatik takip edilir; küçük
 Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zorunlu footer, tüm temalarla uyum, yalnız içeriği düzenleme; kaldırma/gizleme yok. CRT yerleşimi ve kaydırılmayan ana sahne korunacak. #7'den sonra ele alınacak.
 
 - 2026-10-19: Not senaryoları için kullanıcı Sürüm Aynası tasarımını seçti; adı Satır Aynası. Tüm 14 örnek önce/sonra düzeninde, tek örnek ve açık dene/geri al akışıyla sunulur. Header/footer birebir korunur; değişiklik yalnız senaryo içeriğindedir.
+
+- 2026-10-19: Kullanıcı Satır Aynası için seçenekleri kaldırıp bilgiyi deneme sonucu üzerinden öğretmeyi, küçük not kartını gerçek kaynak oku ile bağlamayı ve öğretici animasyonları istedi. Sayfa bağımsız chrome yerine sitenin mevcut ortak header/footer bileşenlerini kullanır; bunların tasarımı değiştirilmez. 14 örnek korunur, gerçek notlara yazılmaz.

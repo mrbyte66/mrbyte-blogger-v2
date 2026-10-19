@@ -8,7 +8,7 @@ import { AmbientAudioToggle } from "./audio/AmbientAudio";
 import { ContactForm } from "./ContactForm";
 import { scrollBehavior } from "../lib/motion";
 
-export function PublicFrame({ children }: { children: ReactNode }) {
+export function PublicFrame({ children, includeStudioFooter = false }: { children: ReactNode; includeStudioFooter?: boolean }) {
   const path = usePathname(); const { workspace } = useWorkspace(); const theme = workspace.applied;
   const appearance = themeAppearance(theme);
   const privateRoute = path.startsWith("/studio") || path.startsWith("/preview");
@@ -21,7 +21,7 @@ export function PublicFrame({ children }: { children: ReactNode }) {
     const target = section === "writing" ? "yazilar" : section === "about" ? "hakkimda" : "";
     if (target) document.getElementById(target)?.scrollIntoView({ behavior: scrollBehavior() });
   }, [path, scene]);
-  if (privateRoute) return <>{children}</>;
+  if (privateRoute && !includeStudioFooter) return <>{children}</>;
   return <div className={`${appearance.className} public-frame${scene ? " public-home-scene" : ""}`} style={appearance.style}>
     <div className="public-content">{children}</div>
     <footer className="public-footer" aria-label="Site alt bilgisi">

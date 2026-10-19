@@ -117,3 +117,5 @@ Kullanıcı geniş editör yanında iki yerine bir kart sütunu istedi. Açık e
 Kullanıcı onayı: güvenle eşleşen kaynaklar otomatik takip edilir; küçük kaynak düzenlemesi değişiklik etiketiyle korunur, belirsiz/büyük değişiklik kontrol bekler. Not, ses ve özgün alıntı silinmez. Varsayılan metni takip et; not sahibi özgün alıntıya bağlı kalabilir. Studio kendi özel okuma notlarını notlu/temiz taslak görünümünde karşılaştırır; yazar diğer okuyucuların özel notlarını göremez. Ayrı senaryo sayfasında davranışlar gerçek eşleştirme motoruyla denenebilir. Takip #7.
 
 Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zorunlu footer, tüm temalarla uyum, yalnız içeriği düzenleme; kaldırma/gizleme yok. CRT yerleşimi ve kaydırılmayan ana sahne korunacak. #7'den sonra ele alınacak.
+
+- 2026-10-19: Not senaryoları için kullanıcı Sürüm Aynası tasarımını seçti; adı Satır Aynası. Tüm 14 örnek önce/sonra düzeninde, tek örnek ve açık dene/geri al akışıyla sunulur. Header/footer birebir korunur; değişiklik yalnız senaryo içeriğindedir.

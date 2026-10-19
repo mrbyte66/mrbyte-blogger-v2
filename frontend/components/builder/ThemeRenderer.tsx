@@ -23,7 +23,7 @@ import { SeriesCatalog } from "../series/SeriesCatalog";
 import { useSeriesWorkspace } from "../../lib/series/use-series-workspace";
 import { DocumentPreview } from "./DocumentPreview";
 import { StudioViewSync } from "./StudioViewSync";
-import { documentEvent, navigateEvent, parseDocumentDraft, targetFromLink, type DocumentDraft } from "../../lib/builder/document-protocol";
+import { studioNotesEvent, documentEvent, navigateEvent, parseDocumentDraft, targetFromLink, type DocumentDraft } from "../../lib/builder/document-protocol";
 import { useProgressiveItems } from "../../lib/use-progressive-items";
 import { useVisibleArticleView } from "../../lib/reactions/use-views";
 import type { Article } from "../../lib/content";
@@ -135,6 +135,7 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
   const [document, setDocument] = useState<DocumentDraft | null>(null);
   const [selection, setSelection] = useState<CanvasSelection>({ id: null, request: 0, editing: embedded });
   const [reset, setReset] = useState(0);
+  const [showNotes, setShowNotes] = useState(false);
   useEffect(() => {
     if (!embedded) return;
     function receive(event: MessageEvent) {
@@ -143,6 +144,7 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
         const next = parseWorkspace(event.data.workspace);
         if (next) setPreviewWorkspace(next);
       }
+      if (event.data?.type === studioNotesEvent && typeof event.data.visible === "boolean") setShowNotes(event.data.visible);
       if (event.data?.type === documentEvent) { if (event.data.document === null) setDocument(null); else { const parsed = parseDocumentDraft(event.data.document); if (parsed) setDocument(parsed); } }
       if (event.data?.type === previewEvents.reset) setReset((n) => n + 1);
       const next = parseCanvasSelection(event.data);
@@ -169,6 +171,6 @@ export function DraftPreview({ embedded = false }: { embedded?: boolean }) {
     {embedded && <StudioViewSync />}
     {!embedded && <div className="preview-bar"><Link href="/studio">← Stüdyoya dön</Link><span>TASLAK ÖNİZLEME · {workspace.draft.name}</span><span>Henüz uygulanmadı</span></div>}
     {storageError && <p role="alert" className="preview-warning">{storageError}</p>}
-    <InlineCanvasEditor reset={reset} selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={(id, rect) => select(id, undefined, rect)} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
+    <InlineCanvasEditor reset={reset} selection={selection} enabled={embedded && selection.editing} theme={currentWorkspace.draft} draft={document}>{document ? <DocumentPreview showNotes={showNotes} draft={document} theme={currentWorkspace.draft} selection={selection} onSelect={(id, rect) => select(id, undefined, rect)} /> : <ThemeRenderer theme={currentWorkspace.draft} preview selection={embedded ? selection : undefined} onSelect={embedded ? select : undefined} />}</InlineCanvasEditor>
   </div>;
 }

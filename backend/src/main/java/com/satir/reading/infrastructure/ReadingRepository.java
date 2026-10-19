@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public class ReadingRepository {
 
     public record AnnotationRow(UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson, String note,
-            Instant createdAt, long version, String color, String audioMime, Integer audioDuration, boolean emphasized) {
+            Instant createdAt, long version, String color, String audioMime, Integer audioDuration, boolean emphasized, String anchorMode, String originalQuote) {
     }
 
     public record NewAnnotation(UUID userId, UUID id, UUID articleId, UUID revisionId, String kind, String fragmentsJson,
@@ -33,7 +33,7 @@ public class ReadingRepository {
     }
 
     private static final String ANNOTATION_COLUMNS =
-            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version, color, audio_mime, audio_duration, emphasized FROM annotation";
+            "id, article_id, revision_id, kind, fragments::text AS fragments, note, created_at, version, color, audio_mime, audio_duration, emphasized, anchor_mode, original_quote FROM annotation";
 
     private final JdbcClient jdbc;
 
@@ -63,8 +63,8 @@ public class ReadingRepository {
     /** Returns false when the account already has an annotation with this ID (or import key). */
     public boolean insertAnnotation(NewAnnotation a) {
         return jdbc.sql("""
-                INSERT INTO annotation (user_id, id, article_id, revision_id, kind, fragments, note, import_key, created_at, updated_at)
-                VALUES (:user, :id, :article, :revision, :kind, CAST(:fragments AS jsonb), :note, :importKey, :createdAt, :now)
+                INSERT INTO annotation (user_id, id, article_id, revision_id, kind, fragments, note, import_key, created_at, updated_at, original_quote)
+                VALUES (:user, :id, :article, :revision, :kind, CAST(:fragments AS jsonb), :note, :importKey, :createdAt, :now, (SELECT string_agg(part->>'quote', ' ' ORDER BY ordinal) FROM jsonb_array_elements(CAST(:fragments AS jsonb)) WITH ORDINALITY AS entry(part, ordinal)))
                 ON CONFLICT DO NOTHING
                 """)
                 .param("user", a.userId()).param("id", a.id()).param("article", a.articleId()).param("revision", a.revisionId())
@@ -91,6 +91,10 @@ public class ReadingRepository {
             .param("data", audio).param("mime", mime).param("duration", duration).param("user", userId).param("id", id).update();
     }
 
+    public void anchorMode(UUID user, UUID id, String mode) {
+        jdbc.sql("UPDATE annotation SET anchor_mode=:mode WHERE user_id=:user AND id=:id")
+                .param("mode", mode).param("user", user).param("id", id).update();
+    }
     public void emphasized(UUID user,UUID id,boolean value) { jdbc.sql("UPDATE annotation SET emphasized=:value WHERE user_id=:user AND id=:id").param("user",user).param("id",id).param("value",value).update(); }
     public byte[] audio(UUID userId, UUID id) {
         return jdbc.sql("SELECT audio_data FROM annotation WHERE user_id = :user AND id = :id")
@@ -196,6 +200,6 @@ public class ReadingRepository {
     private static AnnotationRow annotation(ResultSet rs, int row) throws SQLException {
         return new AnnotationRow(rs.getObject("id", UUID.class), rs.getObject("article_id", UUID.class),
                 rs.getObject("revision_id", UUID.class), rs.getString("kind"), rs.getString("fragments"), rs.getString("note"),
-                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"), rs.getString("color"), rs.getString("audio_mime"), rs.getObject("audio_duration", Integer.class),rs.getBoolean("emphasized"));
+                rs.getTimestamp("created_at").toInstant(), rs.getLong("version"), rs.getString("color"), rs.getString("audio_mime"), rs.getObject("audio_duration", Integer.class),rs.getBoolean("emphasized"),rs.getString("anchor_mode"),rs.getString("original_quote"));
     }
 }

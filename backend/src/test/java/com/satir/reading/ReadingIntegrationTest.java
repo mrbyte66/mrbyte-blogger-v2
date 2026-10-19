@@ -87,6 +87,56 @@ class ReadingIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void sourceSnapshotsAndTrackingPreferencesStayPrivateAndStudioReadsOnlyTheOwner() {
+        ApiClient alice = member("snapshot@example.test");
+        UUID privateId = UUID.randomUUID(), ownerId = UUID.randomUUID();
+        var body = new java.util.HashMap<>(mark("note", 0, 8, "Okurun özel notu"));
+        body.put("anchorMode", "exact");
+        Response created = alice.put(path(privateId), body, Map.of("If-None-Match", "*"));
+        assertThat(created.status()).isEqualTo(201);
+        assertThat(created.text("anchorMode")).isEqualTo("exact");
+        assertThat(created.json().get("sourceTexts").get(blockId).asString()).isEqualTo(TEXT);
+        body.put("anchorMode", "other");
+        assertThat(alice.put(path(privateId), body, Map.of("If-Match", "\"0\"")).status()).isEqualTo(422);
+        body.put("anchorMode", "follow");
+        assertThat(alice.put(path(privateId), body, Map.of("If-Match", "\"0\"")).text("anchorMode")).isEqualTo("follow");
+        var reconnect = new java.util.HashMap<>(mark("note", 0, 3, "Kaynağı yeniden bağladım"));
+        Response reconnected = alice.put(path(privateId), reconnect, Map.of("If-Match", "\"1\""));
+        assertThat(reconnected.status()).isEqualTo(200);
+        assertThat(reconnected.text("originalQuote")).isEqualTo(TEXT.substring(0, 8));
+        owner.put(path(ownerId), mark("note", 0, 8, "Yazarın kendi notu"), Map.of("If-None-Match", "*"));
+        String preview = "/api/v1/studio/articles/" + published.id() + "/reading-notes";
+        assertThat(alice.get(preview).status()).isEqualTo(403);
+        Response own = owner.get(preview);
+        assertThat(own.status()).isEqualTo(200);
+        assertThat(own.json().get("items")).hasSize(1);
+        assertThat(own.json().get("items").get(0).get("id").asString()).isEqualTo(ownerId.toString());
+        assertThat(own.json().get("items").get(0).get("sourceTexts").get(blockId).asString()).isEqualTo(TEXT);
+        unpublish(owner, published);
+        assertThat(owner.get(preview).json().get("items").get(0).get("note").asString()).isEqualTo("Yazarın kendi notu");
+        assertThat(alice.get("/api/v1/me/articles/" + published.id() + "/annotations").json().get("items").get(0).has("sourceTexts")).isFalse();
+    }
+
+    @Test
+    void studioAudioOnlyPlaysTheOwnersOwnRecordingEvenAfterUnpublishing() {
+        ApiClient reader=member("preview-audio@example.test");
+        byte[] webm=new byte[]{0x1a,0x45,(byte)0xdf,(byte)0xa3,1,2,3,4,5,6,7,8};
+        var body=new java.util.HashMap<>(mark("audio",0,8,"Ses"));
+        body.put("audio",Map.of("data",java.util.Base64.getEncoder().encodeToString(webm),"mime","audio/webm","durationMs",1000));
+        UUID own=UUID.randomUUID(),foreign=UUID.randomUUID();
+        assertThat(owner.put(path(own),body,Map.of("If-None-Match","*")).status()).isEqualTo(201);
+        reader.put(path(foreign),body,Map.of("If-None-Match","*"));
+        String prefix="/api/v1/studio/articles/"+published.id()+"/reading-notes/";
+        assertThat(owner.get(prefix+foreign+"/audio").status()).isEqualTo(404);
+        assertThat(reader.get(prefix+own+"/audio").status()).isEqualTo(403);
+        unpublish(owner,published);
+        Response audio=owner.get(prefix+own+"/audio");
+        assertThat(audio.status()).isEqualTo(200);
+        assertThat(audio.header("Cache-Control")).contains("no-store");
+        assertThat(audio.bytes()).containsExactly(webm);
+    }
+
+    @Test
     void quotesMustMatchTheAnchoredRevision() {
         ApiClient reader = member("okur@example.test");
         Map<String, Object> wrongQuote = Map.of("kind", "highlight", "revisionId", revisionId, "note", "", "fragments",

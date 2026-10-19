@@ -727,6 +727,45 @@ paths:
         '422': {$ref: '#/components/responses/Problem'}
 
   # ---------------------------------------------------------------- slice 6: reading
+  /studio/articles/{articleId}/reading-notes:
+    get:
+      tags: [reading]
+      operationId: studioReadingNotes
+      summary: Preview the current owner's own reader notes against a Studio draft
+      description: Owner-only and read-only. Never returns other readers' notes. Includes original source snapshots for matching; no-store.
+      parameters: [{name: articleId, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200':
+          description: Own reading notes on a saved writing, including hidden writings
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [articleId, items]
+                properties:
+                  articleId: {type: string, format: uuid}
+                  available: {type: [boolean, 'null']}
+                  revisionId: {type: [string, 'null'], format: uuid}
+                  items: {type: array, items: {$ref: '#/components/schemas/Annotation'}}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
+  /studio/articles/{articleId}/reading-notes/{markId}/audio:
+    get:
+      tags: [reading]
+      operationId: studioReadingAudio
+      summary: Play the current owner's own private reader recording in Studio
+      parameters:
+        - {name: articleId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: markId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Private recording; owner account only, no-store
+          content:
+            audio/webm: {schema: {type: string, format: binary}}
+            audio/ogg: {schema: {type: string, format: binary}}
+            audio/mp4: {schema: {type: string, format: binary}}
+        '403': {$ref: '#/components/responses/Problem'}
+        '404': {$ref: '#/components/responses/Problem'}
   /me/articles/{articleId}/annotations:
     parameters: [{name: articleId, in: path, required: true, schema: {type: string, format: uuid}}]
     get:
@@ -2355,6 +2394,7 @@ components:
       additionalProperties: false
       required: [kind, revisionId, fragments]
       properties:
+        anchorMode: {type: string, enum: [follow, exact], default: follow, description: Follow safe source edits or require the original quotation}
         kind: {type: string, enum: [highlight, underline, note, audio, bookmark]}
         revisionId: {type: string, format: uuid}
         fragments: {type: array, minItems: 1, maxItems: 30, items: {$ref: '#/components/schemas/Fragment'}, description: Total quote length at most 12000}
@@ -2368,9 +2408,12 @@ components:
       required: [id, kind, revisionId, fragments, note, createdAt, version]
       properties:
         id: {type: string, format: uuid}
+        anchorMode: {type: string, enum: [follow, exact], default: follow, description: Follow safe source edits or require the original quotation}
         kind: {type: string, enum: [highlight, underline, note, audio, bookmark]}
         revisionId: {type: string, format: uuid}
         fragments: {type: array, items: {$ref: '#/components/schemas/Fragment'}}
+        originalQuote: {type: string, readOnly: true, description: First saved quotation; preserved even when the owner explicitly reconnects a note}
+        sourceTexts: {type: object, readOnly: true, additionalProperties: {type: string}, description: Original revision text of the blocks referenced by this own annotation}
         note: {type: string}
         color: {$ref: '#/components/schemas/NoteColor'}
         emphasized: {type: boolean, description: Whether the source receives a visual highlight; disabling preserves the note}

@@ -3,6 +3,7 @@ import { validateArticle } from "../articles/model";
 import { validateSeries, type BlogSeries } from "../series/model";
 export type StudioTarget = { kind: "home" } | { kind: "article" | "series"; slug: string };
 export type DocumentDraft = { kind: "article"; article: Article } | { kind: "series"; series: BlogSeries };
+export const studioNotesEvent = "satir:studio-reading-notes";
 export const documentEvent = "mrbyte:document-preview";
 export const navigateEvent = "mrbyte:document-navigate";
 export function parseStudioTarget(value: unknown): StudioTarget | null {

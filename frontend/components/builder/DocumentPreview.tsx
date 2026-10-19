@@ -10,7 +10,7 @@ import { SeriesPageView } from "../series/SeriesPage";
 /** Settings of the whole page that have no block of their own on the canvas. */
 const pageChips = [["cover", "Kapak ekle"]] as const;
 
-export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: DocumentDraft; theme: Theme; selection: CanvasSelection; onSelect: (field: string, rect?: CanvasRect) => void }) {
+export function DocumentPreview({ showNotes = false, draft, theme, selection, onSelect }: { showNotes?: boolean; draft: DocumentDraft; theme: Theme; selection: CanvasSelection; onSelect: (field: string, rect?: CanvasRect) => void }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     root.current?.querySelectorAll("[data-edit-field]").forEach((node) => node.classList.toggle("document-selected", node.getAttribute("data-edit-field") === selection.id));
@@ -39,6 +39,7 @@ export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: 
   }, [outlineKey]);
   return <div ref={root} className={selection.editing ? "document-editing" : ""} onClickCapture={(event) => {
     const node = event.target as HTMLElement;
+    if (node.closest(".rn-ui")) return;
     if (!selection.editing) {
       const link = node.closest("a");
       const destination = link && targetFromLink(link.getAttribute("href") ?? "");
@@ -55,6 +56,6 @@ export function DocumentPreview({ draft, theme, selection, onSelect }: { draft: 
     {selection.editing && draft.kind === "article" && <nav className="canvas-page-chips" aria-label="Sayfa ayarları">
       {pageChips.map(([id, label]) => <button key={id} type="button" data-chip={id} aria-pressed={selection.id === id}>{id === "cover" && draft.article.coverUrl ? <img src={draft.article.coverUrl} alt="" /> : null}{label}</button>)}
     </nav>}
-    {draft.kind === "article" ? <ArticlePageView article={draft.article} theme={theme} preview /> : <SeriesPageView slug={draft.series.slug} theme={theme} series={[draft.series]} preview />}
+    {draft.kind === "article" ? <ArticlePageView article={draft.article} theme={theme} preview showNotes={showNotes} /> : <SeriesPageView slug={draft.series.slug} theme={theme} series={[draft.series]} preview />}
   </div>;
 }

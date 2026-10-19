@@ -5,7 +5,7 @@
  */
 type Collection = { id: string; name: string; isDefault: boolean; version: number };
 type Bookmark = { articleId: string; collectionId: string; savedAt: string; version: number };
-type Mark = { id: string; articleId: string; kind: string; revisionId: string; fragments: unknown[]; note: string; createdAt: string; version: number };
+type Mark = { id: string; articleId: string; kind: string; revisionId: string; fragments: unknown[]; note: string; createdAt: string; version: number; anchorMode?: "follow"|"exact"; originalQuote?:string; sourceTexts?:Record<string,string> };
 type Respond = (status: number, body?: unknown) => Promise<Response>;
 type Problem = (status: number, code: string, title: string) => Promise<Response>;
 
@@ -144,7 +144,7 @@ export function memberApi(shared: MemberApiState, method: string, path: string, 
       if (!article(articleId)) return notFound();
       if (headers["If-None-Match"] === "*") {
         if (existing) return problem(412, "ALREADY_EXISTS", "Bu işaret zaten kayıtlı");
-        const created = { id: markId, articleId, kind: String(body?.kind), revisionId: String(body?.revisionId), fragments: body?.fragments as unknown[], note: String(body?.note ?? ""), color: body?.color, audio: body?.audio, createdAt: new Date().toISOString(), version: 0 };
+        const created = { id: markId, articleId, kind: String(body?.kind), revisionId: String(body?.revisionId), fragments: body?.fragments as unknown[], note: String(body?.note ?? ""), anchorMode: body?.anchorMode as "follow"|"exact", color: body?.color, audio: body?.audio, createdAt: new Date().toISOString(), version: 0 };
         own.marks.push(created);
         return json(201, created);
       }

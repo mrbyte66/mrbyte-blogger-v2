@@ -9,9 +9,9 @@ import { SeriesArticleNav } from "../series/SeriesArticleNav";
 import { ReadingTools } from "../reading/ReadingTools";
 import { ArticleContent } from "../ArticleContent";
 import { useMemberVisit } from "../../lib/reading/history";
-export function ArticlePageView({ article, theme, preview = false }: { article: Article; theme: Theme; preview?: boolean }) {
+export function ArticlePageView({ article, theme, preview = false, showNotes = false }: { article: Article; theme: Theme; preview?: boolean; showNotes?: boolean }) {
   const appearance = themeAppearance(theme);
-  return <main className={`${appearance.className} reading-page article-width-${article.presentation?.width ?? "comfortable"}`} style={appearance.style}><SitePageHeader theme={theme} preview={preview} /><div id="reading-content" className="reading-content"><SeriesArticleNav articleSlug={article.slug} previewSeriesId={preview ? article.seriesId : undefined} /><ArticleContent article={article} fullPage preview={preview} /></div>{!preview && <ReadingTools articleId={article.slug} contentRootId="reading-content" contentRevision={JSON.stringify([article.excerpt, article.paragraphs])} server={article.id && article.revisionId ? { id: article.id, revisionId: article.revisionId, blockIds: article.blockIds } : undefined} />}</main>;
+  return <main className={`${appearance.className} reading-page article-width-${article.presentation?.width ?? "comfortable"}`} style={appearance.style}><SitePageHeader theme={theme} preview={preview} /><div id="reading-content" className="reading-content"><SeriesArticleNav articleSlug={article.slug} previewSeriesId={preview ? article.seriesId : undefined} /><ArticleContent article={article} fullPage preview={preview} /></div>{(!preview || (showNotes && !!article.id)) && <ReadingTools readOnly={preview} articleId={article.slug} contentRootId="reading-content" contentRevision={JSON.stringify([article.excerpt, article.paragraphs])} server={article.id && article.revisionId ? { id: article.id, revisionId: article.revisionId, blockIds: article.blockIds } : undefined} />}</main>;
 }
 /** Server-rendered permalink: the article comes from the API response; the theme from the applied site. */
 export function ArticleRoute({ article }: { article: Article }) {

@@ -581,7 +581,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     }
     if (event.key === "Enter" && (event.target as HTMLElement).matches(".canvas-text-target")) { event.preventDefault(); event.stopPropagation(); activate(event.target as HTMLElement); }
   }} onClickCapture={(event) => {
-    if (!enabled || (event.target as HTMLElement).closest(".inline-edit-toolbar, .inline-plus, .inline-block-menu")) return;
+    if (!enabled || (event.target as HTMLElement).closest(".inline-edit-toolbar, .inline-plus, .inline-block-menu, .rn-ui")) return;
     const node = (event.target as HTMLElement).closest<HTMLElement>(draft ? "[data-edit-field]" : "[data-inline-field]");
     // A link inside the paragraph being written must not navigate.
     if (active && node === active.node) { if ((event.target as HTMLElement).closest("a")) event.preventDefault(); return; }

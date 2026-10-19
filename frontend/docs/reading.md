@@ -51,3 +51,16 @@ Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları y
 Editör açıkken kart görünümünde solda tek kart sütunu ve yaklaşık 1:3 oranla geniş sağ editör kullanılır. Dar ekranda editör ve tek sütun kartlar alt alta gelir. Yeni not eylemi sayfa başlığındaki ayrı kapsül yerine kart listesinin araç satırındadır. Editör kapatıldığında mevcut kart/liste görünümü korunur.
 
 Etiketler ayrı düğme/pencere açmadan doğrudan yazılır; Enter etiketi çipe çevirir ve aynı alanda sonraki etiket yazılır. Geçerli ama henüz Enter’a basılmamış etiket Kaydet ile eklenir; hatalı etiket sessizce düşürülmez. Bekleyen etiket de kaydedilmemiş taslak sayılır. Yeni Serbest Not rastgele varsayılan renkle başlar ve art arda yeni notta önceki renk tekrar seçilmez; kullanıcı seçimi ve mevcut notların rengi korunur. Otomatik başlangıç rengi taslağı kendiliğinden kirli yapmaz.
+
+
+### Not Atlası — kaynak takibi ve Studio karşılaştırması (19 Ekim 2026)
+
+Notun özgün alıntısı ve kaynak sürümü otomatik eşleştirmede değiştirilmez. Üye API'si yalnız ilgili hesabın kayıtları için özgün blok metinlerini döndürür; tarayıcı notları oluşturulurken kaynak görüntüsü alınır. Eski tarayıcı kayıtları iki yan bağlam tek ve değişmeden kaldıysa küçük bir düzenlemeyi takip edebilir. Kanıt yetersizse kayıt korunur, işaret tahminle başka yere taşınmaz.
+
+Varsayılan Metni takip et; not sahibi isterse Özgün alıntıya bağlı kal seçer. Değişmeyen/kayan kaynak, küçük kaynak düzenlemesi, kontrol bekleyen eşleşme ve kaldırılan kaynak ayrı durumlarla gösterilir. Küçük düzenleme anlamı değiştirebileceği için Kaynak değişti etiketiyle özgün/güncel alıntılar karşılaştırılır. Büyük veya belirsiz değişiklikte vurgu uygulanmaz. Silinen tekrar yazıda kalan başka bir aynı ifadeye bağlanmaz. Paragraf kimliği taşımalarda korunur; bitişik bölünmüş/birleşmiş kaynaklar yeterli kanıt varsa birden çok aralıkla gösterilir. Pahalı diff işlemi sınırlıdır; büyük yeniden yazım kontrol bekler.
+
+Kaynak ayrıntıları dizinde ve kenar kartındadır. Kullanıcı metin seçerek kaynağı açıkça yeniden bağlayabilir; ilk alıntı yine saklanır. Üye tercihleri/version kontrolü API'de, misafir tercihi tarayıcı not kaydındadır. Ses, renk, not kimliği ve çoklu notlar kaynak hesaplamasından etkilenmez.
+
+Studio yazı araç satırındaki Notları göster, taslağın notlu/temiz görünümünü açar. Yalnız kendi okuma notları read-only endpoint'ten gelir; başka okuyucunun özel notları yazar yetkisiyle görünür olmaz. Taslakta değişiklik/silme/geri alma yalnız görüntülenen kaynak sonucunu etkiler; yayınlanmış kayda yazmaz. Studio'da ses de yalnız kendi kaydı için private/no-store olarak okunur. Ana sayfa salt okunur yazı paneline araç eklenmez.
+
+/studio/not-senaryolari owner gate arkasında aynı kaynak motorunu kullanan 14 canlı örnek sunar. Metin düzenleme, notlu/temiz görünüm, takip modu ve özgün sürüme dönüş gerçek notlara/yazılara kaydetmez. Kaynak türü tercihleri V18, ilk alıntının korunması V19 migration'larıyla eklenir; uygulanmış migration'lar değiştirilmez.

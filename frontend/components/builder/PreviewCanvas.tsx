@@ -6,9 +6,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Workspace } from "../../lib/builder/model";
 import { isBlockId, isSceneField, parseCanvasRect, parseCaret, type CaretPosition, type SceneField, previewEvents, type CanvasSelection } from "../../lib/builder/preview-protocol";
 
-import { documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
+import { studioNotesEvent, documentEvent, navigateEvent, parseStudioTarget, isDocumentField, type DocumentDraft, type StudioTarget } from "../../lib/builder/document-protocol";
 
 type Props = {
+  showNotes?: boolean;
   onOutlineCurrent?: (field: string) => void;
   outlineJump?: { field: string; request: number } | null;
   onSaveRequest?: () => void;
@@ -30,7 +31,7 @@ type Props = {
   onAnchor?: (rect: DOMRect) => void;
 };
 
-export function PreviewCanvas({ mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor, onSaveRequest, onHistory, onOutlineCurrent, outlineJump }: Props) {
+export function PreviewCanvas({ showNotes = false, mobile, workspace, selection, onSelect, document = null, onNavigate, onInlineEdit, onCaret, onPointer, resetKey = 0, onAnchor, onSaveRequest, onHistory, onOutlineCurrent, outlineJump }: Props) {
   const {session,openAuth}=useAuth();
   const [unavailable,setUnavailable]=useState(false);
   const [epoch,setEpoch]=useState(0);
@@ -49,21 +50,22 @@ export function PreviewCanvas({ mobile, workspace, selection, onSelect, document
   const [loaded, setLoaded] = useState(false);
   useEffect(()=>{if(unavailable && session) {setUnavailable(false);setLoaded(false);setEpoch(n=>n+1);} },[session]);
   const serialized = JSON.stringify(workspace);
-  const current = useRef({ serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent });
-  current.current = { serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent };
+  const current = useRef({ showNotes, serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent });
+  current.current = { showNotes, serialized, selection, workspace, onSaveRequest, onHistory, onSelect, document, onNavigate, onInlineEdit, onCaret, onPointer, onAnchor, onOutlineCurrent };
 
   function synchronize() {
     const target = frame.current?.contentWindow;
     const state = current.current;
     target?.postMessage({ type: previewEvents.workspace, workspace: state.serialized }, window.location.origin);
     target?.postMessage({ type: documentEvent, document: state.document }, window.location.origin);
+    target?.postMessage({ type: studioNotesEvent, visible: state.showNotes }, window.location.origin);
     target?.postMessage({ type: previewEvents.selection, ...state.selection }, window.location.origin);
   }
 
   useEffect(() => {
     if (outlineJump) frame.current?.contentWindow?.postMessage({ type: previewEvents.outlineJump, field: outlineJump.field }, window.location.origin);
   }, [outlineJump]);
-  useEffect(() => { synchronize(); }, [serialized, document]);
+  useEffect(() => { synchronize(); }, [serialized, document, showNotes]);
   useEffect(() => {
     if (resetKey) frame.current?.contentWindow?.postMessage({ type: previewEvents.reset }, window.location.origin);
   }, [resetKey]);

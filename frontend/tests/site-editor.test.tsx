@@ -6,7 +6,7 @@ import { navigateArticles, initialNavigation } from "../lib/navigation";
 import { SiteEditor } from "../components/builder/SiteEditor";
 import { validateArticle, parseArticles } from "../lib/articles/model";
 import { articles } from "../lib/content";
-import { documentEvent, navigateEvent, parseDocumentDraft, parseStudioTarget } from "../lib/builder/document-protocol";
+import { studioNotesEvent, documentEvent, navigateEvent, parseDocumentDraft, parseStudioTarget } from "../lib/builder/document-protocol";
 import { previewEvents } from "../lib/builder/preview-protocol";
 import { initialSeries } from "../lib/series/model";
 import { ApiError } from "../lib/api/http";
@@ -175,4 +175,19 @@ it("keeps writing done during a first save and uses the returned version for the
  await click(screen.getByRole("button",{name:/Sayfayı kaydet/}));
  expect(site.article("kesintisiz-yazmak")?.paragraphs).toEqual(["Kaydetme sürerken eklenen metin."]);
  expect(site.calls.filter(call=>call.startsWith("save article"))).toHaveLength(2);
+});
+
+it("toggles Studio reading-note preview without dirtying the writing or changing its draft", async()=>{
+ const {site}=studio();selectPage(articles[0].title);
+ const frame=screen.getByTitle("Taslak tema canlı önizleme") as HTMLIFrameElement;
+ const post=vi.spyOn(frame.contentWindow!,"postMessage");
+ const original=JSON.stringify(site.article(articles[0].slug));
+ await click(screen.getByRole("button",{name:"Notları göster"}));
+ expect(post).toHaveBeenCalledWith({type:studioNotesEvent,visible:true},window.location.origin);
+ expect(screen.getByRole("button",{name:"Notları göster"}).getAttribute("aria-pressed")).toBe("true");
+ expect(screen.getByRole("link",{name:"Not senaryoları ↗"}).getAttribute("href")).toBe("/studio/not-senaryolari");
+ await click(screen.getByRole("button",{name:"Notları göster"}));
+ expect(post).toHaveBeenCalledWith({type:studioNotesEvent,visible:false},window.location.origin);
+ expect(JSON.stringify(site.article(articles[0].slug))).toBe(original);
+ expect(site.calls.some(c=>c.includes("update article"))).toBe(false);
 });

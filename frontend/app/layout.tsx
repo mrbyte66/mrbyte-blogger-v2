@@ -15,6 +15,7 @@ import "./personal-space.css";
 import "./floating-surfaces.css";
 import "./reading-notes.css";
 import "./note-atlas.css";
+import "./source-tracking.css";
 import { PublicFrame } from "../components/PublicFrame";
 import { AuthProvider } from "../components/auth/AuthProvider";
 import { AuthNavigation } from "../components/auth/AuthNavigation";

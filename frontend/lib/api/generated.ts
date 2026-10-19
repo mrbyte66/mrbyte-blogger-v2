@@ -573,6 +573,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/studio/articles/{articleId}/reading-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview the current owner's own reader notes against a Studio draft
+         * @description Owner-only and read-only. Never returns other readers' notes. Includes original source snapshots for matching; no-store.
+         */
+        get: operations["studioReadingNotes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/articles/{articleId}/reading-notes/{markId}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Play the current owner's own private reader recording in Studio */
+        get: operations["studioReadingAudio"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/articles/{articleId}/annotations": {
         parameters: {
             query?: never;
@@ -1801,6 +1838,12 @@ export interface components {
             durationMs: number;
         };
         AnnotationWrite: {
+            /**
+             * @description Follow safe source edits or require the original quotation
+             * @default follow
+             * @enum {string}
+             */
+            anchorMode: "follow" | "exact";
             /** @enum {string} */
             kind: "highlight" | "underline" | "note" | "audio" | "bookmark";
             /** Format: uuid */
@@ -1817,11 +1860,23 @@ export interface components {
         Annotation: {
             /** Format: uuid */
             id: string;
+            /**
+             * @description Follow safe source edits or require the original quotation
+             * @default follow
+             * @enum {string}
+             */
+            anchorMode: "follow" | "exact";
             /** @enum {string} */
             kind: "highlight" | "underline" | "note" | "audio" | "bookmark";
             /** Format: uuid */
             revisionId: string;
             fragments: components["schemas"]["Fragment"][];
+            /** @description First saved quotation; preserved even when the owner explicitly reconnects a note */
+            readonly originalQuote?: string;
+            /** @description Original revision text of the blocks referenced by this own annotation */
+            readonly sourceTexts?: {
+                [key: string]: string;
+            };
             note: string;
             color?: components["schemas"]["NoteColor"];
             /** @description Whether the source receives a visual highlight; disabling preserves the note */
@@ -3791,6 +3846,64 @@ export interface operations {
                 };
             };
             422: components["responses"]["Problem"];
+        };
+    };
+    studioReadingNotes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own reading notes on a saved writing, including hidden writings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        articleId: string;
+                        available?: boolean | null;
+                        /** Format: uuid */
+                        revisionId?: string | null;
+                        items: components["schemas"]["Annotation"][];
+                    };
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+        };
+    };
+    studioReadingAudio: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                articleId: string;
+                markId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private recording; owner account only, no-store */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/webm": string;
+                    "audio/ogg": string;
+                    "audio/mp4": string;
+                };
+            };
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
         };
     };
     listAnnotations: {

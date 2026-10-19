@@ -307,3 +307,21 @@ it("scrolls to the newly requested source when switching between different note 
  await user.click(screen.getAllByRole("button",{name:"Notun kaynağına git"})[0]);await waitFor(()=>expect(destinations).toEqual(["97px"]));
  await user.click(screen.getAllByRole("button",{name:"Notun kaynağına git"})[1]);await waitFor(()=>expect(destinations).toEqual(["97px","497px"]));
 });
+
+it("keeps the guest note after a source edit, supports exact mode and explicit reconnection", async()=>{
+ const user=userEvent.setup();
+ const original="Bugün saatte buluşalım.";
+ const anchor={...fragment,start:6,end:12,quote:"saatte",before:"Bugün ",after:" buluşalım.",sourceText:original};
+ localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"Kendi düşüncem",fragments:[anchor]}]}));
+ const current="Bugün saatlerde buluşalım.";
+ render(<><article id="reading-content"><p data-reading-anchor="paragraph-0">{current}</p></article><ReadingTools articleId="sample" contentRootId="reading-content" contentRevision={current}/></>);
+ expect(anchorRange(document.getElementById("reading-content")!,anchor)?.toString()).toBe("saatlerde");
+ await user.click(screen.getByRole("button",{name:/Notlar/}));
+ const select=screen.getByLabelText("Kaynak takibi: saatte");
+ fireEvent.change(select,{target:{value:"exact"}});
+ expect(saved()?.marks[0]).toMatchObject({anchorMode:"exact",fragments:[anchor]});
+ expect(anchorRange(document.getElementById("reading-content")!,anchor,"exact")).toBeNull();
+ selectText(0,5);
+ await user.click(screen.getByRole("button",{name:"Seçili metne yeniden bağla"}));
+ expect(saved()?.marks[0]).toMatchObject({id:mark.id,note:"Kendi düşüncem",originalQuote:"saatte",fragments:[{quote:"Bugün",start:0,end:5}]});
+});

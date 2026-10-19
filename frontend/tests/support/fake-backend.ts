@@ -29,6 +29,11 @@ export function fakeBackend(options: { signedIn?: Partial<Profile> | null; passw
     const body = typeof init.body === "string" ? JSON.parse(init.body) : undefined;
     state.calls.push({ method, path, body, headers: { ...(init.headers as Record<string, string> ?? {}) } });
     if (method !== "GET" && !(init.headers as Record<string, string>)?.["X-CSRF-TOKEN"]) return problem(403, "CSRF_INVALID", "Oturum doğrulanamadı");
+    const readingPreview = /^\/studio\/articles\/([^/]+)\/reading-notes$/.exec(path);
+    if (readingPreview && method === "GET") {
+      if (state.profile?.role !== "owner") return problem(403,"FORBIDDEN","Yetki yok");
+      return json(200,{articleId:readingPreview[1],items:state.member.personal.get(state.profile.id)?.marks.filter(m=>m.articleId===readingPreview[1])??[]});
+    }
     const member = memberApi(state.member, method, path, body, (init.headers as Record<string, string>) ?? {}, state.profile?.verified ? state.profile.id : null, json, problem);
     if (member) return member;
     switch (`${method} ${path}`) {

@@ -110,3 +110,10 @@ Kullanıcı aynı alıntıdaki kartlar dahil tüm yazı notlarının birlikte a�
 ### 2026-10-19 — Defterim: tek kart sütunu ve doğrudan etiket
 
 Kullanıcı geniş editör yanında iki yerine bir kart sütunu istedi. Açık editörde yaklaşık 1:3 alan paylaşılır; Yeni not eylemi not listesine bütünleştirilir. Etiket düğmesi/penceresi kaldırılır; Enter’la çip oluşur ve boş alan yeni etiket için hazır kalır. Yeni Serbest Notlarda rastgele başlangıç rengi kullanılır, kullanıcı seçimi/eskiler korunur. #15 In Progress.
+
+
+## 19 Ekim 2026 — okuma notu kaynak takibi
+
+Kullanıcı onayı: güvenle eşleşen kaynaklar otomatik takip edilir; küçük kaynak düzenlemesi değişiklik etiketiyle korunur, belirsiz/büyük değişiklik kontrol bekler. Not, ses ve özgün alıntı silinmez. Varsayılan metni takip et; not sahibi özgün alıntıya bağlı kalabilir. Studio kendi özel okuma notlarını notlu/temiz taslak görünümünde karşılaştırır; yazar diğer okuyucuların özel notlarını göremez. Ayrı senaryo sayfasında davranışlar gerçek eşleştirme motoruyla denenebilir. Takip #7.
+
+Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zorunlu footer, tüm temalarla uyum, yalnız içeriği düzenleme; kaldırma/gizleme yok. CRT yerleşimi ve kaydırılmayan ana sahne korunacak. #7'den sonra ele alınacak.

@@ -128,3 +128,17 @@ it("updates a member note using its version and keeps the same private record",a
  await act(async()=>{fireEvent.click(screen.getByRole("button",{name:"Notu kaydet"}));await settle();});
  const update=backend.state.calls.find(c=>c.method==="PUT"&&c.path.endsWith("/annotations/edit-mark"));expect(update?.headers["If-Match"]).toBe('"5"');expect(update?.headers["If-None-Match"]).toBeUndefined();expect(personalOf(backend.state.member,"reader-1").marks[0]).toMatchObject({id:"edit-mark",note:"Güncel not",version:6});expect(localStorage.length).toBe(0);
 });
+
+it("previews only the owner's private reader notes in Studio without writing annotations",async()=>{
+ backend.switchTo({id:"reader-1",email:"owner@example.test",role:"owner"});
+ personalOf(backend.state.member,"reader-1").marks.push({id:"preview-note",articleId:ARTICLE,kind:"note",revisionId:"rev-1",note:"Kendi kaynak notum",createdAt:"2026-10-13T10:00:00Z",version:0,sourceTexts:{[BLOCK]:"Bugün saatte buluşalım."},fragments:[{blockId:BLOCK,start:6,end:12,quote:"saatte",before:"Bugün ",after:" buluşalım."}]});
+ personalOf(backend.state.member,"reader-2").marks.push({id:"other-note",articleId:ARTICLE,kind:"note",revisionId:"rev-1",note:"Başkasının özel notu",createdAt:"2026-10-13T10:00:00Z",version:0,fragments:[]});
+ render(<AuthProvider><article id="reading-content"><p data-reading-anchor={BLOCK}>Bugün saatlerde buluşalım.</p></article><ReadingTools readOnly articleId="sample" contentRootId="reading-content" server={server}/></AuthProvider>);await act(settle);
+ expect(screen.getByText("Kendi kaynak notum")).toBeTruthy();
+ expect(screen.queryByText("Başkasının özel notu")).toBeNull();
+ expect(screen.queryByRole("group",{name:"Metin işaretleme araçları"})).toBeNull();
+ expect(screen.getByRole("button",{name:"Notu düzenle"}).hasAttribute("disabled")).toBe(true);
+ expect(backend.state.calls.some(c=>c.path===`/studio/articles/${ARTICLE}/reading-notes`)).toBe(true);
+ expect(backend.state.calls.some(c=>c.method!=="GET"&&c.path.includes("annotations"))).toBe(false);
+ expect(screen.getByText("Kaynak değişti")).toBeTruthy();
+});

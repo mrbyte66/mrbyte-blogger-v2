@@ -32,11 +32,11 @@ function fragmentsFor(mark: Pick<ReadingMark, "fragments">, article: ServerArtic
   return fragments;
 }
 
-export async function loadServerMarks(article: Pick<ServerArticle,"id"> & Partial<ServerArticle>, signal?: AbortSignal): Promise<ReadingMark[]> {
-  const { data } = await api<ListDto>("GET", `/me/articles/${article.id}/annotations`, { signal });
+export async function loadServerMarks(article: Pick<ServerArticle,"id"> & Partial<ServerArticle>, signal?: AbortSignal, preview = false): Promise<ReadingMark[]> {
+  const { data } = await api<ListDto>("GET", preview ? `/studio/articles/${article.id}/reading-notes` : `/me/articles/${article.id}/annotations`, { signal });
   return data.items.filter((item): item is AnnotationDto => "kind" in item).map((item) => ({
-    id: item.id, kind: item.kind, note: item.note, createdAt: item.createdAt, color: item.color, emphasized:item.emphasized, audio: item.audio, version: item.version, revisionId: item.revisionId,
-    fragments: item.fragments.map((f): TextAnchor => ({ anchorId: fromServerAnchor(f.blockId), start: f.start, end: f.end, quote: f.quote, before: f.before ?? "", after: f.after ?? "" })),
+    id: item.id, kind: item.kind, note: item.note, createdAt: item.createdAt, color: item.color, emphasized:item.emphasized, audio: item.audio, version: item.version, revisionId: item.revisionId, anchorMode: item.anchorMode ?? "follow", originalQuote:item.originalQuote,
+    fragments: item.fragments.map((f): TextAnchor => ({ anchorId: fromServerAnchor(f.blockId), start: f.start, end: f.end, quote: f.quote, before: f.before ?? "", after: f.after ?? "", ...(item.sourceTexts?.[f.blockId] !== undefined ? { sourceText: item.sourceTexts[f.blockId] } : {}) })),
   }));
 }
 
@@ -44,8 +44,8 @@ export async function loadServerMarks(article: Pick<ServerArticle,"id"> & Partia
 export async function saveServerMark(article: ServerArticle, mark: ReadingMark, creating: boolean, audio?: AudioInput, signal?: AbortSignal): Promise<ReadingMark> {
   const fragments = fragmentsFor(mark, article);
   if (!fragments) throw new Error("anchor");
-  const { data } = await api<AnnotationDto>("PUT", `/me/articles/${article.id}/annotations/${mark.id}`, { signal, body: ({ kind: mark.kind, revisionId: mark.revisionId ?? article.revisionId, fragments, note: mark.note, color: mark.color ?? "lavender", emphasized:mark.emphasized??true, ...(audio ? { audio } : {}) } satisfies Input<"putAnnotation">), ...(creating ? { ifNoneMatch: "*" } : { ifMatch: mark.version ?? 0 }) });
-  return { ...mark, version: data.version, revisionId: data.revisionId, audio: data.audio, emphasized:data.emphasized, color: data.color };
+  const { data } = await api<AnnotationDto>("PUT", `/me/articles/${article.id}/annotations/${mark.id}`, { signal, body: ({ kind: mark.kind, anchorMode: mark.anchorMode ?? "follow", revisionId: mark.revisionId ?? article.revisionId, fragments, note: mark.note, color: mark.color ?? "lavender", emphasized:mark.emphasized??true, ...(audio ? { audio } : {}) } satisfies Input<"putAnnotation">), ...(creating ? { ifNoneMatch: "*" } : { ifMatch: mark.version ?? 0 }) });
+  return { ...mark, version: data.version, revisionId: data.revisionId, audio: data.audio, originalQuote:data.originalQuote ?? mark.originalQuote, emphasized:data.emphasized, color: data.color };
 }
 export async function createServerMark(article: ServerArticle, mark: ReadingMark): Promise<void> { await saveServerMark(article, mark, true); }
 
@@ -56,7 +56,7 @@ export async function deleteServerMark(article: ServerArticle, markId: string, s
 /** Imports browser-only guest marks into the account; returns the IDs of accepted local marks. */
 export async function importGuestMarks(article: ServerArticle, marks: ReadingMark[], clientImportId: string, signal?: AbortSignal): Promise<{ accepted: string[]; rejected: number }> {
   const candidates = marks.map((mark) => ({ mark, fragments: fragmentsFor(mark, article) }));
-  const items = candidates.filter((c): c is { mark: ReadingMark; fragments: FragmentDto[] } => c.fragments !== null).map(({ mark, fragments }) => ({ articleId: article.id, revisionId: article.revisionId, kind: mark.kind, fragments, note: mark.note, createdAt: mark.createdAt, ...(mark.color ? { color: mark.color } : {}),emphasized:mark.emphasized??true }));
+  const items = candidates.filter((c): c is { mark: ReadingMark; fragments: FragmentDto[] } => c.fragments !== null).map(({ mark, fragments }) => ({ articleId: article.id, anchorMode: mark.anchorMode ?? "follow", revisionId: article.revisionId, kind: mark.kind, fragments, note: mark.note, createdAt: mark.createdAt, ...(mark.color ? { color: mark.color } : {}),emphasized:mark.emphasized??true }));
   const sent = candidates.filter((c) => c.fragments).map((c) => c.mark.id);
   if (!items.length) return { accepted: [], rejected: marks.length };
   const { data } = await api<Output<"importAnnotations">>("POST", "/me/imports/annotations", { signal, body: ({ clientImportId, items } satisfies Input<"importAnnotations">) });

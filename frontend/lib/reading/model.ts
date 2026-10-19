@@ -1,3 +1,4 @@
+import { resolveSource, type AnchorMode, type SourceBlock } from "./source-tracking";
 export type ReadingMarkKind = "highlight" | "underline" | "note" | "audio" | "bookmark";
 export type TextAnchor = {
   anchorId: string;
@@ -6,6 +7,7 @@ export type TextAnchor = {
   quote: string;
   before: string;
   after: string;
+  sourceText?: string;
 };
 export const noteColors = ["lavender", "mint", "peach", "blue", "yellow"] as const;
 export type NoteColor = typeof noteColors[number];
@@ -22,6 +24,8 @@ export type ReadingMark = {
   audio?: AudioInfo | null;
   version?: number;
   revisionId?: string;
+  anchorMode?: "follow" | "exact";
+  originalQuote?: string;
 };
 /** {@code importId} is remembered once a guest import starts, so a retry returns the same server result. */
 export type ReadingDocument = { version: 1; articleId: string; marks: ReadingMark[]; importId?: string };
@@ -43,7 +47,8 @@ function validFragment(value: unknown): value is TextAnchor {
     && typeof value.start === "number" && typeof value.end === "number"
     && value.start >= 0 && value.end > value.start && value.end <= 1_000_000
     && boundedText(value.quote, maxQuoteLength) && value.quote.length === value.end - value.start
-    && boundedText(value.before, contextLength) && boundedText(value.after, contextLength);
+    && boundedText(value.before, contextLength) && boundedText(value.after, contextLength)
+    && (value.sourceText === undefined || boundedText(value.sourceText, 20000));
 }
 function validMark(value: unknown): value is ReadingMark {
   if (!record(value) || typeof value.id !== "string" || !safeId.test(value.id)) return false;
@@ -53,6 +58,8 @@ function validMark(value: unknown): value is ReadingMark {
     && value.fragments.reduce((sum, fragment) => sum + fragment.quote.length, 0) <= maxQuoteLength
     && boundedText(value.note, maxNoteLength) && (value.kind !== "note" || value.note.trim().length > 0)
     && (value.emphasized === undefined || typeof value.emphasized === "boolean")
+    && (value.originalQuote === undefined || boundedText(value.originalQuote, maxQuoteLength + 30))
+    && (value.anchorMode === undefined || value.anchorMode === "follow" || value.anchorMode === "exact")
     && (value.color === undefined || noteColors.includes(value.color as NoteColor))
     && (value.kind !== "audio" || (record(value.audio) && typeof value.audio.mime === "string"))
     && (value.audio === undefined || value.audio === null || (record(value.audio) && ["audio/webm", "audio/ogg", "audio/mp4"].includes(String(value.audio.mime)) && typeof value.audio.durationMs === "number" && value.audio.durationMs > 0 && value.audio.durationMs <= 120000))
@@ -60,7 +67,7 @@ function validMark(value: unknown): value is ReadingMark {
 }
 
 export function parseReadingDocument(raw: string, articleId: string): ReadingDocument | null {
-  if (raw.length > 2_000_000) return null;
+  if (raw.length > 12_000_000) return null;
   try {
     const value: unknown = JSON.parse(raw);
     if (!record(value) || value.version !== 1 || value.articleId !== articleId
@@ -125,19 +132,15 @@ export function findAnchor(root: HTMLElement, anchorId: string): HTMLElement | n
     ?? elements.find((element) => element.dataset.readingLegacy === anchorId) ?? null;
 }
 
-/** A new mark created from a recovered source belongs to the current text, not the saved revision. */
+export function readingBlocks(root: HTMLElement): SourceBlock[] {
+  return Array.from(root.querySelectorAll<HTMLElement>("[data-reading-anchor]")).map(element => ({ id: element.dataset.readingAnchor!, legacy: element.dataset.readingLegacy, text: element.textContent ?? "" }));
+}
+export function resolvedAnchors(root: HTMLElement, anchor: TextAnchor, mode: AnchorMode = "follow"): TextAnchor[] {
+  return resolveSource(anchor, readingBlocks(root), mode).parts;
+}
+/** Only used for new selections; never replaces the persisted original of an existing note. */
 export function currentAnchor(root: HTMLElement, anchor: TextAnchor): TextAnchor | null {
-  const element = findAnchor(root, anchor.anchorId);
-  if (!element) return null;
-  const text = element.textContent ?? "";
-  const offsets = resolveOffsets(text, anchor);
-  return offsets ? {
-    anchorId: element.dataset.readingAnchor ?? anchor.anchorId,
-    ...offsets,
-    quote: anchor.quote,
-    before: text.slice(Math.max(0, offsets.start - contextLength), offsets.start),
-    after: text.slice(offsets.end, offsets.end + contextLength),
-  } : null;
+  return resolvedAnchors(root, anchor)[0] ?? null;
 }
 
 function textPosition(element: HTMLElement, offset: number): { node: Text; offset: number } | null {
@@ -152,16 +155,15 @@ function textPosition(element: HTMLElement, offset: number): { node: Text; offse
   return null;
 }
 
-export function anchorRange(root: HTMLElement, anchor: TextAnchor): Range | null {
-  const element = findAnchor(root, anchor.anchorId);
-  if (!element) return null;
-  const offsets = resolveOffsets(element.textContent ?? "", anchor);
-  if (!offsets) return null;
-  const start = textPosition(element, offsets.start);
-  const end = textPosition(element, offsets.end);
+export function anchorRange(root: HTMLElement, anchor: TextAnchor, mode: AnchorMode = "follow"): Range | null {
+  const parts = resolvedAnchors(root, anchor, mode);
+  const first = parts[0], last = parts.at(-1);
+  if (!first || !last) return null;
+  const firstElement = findAnchor(root, first.anchorId), lastElement = findAnchor(root, last.anchorId);
+  if (!firstElement || !lastElement) return null;
+  const start = textPosition(firstElement, first.start), end = textPosition(lastElement, last.end);
   if (!start || !end) return null;
   const range = document.createRange();
-  range.setStart(start.node, start.offset);
-  range.setEnd(end.node, end.offset);
+  range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
   return range;
 }

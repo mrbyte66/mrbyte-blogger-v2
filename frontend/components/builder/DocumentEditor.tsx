@@ -47,6 +47,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   const [resetKey, setResetKey] = useState(0);
   const [baseline, setBaseline] = useState<DocumentDraft | null>(isNew ? null : initial);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [field, setField] = useState("title");
   const [request, setRequest] = useState(isNew ? 1 : 0);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -243,11 +244,12 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
       <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali">
         <CanvasToolbar focused={focused} onFocus={panelOpen || focused ? setFocused : undefined} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>
           {draft.kind === "article" && <ArticleSeriesContext series={series} selectedId={seriesId} creating={creatingSeries} onSelect={id => {setSeriesId(id); setCreatingSeries(false); setSeriesFormDirty(false);}} onCreate={() => {setCreatingSeries(true); setPanelKind("document"); setSettingsKind("document"); setFocused(false); setPanelOpen(true);}}/>}
+          {draft.kind === "article" && <><button className="canvas-settings" aria-label="Notları göster" disabled={!draft.article.id} title={draft.article.id?"Kendi okuma notlarını taslağın üzerinde göster":"Notları görmek için önce yazıyı kaydet"} aria-pressed={showNotes} onClick={() => setShowNotes(!showNotes)}><EditorIcon name="notes" size={18}/><span>{showNotes ? "Notlar açık" : "Notları göster"}</span></button><Link className="canvas-settings" href="/studio/not-senaryolari">Not senaryoları ↗</Link></>}
           <button ref={outlineToggle} className="canvas-settings outline-toggle" aria-label="İçindekiler" aria-expanded={panelOpen && !focused} onClick={() => {setPanelKind("outline"); setFocused(false); setPanelOpen(!(panelOpen && panelKind === "outline" && !focused));}}><EditorIcon name="list" size={18}/><span>İçindekiler</span></button>
         </CanvasToolbar>
         <p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>
         {!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}
-        <PreviewCanvas onSaveRequest={() => {void save();}} onHistory={historyMove} onOutlineCurrent={setOutlineCurrent} outlineJump={outlineJump} onInlineEdit={canvasEdit} resetKey={resetKey} workspace={workspace} document={preview} mobile={mobile} selection={{id:field,request,editing}} onSelect={id => select(id,true)} onNavigate={onNavigate}/>
+        <PreviewCanvas showNotes={showNotes} onSaveRequest={() => {void save();}} onHistory={historyMove} onOutlineCurrent={setOutlineCurrent} outlineJump={outlineJump} onInlineEdit={canvasEdit} resetKey={resetKey} workspace={workspace} document={preview} mobile={mobile} selection={{id:field,request,editing}} onSelect={id => select(id,true)} onNavigate={onNavigate}/>
         <WritingTools article={draft.kind === "article"} disabled={!ready || saving || creatingSeries || !editing} full={draft.kind === "article" && draft.article.paragraphs.length >= 200} onInsert={insert} onSelect={openSettings} onDesign={openDesign}/>
       </section>
       <aside ref={inspectorRef} hidden={!panelOpen} className="studio-inspector writing-companion" aria-label="Seçili alanın ayarları">

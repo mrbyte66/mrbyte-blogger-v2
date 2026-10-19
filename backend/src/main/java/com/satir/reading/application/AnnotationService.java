@@ -40,7 +40,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class AnnotationService {
 
     public record AnnotationView(UUID id, String kind, UUID revisionId, List<Fragment> fragments, String note,
-            Instant createdAt, long version, String color, AudioInfo audio, boolean emphasized) {
+            Instant createdAt, long version, String color, AudioInfo audio, boolean emphasized, String anchorMode, Map<String, String> sourceTexts, String originalQuote) {
     }
 
     public record Unavailable(UUID id, boolean available) {
@@ -53,14 +53,14 @@ public class AnnotationService {
     public record AudioInput(String data, String mime, int durationMs) { }
     public record AudioInfo(String mime, int durationMs) { }
     public record AudioContent(byte[] data, String mime) { }
-    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note, String color, AudioInput audio, Boolean emphasized) {
+    public record Write(String kind, UUID revisionId, List<Fragment> fragments, String note, String color, AudioInput audio, Boolean emphasized, String anchorMode) {
     }
 
     public record Saved(AnnotationView annotation, boolean created) {
     }
 
     public record ImportItem(UUID articleId, UUID revisionId, String kind, List<Fragment> fragments, String note,
-            Instant createdAt, String color, Boolean emphasized) {
+            Instant createdAt, String color, Boolean emphasized, String anchorMode) {
     }
 
     public record ImportReport(UUID clientImportId, List<Accepted> accepted, List<Rejected> rejected) {
@@ -78,14 +78,16 @@ public class AnnotationService {
 
     private final ReadingRepository repository;
     private final PublicContentQuery content;
+    private final com.satir.editorial.application.StudioContentQuery studio;
     private final JsonMapper json;
     private final IdGenerator ids;
     private final Clock clock;
     private final com.satir.reading.infrastructure.NotebookRepository notebook;
 
-    AnnotationService(ReadingRepository repository, PublicContentQuery content, JsonMapper json, IdGenerator ids, Clock clock, com.satir.reading.infrastructure.NotebookRepository notebook) {
+    AnnotationService(ReadingRepository repository, PublicContentQuery content, JsonMapper json, IdGenerator ids, Clock clock, com.satir.reading.infrastructure.NotebookRepository notebook, com.satir.editorial.application.StudioContentQuery studio) {
         this.repository = repository;
         this.content = content;
+        this.studio = studio;
         this.json = json;
         this.ids = ids;
         this.clock = clock;
@@ -100,7 +102,20 @@ public class AnnotationService {
             return new ArticleAnnotations(articleId, false, null,
                     rows.stream().map(row -> new Unavailable(row.id(), false)).toList());
         }
-        return new ArticleAnnotations(articleId, null, current.get(), rows.stream().map(this::view).toList());
+        return new ArticleAnnotations(articleId, null, current.get(), views(rows, false));
+    }
+
+    @Transactional(readOnly = true)
+    public ArticleAnnotations preview(UUID userId, UUID articleId) {
+        var article = studio.article(articleId).orElseThrow(AnnotationService::notFound);
+        return new ArticleAnnotations(articleId, true, article.revisionId(), views(repository.annotations(userId, articleId), true));
+    }
+
+    private List<AnnotationView> views(List<AnnotationRow> rows, boolean preview) {
+        Map<UUID, Map<String, String>> cache = new java.util.HashMap<>();
+        return rows.stream().map(row -> view(row, cache.computeIfAbsent(row.revisionId(), revision ->
+                (preview ? studio.revisionText(row.articleId(), revision) : content.revisionText(row.articleId(), revision))
+                .map(RevisionText::anchors).orElse(Map.of())))).toList();
     }
 
     /**
@@ -119,6 +134,7 @@ public class AnnotationService {
         RevisionText text = anchoredText(articleId, write.revisionId());
         Annotation.validate(kind, write.fragments(), note, text.anchors());
         String color = validColor(write.color());
+        if (write.anchorMode() != null) validMode(write.anchorMode());
         byte[] audio = audioBytes(write.audio());
         if (kind != Kind.AUDIO && write.audio() != null) throw new ValidationException("audio", "INVALID");
         if (audio != null && repository.audioBytes(userId) + notebook.audioBytes(userId) - repository.audioLength(userId, markId) + audio.length > 25_000_000) {
@@ -149,6 +165,7 @@ public class AnnotationService {
         repository.presentation(userId, markId, color, audio, write.audio() == null ? null : write.audio().mime(),
                 write.audio() == null ? null : write.audio().durationMs());
         if(write.emphasized()!=null)repository.emphasized(userId,markId,write.emphasized());
+        if(write.anchorMode()!=null)repository.anchorMode(userId,markId,validMode(write.anchorMode()));
         AnnotationRow saved = repository.lockAnnotation(userId, markId).orElseThrow();
         return new Saved(view(saved), create);
     }
@@ -212,6 +229,7 @@ public class AnnotationService {
             kind = Annotation.kind(item.kind());
             if (kind == Kind.AUDIO) return Optional.of("AUDIO_REQUIRES_UPLOAD");
             validColor(item.color());
+            validMode(item.anchorMode());
             Annotation.validate(kind, item.fragments(), note, text.get().anchors());
         } catch (ValidationException invalid) {
             return Optional.of(invalid.code());
@@ -230,6 +248,7 @@ public class AnnotationService {
         if (kind == Kind.BOOKMARK) repository.removeOtherBookmarks(userId, item.articleId(), id);
         repository.presentation(userId, id, validColor(item.color()), null, null, null);
         if(item.emphasized()!=null)repository.emphasized(userId,id,item.emphasized());
+        repository.anchorMode(userId,id,validMode(item.anchorMode()));
         accepted.add(new Accepted(index, id, item.articleId()));
         return Optional.empty();
     }
@@ -246,9 +265,20 @@ public class AnnotationService {
     }
 
     private AnnotationView view(AnnotationRow row) {
+        return view(row, content.revisionText(row.articleId(), row.revisionId()).map(RevisionText::anchors).orElse(Map.of()));
+    }
+    private AnnotationView view(AnnotationRow row, Map<String, String> original) {
+        List<Fragment> fragments = json.readValue(row.fragmentsJson(), FRAGMENTS);
+        Map<String, String> sources = new java.util.LinkedHashMap<>();
+        for (Fragment fragment : fragments) if (original.containsKey(fragment.blockId())) sources.put(fragment.blockId(), original.get(fragment.blockId()));
         return new AnnotationView(row.id(), row.kind().toLowerCase(Locale.ROOT), row.revisionId(),
-                json.readValue(row.fragmentsJson(), FRAGMENTS), row.note(), row.createdAt(), row.version(), row.color(),
-                row.audioMime() == null ? null : new AudioInfo(row.audioMime(), row.audioDuration()),row.emphasized());
+                fragments, row.note(), row.createdAt(), row.version(), row.color(),
+                row.audioMime() == null ? null : new AudioInfo(row.audioMime(), row.audioDuration()), row.emphasized(), row.anchorMode(), sources, row.originalQuote());
+    }
+    private static String validMode(String mode) {
+        if (mode == null) return "follow";
+        if (!List.of("follow", "exact").contains(mode)) throw new ValidationException("anchorMode", "INVALID");
+        return mode;
     }
 
     public static String validColor(String color) {
@@ -279,6 +309,13 @@ public class AnnotationService {
     public AudioContent audio(UUID userId, UUID articleId, UUID id) {
         AnnotationRow row = repository.lockAnnotation(userId, id).filter(r -> r.articleId().equals(articleId) && r.audioMime() != null).orElseThrow(AnnotationService::notFound);
         if (content.currentPublicRevision(articleId).isEmpty()) throw notFound();
+        return new AudioContent(repository.audio(userId, id), row.audioMime());
+    }
+
+    @Transactional
+    public AudioContent previewAudio(UUID userId, UUID articleId, UUID id) {
+        studio.article(articleId).orElseThrow(AnnotationService::notFound);
+        AnnotationRow row = repository.lockAnnotation(userId, id).filter(r -> r.articleId().equals(articleId) && r.audioMime() != null).orElseThrow(AnnotationService::notFound);
         return new AudioContent(repository.audio(userId, id), row.audioMime());
     }
 

@@ -42,13 +42,26 @@ public class StudioContentQuery {
     private final SeriesRepository series;
     private final CategoryRepository categories;
     private final EditorialAssembler assembler;
+    private final EditorialJson json;
 
     StudioContentQuery(ArticleRepository articles, SeriesRepository series, CategoryRepository categories,
-            EditorialAssembler assembler) {
+            EditorialAssembler assembler, EditorialJson json) {
         this.articles = articles;
         this.series = series;
         this.categories = categories;
         this.assembler = assembler;
+        this.json = json;
+    }
+
+    /** Owner-only revision access. Callers must use the /studio authorization boundary. */
+    @Transactional(readOnly = true)
+    public Optional<EditorialViews.RevisionText> revisionText(UUID articleId, UUID revisionId) {
+        return articles.revision(articleId, revisionId).map(revision -> {
+            Map<String, String> anchors = new java.util.LinkedHashMap<>();
+            anchors.put("abstract", revision.abstractText());
+            json.document(revision.documentJson()).annotatableTexts().forEach((id, text) -> anchors.put(id.toString(), text));
+            return new EditorialViews.RevisionText(articleId, revision.id(), anchors);
+        });
     }
 
     @Transactional(readOnly = true)

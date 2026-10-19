@@ -18,4 +18,6 @@ Owner parolası için mevcut mail reset akışı; bootstrap mevcut owner’ı ov
 
 Images workflow `scripts/image-name.sh` ile `ghcr.io/<owner>/<repository>-backend` ve `ghcr.io/<owner>/<repository>-frontend` paketlerini kullanır. Bu repo için adlar `ghcr.io/mrbyte66/mrbyte-blogger-v2-backend` ve `ghcr.io/mrbyte66/mrbyte-blogger-v2-frontend` olur. Eski `satir-*` paketleri başka repoya aittir; onların erişimi veya etiketleri bu proje için değiştirilmez. İlk push’taki `org.opencontainers.image.source` etiketi yeni paketi bu repoya bağlar. Paket görünürlüğü ayrıca yönetilir; workflow bunu public yapmaz.
 
+Otomatik yayın yalnız aynı reponun başarılı main push CI sonucunda yapılır; PR/fork veya başka dalın workflow_run sonucu yayın yetkili job’a alınmaz. Manuel yayın yalnız main üzerinden yapılır; PR akışı build/tarama ile sınırlıdır.
+
 Push kontrolü yalnız CI ile bitmez: aynı git SHA için Images iki build/tarama, iki GHCR push/imza ve release manifest dahil başarılı olmalıdır. `permission_denied: write_package` durumunda önce paket adı, kaynak repo ve Manage Actions access kontrol edilir; doğrudan token yetkisi büyütülmez veya eski paket paylaşılmaz. Release her zamanki gibi manifestteki immutable digest’leri kullanır.

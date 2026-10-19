@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { marksAtPoint,overlappingMarks } from "../../lib/reading/hit-test";
 import { scrollBehavior } from "../../lib/motion";
-import { anchorRange, findAnchor, maxMarks, maxNoteLength, noteColors, selectionAnchors, type NoteColor, type ReadingMark, type ReadingMarkKind, type TextAnchor } from "../../lib/reading/model";
+import { anchorRange, currentAnchor, findAnchor, maxMarks, maxNoteLength, noteColors, selectionAnchors, type NoteColor, type ReadingMark, type ReadingMarkKind, type TextAnchor } from "../../lib/reading/model";
 import { readReadingDocument, readingStorageKey, writeReadingDocument } from "../../lib/reading/storage";
 import { deleteServerMark, importGuestMarks, loadServerMarks, saveServerMark, type ServerArticle } from "../../lib/reading/server";
 import { audioInput, readAudio, storeAudio, removeAudio } from "../../lib/reading/audio";
@@ -30,7 +30,7 @@ export function ReadingTools(props:Props){
 function ScopedReadingTools({articleId,contentRootId,contentRevision="",memberId,server}:Props&{memberId?:string}){
  const {openAuth}=useAuth();
  const [marks,setMarks]=useState<ReadingMark[]>([]);const marksRef=useRef(marks);marksRef.current=marks;
- const [hitIds,setHitIds]=useState<string[]>([]);const [styleUndo,setStyleUndo]=useState<ReadingMark[]>([]);
+ const [styleUndo,setStyleUndo]=useState<ReadingMark[]>([]);
  const [fragments,setFragments]=useState<TextAnchor[]>([]);const [open,setOpen]=useState(false);const [pinned,setPinned]=useState(false);const [paletteOpen,setPaletteOpen]=useState(false);const [visible,setVisible]=useState(true);
  const [expanded,setExpanded]=useState<string[]>([]);const [editing,setEditing]=useState<string|null>(null);const [draftKind,setDraftKind]=useState<"note"|"audio"|null>(null);
  const [note,setNote]=useState("");const [color,setColor]=useState<NoteColor>("lavender");const [status,setStatus]=useState("");const [error,setError]=useState<string|null>(null);
@@ -67,7 +67,7 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",memberId
   const root=document.getElementById(contentRootId);if(!root)return;
   function capture(){if(draftKind)return;const next=selectionAnchors(root!,window.getSelection());if(next.length){setFragments(next);setStatus("");}}
   function finish(e:PointerEvent){if(draftKind)return;const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui,input,textarea,select,[contenteditable]"))return;
-   const next=root!.contains(target)?selectionAnchors(root!,window.getSelection()):[];const hit=!next.length&&root!.contains(target)?marksAtPoint(root!,marksRef.current,e.clientX,e.clientY):[];setHitIds(hit.map(m=>m.id));setFragments(hit.length?hit[0].fragments:next);
+   const next=root!.contains(target)?selectionAnchors(root!,window.getSelection()):[];const hit=!next.length&&root!.contains(target)?marksAtPoint(root!,marksRef.current,e.clientX,e.clientY):[];setFragments(hit.length?hit[0].fragments.map(f=>currentAnchor(root!,f)).filter(f=>f!==null):next);
    if(!next.length&&!draftKind)setDictionary(false);
   }
   function bookmarkHover(e:PointerEvent){const target=e.target;if(!(target instanceof Element)||target.closest(".rn-ui"))return;const anchor=target.closest<HTMLElement>("[data-reading-anchor]");setHover(anchor?.dataset.readingAnchor??null);}
@@ -125,13 +125,13 @@ function ScopedReadingTools({articleId,contentRootId,contentRevision="",memberId
   if(!server&&mark.kind==="audio")try{await removeAudio(scope,mark.id);}catch{/* Stale blob is never exposed without its private mark. */}
   await dissolveNote(cardRefs.current.get(mark.id),requests.current.signal);if(!alive.current)return;undoAudio.current=recording;setMarks(next);setUndo(mark.kind!=="audio"||recording?{mark,index}:null);setExpanded(ids=>ids.filter(id=>id!==mark.id));setStatus("Not kaldırıldı.");setError(null);
  }catch(cause){if(alive.current)setError(cause instanceof Error&&!("code"in cause)?cause.message:describe(cause));}finally{busy.current=false;if(alive.current)setPending(false);}}
- const contextual=hitIds.length?marks.filter(m=>hitIds.includes(m.id)):overlappingMarks(marks,fragments);
+ const contextual=overlappingMarks(typeof document!=="undefined"?document.getElementById(contentRootId):null,marks,fragments);
  async function clearStyle(kind:"highlight"|"underline"){
   if(busy.current)return;const targets=contextual.filter(m=>kind==="underline"?m.kind==="underline":m.kind!=="underline"&&m.kind!=="bookmark"&&m.emphasized!==false);if(!targets.length)return;
   busy.current=true;setPending(true);let next=[...marksRef.current];const restored:ReadingMark[]=[];
   try{for(const m of targets){if(m.kind==="highlight"||m.kind==="underline"){if(server)await deleteServerMark(server,m.id,requests.current.signal);next=next.filter(item=>item.id!==m.id);}else{const changed=server?await saveServerMark(server,{...m,emphasized:false},false,undefined,requests.current.signal):{...m,emphasized:false};next=next.map(item=>item.id===m.id?changed:item);}restored.push(m);}
    if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId))throw new Error("Tarayıcı kaydı başarısız. İşaret değişikliği bu oturumda korunuyor.");
-   if(alive.current){setMarks(next);setStyleUndo(restored);setHitIds([]);setFragments([]);window.getSelection()?.removeAllRanges();setStatus(kind==="underline"?"Alt çizgi kaldırıldı. Notların korundu.":"Vurgu kaldırıldı. Notların korundu.");setError(null);}
+   if(alive.current){setMarks(next);setStyleUndo(restored);setFragments([]);window.getSelection()?.removeAllRanges();setStatus(kind==="underline"?"Alt çizgi kaldırıldı. Notların korundu.":"Vurgu kaldırıldı. Notların korundu.");setError(null);}
   }catch(e){if(alive.current){setMarks(next);setStyleUndo(restored);if(!server)writeReadingDocument({version:1,articleId,marks:next},memberId);setError(e instanceof Error?e.message:describe(e));}}finally{busy.current=false;if(alive.current)setPending(false);}
  }
  async function restoreStyles(){if(busy.current)return;busy.current=true;setPending(true);let next=[...marksRef.current];try{for(const m of styleUndo){const existing=next.find(n=>n.id===m.id);const saved=server?await saveServerMark(server,{...m,version:existing?.version??m.version},!existing,undefined,requests.current.signal):m;next=[...next.filter(n=>n.id!==m.id),saved];}if(!server&&!writeReadingDocument({version:1,articleId,marks:next},memberId))throw new Error("Tarayıcıya kaydedilemedi.");if(alive.current){setMarks(next);setStyleUndo([]);setStatus("İşaret geri alındı.");}}catch(e){if(alive.current){setMarks(next);setError(describe(e));}}finally{busy.current=false;if(alive.current)setPending(false);}}

@@ -1,5 +1,11 @@
-import {anchorRange,type ReadingMark,type TextAnchor} from "./model";
-export function overlappingMarks(marks:ReadingMark[],fragments:TextAnchor[]){return marks.filter(m=>m.kind!=="bookmark"&&m.fragments.some(f=>fragments.some(p=>p.anchorId===f.anchorId&&p.start<f.end&&p.end>f.start)));}
+import {anchorRange,findAnchor,resolveOffsets,type ReadingMark,type TextAnchor} from "./model";
+/** Selection actions must use the same recovered locations as the visible highlights. */
+export function overlappingMarks(root:HTMLElement|null,marks:ReadingMark[],fragments:TextAnchor[]){
+ if(!root||!fragments.length)return[];
+ const locate=(fragment:TextAnchor)=>{const element=findAnchor(root,fragment.anchorId);const offsets=element&&resolveOffsets(element.textContent??"",fragment);return element&&offsets?{element,...offsets}:null;};
+ const selected=fragments.map(locate).filter(p=>p!==null);
+ return marks.filter(m=>m.kind!=="bookmark"&&m.fragments.some(f=>{const source=locate(f);return source&&selected.some(p=>p.element===source.element&&p.start<source.end&&p.end>source.start);}));
+}
 /** CSS Highlights do not wrap prose; hit testing therefore uses the text caret's DOM range. */
 export function marksAtPoint(root:HTMLElement,marks:ReadingMark[],x:number,y:number){
  const doc=root.ownerDocument as Document&{caretPositionFromPoint?:(x:number,y:number)=>{offsetNode:Node;offset:number}|null;caretRangeFromPoint?:(x:number,y:number)=>Range|null};

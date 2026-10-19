@@ -67,6 +67,23 @@ it("keeps guests on browser-only notes", async () => {
   expect(backend.state.calls.some((c) => c.path.startsWith("/me/"))).toBe(false);
 });
 
+it("creates a new note on a relocated highlight using the current revision's offsets", async () => {
+  personalOf(backend.state.member, "reader-1").marks.push({ id: "old-highlight", articleId: ARTICLE, kind: "highlight", revisionId: "rev-1", note: "", createdAt: "2026-10-05T10:00:00Z", version: 0, fragments: [{ blockId: BLOCK, start: 2, end: 7, quote: "Hello", before: "A ", after: " B" }] });
+  render(<AuthProvider><article id="reading-content"><p data-reading-anchor={BLOCK}>New A Hello B</p></article><ReadingTools articleId="sample" contentRootId="reading-content" server={{ ...server, revisionId: "rev-2" }} /></AuthProvider>);
+  await act(settle);
+  const paragraph = document.querySelector(`[data-reading-anchor="${BLOCK}"]`)!;
+  Object.defineProperty(document, "caretPositionFromPoint", { configurable: true, value: () => ({ offsetNode: paragraph.firstChild, offset: 7 }) });
+  try {
+    window.getSelection()!.removeAllRanges();
+    fireEvent.pointerUp(paragraph, { pointerType: "mouse", button: 0 });
+    fireEvent.click(screen.getByRole("button", { name: "Seçili metne not ekle" }));
+    fireEvent.change(screen.getByLabelText("Bu alıntı için notun"), { target: { value: "Yeni bağlamda not" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Notu kaydet" })); await settle(); });
+    const create = backend.state.calls.find(c => c.method === "PUT" && c.path.includes("/annotations/"));
+    expect(create?.body).toMatchObject({ revisionId: "rev-2", fragments: [{ blockId: BLOCK, start: 6, end: 11, quote: "Hello", before: "New A ", after: " B" }] });
+  } finally { Reflect.deleteProperty(document, "caretPositionFromPoint"); }
+});
+
 it("records a permalink visit for verified members only", async () => {
   function Visit() { useMemberVisit({ ...articles[0], id: ARTICLE, revisionId: "rev-1" }); return null; }
   render(<AuthProvider><Visit /></AuthProvider>);

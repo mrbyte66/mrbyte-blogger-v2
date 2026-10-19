@@ -276,6 +276,27 @@ it("removes visual emphasis through selected text while retaining and undoing th
  selectText();await user.click(screen.getByRole("button",{name:"Alt çizgiyi kaldır"}));expect(saved()?.marks.map(m=>m.id)).toEqual([mark.id]);expect(saved()?.marks[0].note).toBe("Bu düşünce korunmalı");
 });
 
+it.each(["highlight", "underline"] as const)("uses the relocated source when removing a %s through a text selection", async (kind) => {
+ const anchor = { ...fragment, start: 2, end: 7, before: "A ", after: " B" };
+ localStorage.setItem(readingStorageKey("sample"), JSON.stringify({ version: 1, articleId: "sample", marks: [{ ...mark, kind, fragments: [anchor] }] }));
+ const user = userEvent.setup();
+ render(<><article id="reading-content"><p data-reading-anchor="paragraph-0">X Hello Y A Hello B</p></article><ReadingTools articleId="sample" contentRootId="reading-content" /></>);
+ const select = (start: number) => {
+  const text = document.querySelector('[data-reading-anchor="paragraph-0"]')!.firstChild!;
+  const range = document.createRange(); range.setStart(text, start); range.setEnd(text, start + 5);
+  act(() => { window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range); document.dispatchEvent(new Event("selectionchange")); });
+ };
+ const action = kind === "underline" ? "Alt çizgiyi kaldır" : "Vurguyu kaldır";
+ select(2);
+ expect(screen.queryByRole("button", { name: action })).toBeNull();
+ expect(saved()?.marks).toHaveLength(1);
+ select(12);
+ await user.click(screen.getByRole("button", { name: action }));
+ expect(saved()?.marks).toHaveLength(0);
+ await user.click(screen.getByRole("button", { name: "İşareti geri al ↶" }));
+ expect(saved()?.marks[0].fragments).toEqual([anchor]);
+});
+
 it("scrolls to the newly requested source when switching between different note cards",async()=>{
  const other={anchorId:"paragraph-1",start:0,end:7,quote:"Another",before:"",after:" paragraph"};
  localStorage.setItem(readingStorageKey("sample"),JSON.stringify({version:1,articleId:"sample",marks:[{...mark,kind:"note",note:"İlk"},{...mark,id:"other",kind:"note",note:"Son",fragments:[other]}]}));

@@ -125,6 +125,21 @@ export function findAnchor(root: HTMLElement, anchorId: string): HTMLElement | n
     ?? elements.find((element) => element.dataset.readingLegacy === anchorId) ?? null;
 }
 
+/** A new mark created from a recovered source belongs to the current text, not the saved revision. */
+export function currentAnchor(root: HTMLElement, anchor: TextAnchor): TextAnchor | null {
+  const element = findAnchor(root, anchor.anchorId);
+  if (!element) return null;
+  const text = element.textContent ?? "";
+  const offsets = resolveOffsets(text, anchor);
+  return offsets ? {
+    anchorId: element.dataset.readingAnchor ?? anchor.anchorId,
+    ...offsets,
+    quote: anchor.quote,
+    before: text.slice(Math.max(0, offsets.start - contextLength), offsets.start),
+    after: text.slice(offsets.end, offsets.end + contextLength),
+  } : null;
+}
+
 function textPosition(element: HTMLElement, offset: number): { node: Text; offset: number } | null {
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let node = walker.nextNode();

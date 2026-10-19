@@ -62,6 +62,32 @@ describe("reading text anchors and validation", () => {
     expect(resolveOffsets("X Hello and Hello end", { ...fragment, start: 100, end: 105, before: "", after: "" })).toBeNull();
     expect(resolveOffsets("Quote removed", fragment)).toBeNull();
   });
+  it("finds the original context even when another occurrence occupies the old offsets", () => {
+    const anchor = { ...fragment, start: 2, end: 7, before: "A ", after: " B" };
+    expect(resolveOffsets("A Hello B", anchor)).toEqual({ start: 2, end: 7 });
+    expect(resolveOffsets("X Hello Y A Hello B", anchor)).toEqual({ start: 12, end: 17 });
+  });
+  it("refuses a surviving quote with changed context, at both original and shifted offsets", () => {
+    const anchor = { ...fragment, start: 2, end: 7, before: "A ", after: " B" };
+    expect(resolveOffsets("X Hello Y", anchor)).toBeNull();
+    expect(resolveOffsets("New X Hello Y", anchor)).toBeNull();
+    expect(resolveOffsets("A Hello B A Hello B", anchor)).toBeNull();
+    expect(resolveOffsets("Hello Hello", { ...fragment, before: "", after: "" })).toBeNull();
+    expect(resolveOffsets("Hello", { ...fragment, before: "", after: "" })).toEqual({ start: 0, end: 5 });
+  });
+  it("resolves DOM ranges to the contextual occurrence and leaves mismatches unmarked", () => {
+    const root = document.createElement("article");
+    root.innerHTML = '<p data-reading-anchor="paragraph-0">X Hello Y A <strong>Hello</strong> B</p>';
+    const anchor = { ...fragment, start: 2, end: 7, before: "A ", after: " B" };
+    const range = anchorRange(root, anchor);
+    const prefix = document.createRange();
+    prefix.selectNodeContents(root.querySelector("p")!);
+    prefix.setEnd(range!.startContainer, range!.startOffset);
+    expect(prefix.toString()).toBe("X Hello Y A ");
+    expect(range?.toString()).toBe("Hello");
+    root.querySelector("p")!.textContent = "X Hello Y";
+    expect(anchorRange(root, anchor)).toBeNull();
+  });
   it("validates version, article isolation, bounded offsets, mark kinds and note content", () => {
     const data = { version: 1, articleId: "sample", marks: [mark] };
     expect(parseReadingDocument(JSON.stringify(data), "sample")?.marks).toEqual([mark]);

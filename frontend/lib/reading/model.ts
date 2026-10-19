@@ -102,9 +102,10 @@ export function selectionAnchors(root: HTMLElement, selection: Selection | null)
   return fragments;
 }
 
-// Context is a recovery hint when edits shift the original offsets. Ambiguous matches stay unresolved.
+// Offsets alone cannot identify a quote after an edit. Require a unique context match;
+// when no context was captured, the quote itself must be unique in this block.
 export function resolveOffsets(text: string, anchor: TextAnchor): { start: number; end: number } | null {
-  if (text.slice(anchor.start, anchor.end) === anchor.quote) return { start: anchor.start, end: anchor.end };
+  if (!anchor.quote) return null;
   const matches: number[] = [];
   let from = 0;
   while (from <= text.length) {
@@ -114,8 +115,7 @@ export function resolveOffsets(text: string, anchor: TextAnchor): { start: numbe
     from = index + 1;
   }
   const contextual = matches.filter((start) => text.slice(Math.max(0, start - anchor.before.length), start) === anchor.before && text.slice(start + anchor.quote.length, start + anchor.quote.length + anchor.after.length) === anchor.after);
-  const candidates = contextual.length ? contextual : matches;
-  return candidates.length === 1 ? { start: candidates[0], end: candidates[0] + anchor.quote.length } : null;
+  return contextual.length === 1 ? { start: contextual[0], end: contextual[0] + anchor.quote.length } : null;
 }
 
 /** Server articles anchor to stable block IDs; older guest notes used "paragraph-N" (kept as a legacy alias). */

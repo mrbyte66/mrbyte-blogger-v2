@@ -675,6 +675,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Retrieve one private recording owned by the current user */
         get: operations["getPersonalRecording"];
         put?: never;
         post?: never;
@@ -691,6 +692,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Retrieve the first private recording of a personal note */
         get: operations["getPersonalNoteAudio"];
         put?: never;
         post?: never;
@@ -713,6 +715,7 @@ export interface paths {
         /** Create with If-None-Match or update with If-Match; owner determined by session */
         put: operations["putPersonalNote"];
         post?: never;
+        /** Delete a personal note owned by the current user */
         delete: operations["deletePersonalNote"];
         options?: never;
         head?: never;
@@ -1750,7 +1753,7 @@ export interface components {
         /** @enum {string} */
         NoteColor: "lavender" | "mint" | "peach" | "blue" | "yellow";
         AudioInput: {
-            /** @description Base64 encoded audio; decoded at most 1 MB */
+            /** @description Base64 encoded audio; decoded at most 1 MB, validated container signature */
             data: string;
             /** @enum {string} */
             mime: "audio/webm" | "audio/ogg" | "audio/mp4";

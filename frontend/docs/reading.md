@@ -6,6 +6,8 @@ Seçili metne bağlı notlar geniş alanda kenardaki kartlarda düzenlenir; bağ
 
 Mevcut not düzenlenir/silinir, silme geri alınabilir. Sunucu güncellemesinde kaydın revisionId/version değeri kullanılır; 412 durumunda taslak korunur. Stable block UUID, UTF-16 aralık ve quote/context ile eşleşmeyen kayıt yanlış metne bağlanmaz; listede ve düzenleme kartında korunur. CSS Highlight API metnin DOM’unu sarmadan renklendirir. Destek yoksa kayıt listesi çalışır.
 
+Alıntı eşleştirmesinde eski konum tek başına yeterli değildir: kaydedilen önceki/sonraki bağlamla yalnız bir eşleşme bulunmalıdır. Bağlam değişmişse veya aynı bağlam birden çok yerde varsa işaret çözümlenmez. Eski kayıtta bağlam yoksa alıntının blokta tek olması gerekir. Böylece düzenleme sonrası eski konuma gelen başka bir tekrar yanlışlıkla vurgulanmaz; güvenle eşleşmeyen not silinmeden korunur.
+
 Serbest Notlar seçime bağlı değildir; /notlar sayfasında ve okuma içindeki Serbest Not penceresinde yazılır. Inline hashtag’ler yalnız bu Serbest Notlar için arama/filtre işlevi taşır; alıntı notlarında hashtag sınıflandırması yoktur. Notlarım ayrı belge ikonuyla açılır. Not metni HTML olarak yorumlanmaz.
 
 Doğrulanmış üyelerin notları Spring Boot API’de, misafirlerin metin/ayraç/Serbest Notları localStorage’da; misafir sesleri hesap/yazı bazında IndexedDB’de saklanır. Tarayıcı site verileri temizlenirse misafir notları kaybolur. Üyelik çağrısı bunu açıklar; kayıtlar kendiliğinden hesaba aktarılmaz. İçe aktarma açık tercihle yapılır, başarısız kayıtlar korunur. Hesap değişince bileşen yeniden kurulur; eski hesabın görünür notları ve ses URL’leri temizlenir.

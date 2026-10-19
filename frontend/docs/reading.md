@@ -24,7 +24,7 @@ Serbest Notlara da private ses eklenebilir (V16): metin güncellenince ses korun
 
 ## Not Atlası — 17 Ekim 2026
 
-Defterim renkli kart ve sıkı liste görünümü, başlık/metin araması, açık Etiket ekle kontrolü ve etiket filtreleri içerir. Seçili Serbest Not geniş yan editörde açılır; başlık, büyüyen metin alanı, kaldırılabilir etiketler ve bağımsız ses kayıtları aynı taslağın parçalarıdır. Header Defterim | + kontrolünü korur; hızlı panel de aynı editörü kullanır. Kaydedilmeyen değişiklikte geçiş/kapanış uyarılır.
+Defterim renkli kart ve sıkı liste görünümü, başlık/metin araması, doğrudan Enter ile etiket girişi ve etiket filtreleri içerir. Seçili Serbest Not geniş yan editörde açılır; başlık, büyüyen metin alanı, kaldırılabilir etiketler ve bağımsız ses kayıtları aynı taslağın parçalarıdır. Header Defterim | + kontrolünü korur; hızlı panel de aynı editörü kullanır. Kaydedilmeyen değişiklikte geçiş/kapanış uyarılır.
 
 Bir Serbest Nota en fazla 10 ses kaydı eklenebilir; her kayıt ayrı oynatılır, ileri alınır ve kaldırılır. Yeni kayıt sırasında önceki kayıtlar görünür kalır; kayıt sürerken kaydetme kapalıdır. Eski tek sesli notlar V17 ile kayıt listesine taşınır; legacy audio endpoint ilk kaydı döndürür. Yeni private recording endpoint not sahibini doğrular ve no-store yanıt verir. 2 dakika/1 MB kayıt ve toplam 25 MB hesap sınırı korunur.
 
@@ -41,3 +41,9 @@ Kaynak düğmesi veya dizinden bir not seçmek, tam alıntıya yumuşak kaydır�
 Ana sayfanın açılır okuyucusunda not ekleme, dizin ve highlight araçları yoktur. Yazı altındaki sayaç kalıcı okuyucuyla aynı özel kayıt adedini gösterir; tıklamak alttaki kalıcı bağlantı ile aynı yazıyı açar. Public summary için revision gerekmeden hesap notları okunur; eski hesabın sonucu yeni oturumda gösterilmez. Panelin eski genişliği korunur.
 
 Önizleme sayacı kalıcı bağlantı satırında, yazının altında yer alır; üst adada gösterilmez. Kalıcı okuyucudaki Notlar toplamıyla aynı kayıtlar sayılır (metin/ses notu, fosfor, alt çizgi ve ayraç). Sıfır, yükleniyor ve hata durumunda kontrol disabled olur; dolu sayaç kalıcı yazıyı açar.
+
+### Defterim çalışma alanı — 19 Ekim 2026
+
+Editör açıkken kart görünümünde solda tek kart sütunu ve yaklaşık 1:3 oranla geniş sağ editör kullanılır. Dar ekranda editör ve tek sütun kartlar alt alta gelir. Yeni not eylemi sayfa başlığındaki ayrı kapsül yerine kart listesinin araç satırındadır. Editör kapatıldığında mevcut kart/liste görünümü korunur.
+
+Etiketler ayrı düğme/pencere açmadan doğrudan yazılır; Enter etiketi çipe çevirir ve aynı alanda sonraki etiket yazılır. Geçerli ama henüz Enter’a basılmamış etiket Kaydet ile eklenir; hatalı etiket sessizce düşürülmez. Bekleyen etiket de kaydedilmemiş taslak sayılır. Yeni Serbest Not rastgele varsayılan renkle başlar ve art arda yeni notta önceki renk tekrar seçilmez; kullanıcı seçimi ve mevcut notların rengi korunur. Otomatik başlangıç rengi taslağı kendiliğinden kirli yapmaz.

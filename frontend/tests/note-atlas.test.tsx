@@ -7,10 +7,10 @@ import {guestNotebook,recordings,newPersonalNote,notebookKey,sameNotebookContent
 const {blobs}=vi.hoisted(()=>({blobs:new Map<string,Blob>()}));
 vi.mock("../lib/reading/audio",()=>({storeAudio:async(scope:string,id:string,b:Blob)=>{blobs.set(`${scope}:${id}`,b);},readAudio:async(scope:string,id:string)=>blobs.get(`${scope}:${id}`)??null,removeAudio:async(scope:string,id:string)=>{blobs.delete(`${scope}:${id}`);},audioInput:async(b:Blob,durationMs:number)=>({data:"valid",mime:b.type,durationMs})}));
 vi.mock("../components/reading/VoiceNote",()=>({RecordingButton:({onRecorded,onBusyChange}:{onRecorded:(b:Blob,d:number)=>void;onBusyChange:(b:boolean)=>void})=>{useEffect(()=>{onBusyChange?.(true);return()=>onBusyChange?.(false);},[onBusyChange]);return <button onClick={()=>onRecorded(new Blob(["test recording"],{type:"audio/webm"}),2000)}>Kaydı bitir</button>;},VoicePlayback:({label}:{label:string})=><audio aria-label={label}/> }));
-beforeEach(()=>{localStorage.clear();blobs.clear();});
+beforeEach(()=>{localStorage.clear();blobs.clear();vi.restoreAllMocks();});
 it("adds and removes explicit tags with Turkish normalization and persists the card",async()=>{
  const user=userEvent.setup();render(<GeneralNotebook/>);await user.type(screen.getByLabelText("Serbest Notun"),"Etiketli düşünce");await user.type(screen.getByLabelText("Not başlığı"),"Atlas notu");
- await user.click(screen.getByRole("button",{name:"Etiket ekle"}));await user.type(screen.getByLabelText("Yeni etiket"),"#YAZILIM{Enter}");await user.click(screen.getByRole("button",{name:"Etiket penceresini kapat"}));await user.click(screen.getByRole("button",{name:"Kaydet"}));
+ await user.type(screen.getByLabelText("Yeni etiket"),"#YAZILIM{Enter}");expect(document.activeElement).toBe(screen.getByLabelText("Yeni etiket"));expect(screen.getByLabelText("Yeni etiket")).toHaveProperty("value","");await user.click(screen.getByRole("button",{name:"Kaydet"}));
  expect(guestNotebook()[0]).toMatchObject({title:"Atlas notu",tags:["yazılım"]});await user.click(screen.getByRole("button",{name:"#yazılım etiketini kaldır"}));await user.click(screen.getByRole("button",{name:"Kaydet"}));expect(guestNotebook()[0].tags).toEqual([]);
  await user.click(screen.getByRole("button",{name:"Liste görünümü"}));expect(screen.getByRole("button",{name:"Liste görünümü"}).getAttribute("aria-pressed")).toBe("true");expect(screen.getByText("Atlas notu")).toBeTruthy();
 });
@@ -33,4 +33,20 @@ it("retains a guest copy when an existing account note has different tags or att
 
 it("keeps inline hashtags compatible with the twelve-tag notebook limit",()=>{
  expect(noteTags(newPersonalNote(Array.from({length:15},(_,i)=>`#etiket${i}`).join(" "),"mint"))).toHaveLength(12);
+});
+
+it("accepts successive inline tags and includes an unfinished valid tag when saving",async()=>{
+ const user=userEvent.setup();render(<GeneralNotebook/>);await user.type(screen.getByLabelText("Serbest Notun"),"Doğrudan etiketler");
+ expect(screen.queryByRole("button",{name:"Etiket ekle"})).toBeNull();await user.type(screen.getByLabelText("Yeni etiket"),"okuma{Enter}yazılım{Enter}fikir");await user.click(screen.getByRole("button",{name:"Kaydet"}));
+ expect(guestNotebook()[0].tags).toEqual(["okuma","yazılım","fikir"]);expect(screen.getByLabelText("Yeni etiket")).toHaveProperty("value","");
+});
+it("preserves an invalid tag draft rather than silently dropping it",async()=>{
+ const user=userEvent.setup();render(<GeneralNotebook/>);await user.type(screen.getByLabelText("Serbest Notun"),"Düşünce");await user.type(screen.getByLabelText("Yeni etiket"),"iki kelime{Enter}");expect(screen.getByRole("alert").textContent).toContain("1–32");await user.click(screen.getByRole("button",{name:"Kaydet"}));expect(guestNotebook()).toHaveLength(0);expect(screen.getByLabelText("Yeni etiket")).toHaveProperty("value","iki kelime");
+});
+it("starts new drafts in random colors without treating the automatic color as unsaved work",async()=>{
+ vi.spyOn(Math,"random").mockReturnValue(.9);const user=userEvent.setup();const {container}=render(<GeneralNotebook/>);expect(screen.getByRole("button",{name:"Sarı Serbest Not rengi",pressed:true})).toBeTruthy();
+ expect(container.querySelector(".na-heading .na-new-note")).toBeNull();expect(container.querySelector(".na-board-head .na-new-note")).toBeTruthy();
+ await user.click(screen.getByRole("button",{name:"Yeni Serbest Not"}));expect(screen.queryByRole("alert")).toBeNull();expect(screen.getByRole("button",{name:"Mavi Serbest Not rengi",pressed:true})).toBeTruthy();
+ await user.click(screen.getByRole("button",{name:"Nane Serbest Not rengi"}));await user.type(screen.getByLabelText("Serbest Notun"),"Seçtiğim renk");await user.click(screen.getByRole("button",{name:"Kaydet"}));expect(guestNotebook()[0].color).toBe("mint");
+ await user.click(screen.getByRole("button",{name:"Yeni Serbest Not"}));await user.click(screen.getByRole("button",{name:"Notu düzenle: Seçtiğim renk"}));expect(screen.getByRole("button",{name:"Nane Serbest Not rengi",pressed:true})).toBeTruthy();
 });

@@ -7,7 +7,7 @@ describe("theme composition and publication boundaries", () => {
     const workspace = createWorkspace();
     const originalContent = JSON.stringify(articles);
     const edited = { ...workspace, draft: createTheme("feed") };
-    expect(edited.applied.blocks.map((block) => block.kind)).toEqual(["scene"]);
+    expect(edited.applied.blocks.map((block) => block.kind)).toEqual(["scene", "footer"]);
     const applied = applyDraft(edited);
     expect(applied.applied).toEqual(edited.draft);
     expect(applied.applied).not.toBe(edited.draft);
@@ -26,10 +26,10 @@ describe("theme composition and publication boundaries", () => {
     const original = createTheme("scene");
     const combined = addBlock(original, "articles", "new-feed");
     expect(moveBlock(combined, "new-feed", -1)).toBe(combined);
-    expect(combined.blocks.map((block) => block.kind)).toEqual(["scene", "articles"]);
+    expect(combined.blocks.map((block) => block.kind)).toEqual(["scene", "articles", "footer"]);
     const withQuote = addBlock(combined, "quote", "new-quote");
     const moved = moveBlock(withQuote, "new-quote", -1);
-    expect(moved.blocks.map((block) => block.kind)).toEqual(["scene", "quote", "articles"]);
+    expect(moved.blocks.map((block) => block.kind)).toEqual(["scene", "quote", "articles", "footer"]);
     expect(moved.blocks[1].id).toBe("new-quote");
     expect(moveBlock(moved, "new-quote", -1)).toBe(moved);
     expect(moveBlock(moved, "missing", 1)).toBe(moved);
@@ -39,10 +39,10 @@ describe("theme composition and publication boundaries", () => {
     expect(addBlock(theme, "scene", "second-scene")).toBe(theme);
     expect(addBlock(theme, "articles", theme.blocks[0].id)).toBe(theme);
     const empty = removeBlock(theme, theme.blocks[0].id);
-    expect(empty.blocks).toEqual([]);
+    expect(empty.blocks.map(block => block.kind)).toEqual(["footer"]);
     const workspace = { ...createWorkspace(), draft: empty };
     expect(applyDraft(workspace)).toBe(workspace);
-    expect(parseWorkspace(JSON.stringify(workspace))?.draft.blocks).toEqual([]);
+    expect(parseWorkspace(JSON.stringify(workspace))?.draft.blocks).toEqual(empty.blocks);
     expect(removeBlock(theme, "missing")).toBe(theme);
   });
   it("inserts structural blocks into their page roles regardless of insertion order", () => {
@@ -106,7 +106,7 @@ describe("theme composition and publication boundaries", () => {
   });
   it("requires a named theme and an actual content block before application", () => {
     const theme = createTheme("feed");
-    expect(themeErrors({ ...theme, name: " ", siteName: "", blocks: [theme.blocks[0]] })).toHaveLength(3);
+    expect(themeErrors({ ...theme, name: " ", siteName: "", blocks: [theme.blocks[0]] })).toHaveLength(4);
   });
 });
 
@@ -196,5 +196,22 @@ describe("persisted workspace validation", () => {
     const workspace = createWorkspace();
     expect(parseWorkspace(JSON.stringify({ ...workspace, draft: { ...workspace.draft, siteName: "x".repeat(41) } }))).toBeNull();
     expect(parseWorkspace(JSON.stringify({ ...workspace, applied: { ...workspace.applied, name: "" } }))).toBeNull();
+  });
+});
+
+describe("mandatory footer", () => {
+  it.each(["scene", "feed", "magazine"] as const)("keeps %s footer when remove is requested and blocks movement", starter => {
+    const theme = createTheme(starter), footer = theme.blocks.find(block => block.kind === "footer")!;
+    expect(removeBlock(theme, footer.id)).toBe(theme);
+    expect(canMoveBlock(theme, footer.id, -1)).toBe(false);
+    expect(canMoveBlock(theme, footer.id, 1)).toBe(false);
+  });
+  it("repairs legacy themes without replacing authored text or colliding with existing ids", () => {
+    const legacy = createTheme("scene");
+    legacy.blocks = [{ ...legacy.blocks[0], id: "block-footer" }];
+    const parsed = parseWorkspace(JSON.stringify({version: 1, draft: legacy, applied: legacy}))!;
+    expect(parsed.draft.blocks[0]).toEqual(legacy.blocks[0]);
+    expect(parsed.draft.blocks[1]).toMatchObject({kind:"footer",id:"block-footer-1"});
+    expect(parseWorkspace(JSON.stringify(parsed))).toEqual(parsed);
   });
 });

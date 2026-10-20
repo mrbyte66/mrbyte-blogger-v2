@@ -250,6 +250,6 @@ public class SiteService {
     }
 
     private ThemeDocument parse(String payload) {
-        return json.readValue(payload, ThemeDocument.class);
+        return json.readValue(payload, ThemeDocument.class).withRequiredFooter();
     }
 }

@@ -43,7 +43,7 @@ export type Workspace = { version: 1; draft: Theme; applied: Theme };
 const defaultAppearance = { typography: "modern", surface: "paper", width: "reading", spacing: "airy", corners: "soft", textSize: "medium", texture: "plain", cards: "outlined" } as const;
 const legacyAccents: Record<string, string> = { mint: "#c8efbc", violet: "#d9c6f0", amber: "#efd19b" };
 const starterKinds: Record<Starter, BlockKind[]> = {
-  scene: ["scene"],
+  scene: ["scene", "footer"],
   feed: ["header", "intro", "articles", "quote", "about", "footer"],
   magazine: ["header", "intro", "quote", "articles", "projects", "footer"],
 };
@@ -82,6 +82,21 @@ export function createBlock(kind: BlockKind, id: string): PageBlock {
     case "projects": return { kind, id, title: "Deney alanı" };
     case "footer": return { kind, id, text: "Her şey bir merakla başlar." };
   }
+}
+
+/** Legacy scenes had no footer; retain authored blocks and a collision-free stable id. */
+export function footerBlock(theme: Theme): Extract<PageBlock, { kind: "footer" }> {
+  const existing = theme.blocks.find(block => block.kind === "footer");
+  if (existing) return existing;
+  let id = "block-footer";
+  for (let n = 1; theme.blocks.some(block => block.id === id); n++) id = `block-footer-${n}`;
+  return createBlock("footer", id) as Extract<PageBlock, { kind: "footer" }>;
+}
+export function withRequiredFooter(theme: Theme): Theme {
+  return theme.blocks.some(block => block.kind === "footer") ? theme : { ...theme, blocks: [...theme.blocks, footerBlock(theme)] };
+}
+export function isSceneHome(theme: Theme): boolean {
+  return theme.blocks.some(block => block.kind === "scene") && theme.blocks.every(block => ["header", "scene", "footer"].includes(block.kind));
 }
 
 export function createTheme(starter: Starter): Theme {
@@ -169,7 +184,7 @@ export function moveBlock(theme: Theme, id: string, direction: -1 | 1): Theme {
 }
 
 export function removeBlock(theme: Theme, id: string): Theme {
-  if (!theme.blocks.some((block) => block.id === id)) return theme;
+  if (!theme.blocks.some((block) => block.id === id && block.kind !== "footer")) return theme;
   return { ...theme, blocks: theme.blocks.filter((block) => block.id !== id) };
 }
 
@@ -188,6 +203,7 @@ export function restoreApplied(workspace: Workspace): Workspace {
 
 export function themeErrors(theme: Theme): string[] {
   const errors: string[] = [];
+  if (!theme.blocks.some(block => block.kind === "footer")) errors.push("Footer sayfada kalmalı; yalnız imza metnini değiştirebilirsin.");
   if (!theme.name.trim()) errors.push("Temana bir ad ver.");
   if (!theme.siteName.trim()) errors.push("Site adını doldur.");
   if (!theme.blocks.some((block) => !["header", "footer"].includes(block.kind))) errors.push("Uygulamadan önce en az bir içerik bloğu ekle.");
@@ -256,7 +272,7 @@ function parseTheme(value: unknown): Theme | null {
   // Old versions allowed arbitrary order. Keep all identities and text while restoring page roles.
   const rank = (block: PageBlock) => block.kind === "header" ? 0 : isLead(block.kind) ? 1 : block.kind === "footer" ? 3 : 2;
   const blocks = migratedBlocks.map((block) => ({ ...block })).sort((left, right) => rank(left) - rank(right));
-  return { name: value.name, siteName: value.siteName, accent: value.accent, ...appearance, blocks };
+  return withRequiredFooter({ name: value.name, siteName: value.siteName, accent: value.accent, ...appearance, blocks });
 }
 
 export function parseWorkspace(serialized: string): Workspace | null {

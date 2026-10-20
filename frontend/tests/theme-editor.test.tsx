@@ -73,7 +73,7 @@ describe("visual theme authoring", () => {
     await user.click(screen.getByRole("button", { name: "Karakter sahnesi ekle" }));
     expect(screen.getByRole("button", { name: "Blok ayarları" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByLabelText("Başlık")).toBeTruthy();
-    expect(savedWorkspace()?.draft.blocks.map((block) => block.kind)).toEqual(["scene"]);
+    expect(savedWorkspace()?.draft.blocks.map((block) => block.kind)).toEqual(["scene", "footer"]);
   });
 
   it("persists a draft independently, then applies it to the homepage snapshot", async () => {
@@ -98,8 +98,8 @@ describe("visual theme authoring", () => {
     expect(screen.getByRole("button", { name: "Yazı akışı yukarı taşı" }).hasAttribute("disabled")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Alıntı ekle" }));
     await user.click(screen.getByRole("button", { name: "Alıntı yukarı taşı" }));
-    expect(savedWorkspace()?.draft.blocks.map((block) => block.kind)).toEqual(["scene", "quote", "articles"]);
-    expect(savedWorkspace()?.applied.blocks.map((block) => block.kind)).toEqual(["scene"]);
+    expect(savedWorkspace()?.draft.blocks.map((block) => block.kind)).toEqual(["scene", "quote", "articles", "footer"]);
+    expect(savedWorkspace()?.applied.blocks.map((block) => block.kind)).toEqual(["scene", "footer"]);
     expect(screen.getByRole("button", { name: "Giriş mevcut" }).hasAttribute("disabled")).toBe(true);
   });
 
@@ -109,12 +109,12 @@ describe("visual theme authoring", () => {
     if (!screen.queryByRole("button", { name: "Blok ayarları" })) await user.click(screen.getByRole("button", { name: "Tasarım" }));
     await user.click(screen.getByRole("button", { name: "Blok ayarları" }));
     await user.click(screen.getByRole("button", { name: /Bloğu kaldır/ }));
-    expect(savedWorkspace()?.draft.blocks).toEqual([]);
-    expect(savedWorkspace()?.applied.blocks).toHaveLength(1);
+    expect(savedWorkspace()?.draft.blocks.map(block => block.kind)).toEqual(["footer"]);
+    expect(savedWorkspace()?.applied.blocks).toHaveLength(2);
     expect(screen.getByRole("button", { name: /Temayı uygula/ }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByText("Uygulamadan önce en az bir içerik bloğu ekle.")).toBeTruthy();
     expect(screen.getByRole("complementary", { name: "Sayfa yapısını düzenle" })).toBeTruthy();
-    expect(screen.getByText("Sayfan şu an boş. Blok ekleyerek yeni bir düzen oluşturabilirsin.")).toBeTruthy();
+    expect(screen.getByText("Henüz içerik yok. Footer korunuyor; yeni bir bölüm ekleyebilirsin.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Karakter sahnesi ekle" })).toBeTruthy();
     await user.click(screen.getByRole("button", { name: /Son kaldırmayı geri al/ }));
     expect(savedWorkspace()?.draft).toEqual(createWorkspace().draft);
@@ -226,4 +226,16 @@ describe("visual theme authoring", () => {
     expect(post).toHaveBeenLastCalledWith(expect.objectContaining({ type: previewEvents.selection, id: null }), window.location.origin);
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
+});
+
+it("edits footer text without exposing removal and keeps it private until apply", async () => {
+  const user = userEvent.setup();
+  render(<ThemeEditor />);
+  await user.click(screen.getByRole("button", { name: /Footer.*Sonda sabit/ }));
+  const input = screen.getByLabelText("İmza metni");
+  expect(screen.queryByRole("button", {name:/Bloğu kaldır/})).toBeNull();
+  expect(screen.getByRole("button",{name:"Footer yukarı taşı"}).hasAttribute("disabled")).toBe(true);
+  fireEvent.change(input,{target:{value:"Benim imzam"}});
+  expect(savedWorkspace()?.draft.blocks.at(-1)).toMatchObject({kind:"footer",text:"Benim imzam"});
+  expect(savedWorkspace()?.applied.blocks.at(-1)).toMatchObject({kind:"footer",text:"Her şey bir merakla başlar."});
 });

@@ -1,4 +1,5 @@
 "use client";
+import { PublicFrame } from "../PublicFrame";
 import { InlineCanvasEditor } from "./InlineCanvasEditor";
 import { UtilityIsland } from "../UtilityIsland";
 import { AccountMenu } from "../auth/AccountMenu";
@@ -10,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { publicArticles } from "../../lib/editorial/store";
 import { articleCategories, articleDate, formatArticleDate } from "../../lib/articles/metadata";
 import { useArticles } from "../../lib/articles/use-articles";
-import { blockLabels, parseWorkspace, type Workspace, type PageBlock, type Theme } from "../../lib/builder/model";
+import { blockLabels, footerBlock, parseWorkspace, type Workspace, type PageBlock, type Theme } from "../../lib/builder/model";
 import { themeAppearance } from "../../lib/builder/appearance";
 import { isSceneField, type SceneField, parseCanvasSelection, previewEvents, type CanvasRect, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { useWorkspace } from "../../lib/builder/use-workspace";
@@ -83,13 +84,13 @@ function BlockContent({ block, theme, primaryTitle, preview, editing }: { block:
         case "quote": return <section className={`theme-section theme-quote quote-${block.display}`}><blockquote><p><span className="quote-mark" aria-hidden="true">“</span><span data-inline-field="text">{block.text}</span><span className="quote-mark" aria-hidden="true">”</span></p><cite data-inline-field="attribution">{block.attribution}</cite></blockquote></section>;
         case "about": return <section className="theme-section theme-about" id="hakkimda" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">EKRANIN DİĞER TARAFINDA</p><h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2><p data-inline-field="text">{block.text}</p></section>;
         case "projects": return <section className="theme-section theme-projects" id="projeler" aria-labelledby={`${block.id}-title`}><p className="editorial-eyebrow">KOD & DENEYLER</p><h2 id={`${block.id}-title`} data-inline-field="title">{block.title}</h2><div className="project-empty"><span aria-hidden="true">[ _ ]</span><p>İlk deney için yer hazır.<br /><small>Henüz proje eklenmedi.</small></p></div></section>;
-        case "footer": return <footer className="theme-section theme-footer"><a href="#top">{theme.siteName}<span>.</span></a><p data-inline-field="text">{block.text}</p><a className="footer-top" href="#top">Başa dön ↑</a></footer>;
+        case "footer": return null;
       }
 }
 
 export function ThemeRenderer({ theme, preview = false, selection, onSelect }: { theme: Theme; preview?: boolean; selection?: CanvasSelection; onSelect?: (id: string, field?: SceneField) => void }) {
   const primaryTitle = theme.blocks.find((block) => block.kind === "scene" || block.kind === "intro")?.id;
-  const nodes = useRef(new Map<string, HTMLDivElement>());
+  const nodes = useRef(new Map<string, HTMLElement>());
   const appearance = themeAppearance(theme);
   const editing = selection?.editing ?? false;
   const selectedExists = theme.blocks.some((block) => block.id === selection?.id);
@@ -98,10 +99,15 @@ export function ThemeRenderer({ theme, preview = false, selection, onSelect }: {
     nodes.current.get(selection.id)?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
   }, [selection?.id, selection?.request, editing, selectedExists]);
 
-  return <main id="top" className={`${appearance.className} ${editing ? "canvas-editing" : ""} ${editing && selectedExists ? "canvas-spotlight" : ""}`} style={appearance.style}>
+  const footer = footerBlock(theme);
+  return <PublicFrame theme={theme} home includeStudioFooter preview={preview} footerEditing={editing ? {
+    active: selection?.id === footer.id,
+    select: id => onSelect?.(id),
+    attach: node => { if (node) nodes.current.set(footer.id, node); else nodes.current.delete(footer.id); },
+  } : undefined}><main id="top" className={`${appearance.className} ${editing ? "canvas-editing" : ""} ${editing && selectedExists ? "canvas-spotlight" : ""}`} style={appearance.style}>
     {!primaryTitle && <h1 className="visually-hidden">{theme.siteName}</h1>}
     {theme.blocks.length === 0 && <div className="empty-theme"><span aria-hidden="true">＋</span><h2>Boş bir tuval. Yeni bir başlangıç.</h2><p>Stüdyodaki “Blok ekle” düğmesinden ilk bölümünü seç.</p></div>}
-    {theme.blocks.map((block) => <div
+    {theme.blocks.filter(block => block.kind !== "footer").map((block) => <div
       key={block.id}
       ref={(node) => { if (node) nodes.current.set(block.id, node); else nodes.current.delete(block.id); }}
       data-block-id={block.id}
@@ -120,7 +126,7 @@ export function ThemeRenderer({ theme, preview = false, selection, onSelect }: {
       {editing && <span className="canvas-block-label">{blockLabels[block.kind]} <span>· Düzenlemek için seç</span></span>}
       <BlockContent block={block} theme={theme} primaryTitle={primaryTitle} preview={preview} editing={editing} />
     </div>)}
-  </main>;
+  </main></PublicFrame>;
 }
 
 export function PublishedSite() {

@@ -1,6 +1,7 @@
 import type { Article } from "../content";
 import type { BlogSeries } from "../series/model";
 import type { PageBlock, Theme } from "../builder/model";
+import { withRequiredFooter } from "../builder/model";
 import { categoryIds, categoryNames, type Category } from "./categories";
 import type { TextMark } from "../articles/marks";
 
@@ -136,7 +137,7 @@ export function themeFromDto(dto: ThemeDto, slugOfArticle: (id: string) => strin
     }
     return { ...block };
   }) as unknown as PageBlock[];
-  return { name: dto.name, siteName: dto.siteName, accent: dto.accent, typography: dto.typography, surface: dto.surface, width: dto.width, spacing: dto.spacing, corners: dto.corners ?? "soft", textSize: dto.textSize ?? "medium", texture: dto.texture ?? "plain", cards: dto.cards ?? "outlined", blocks };
+  return withRequiredFooter({ name: dto.name, siteName: dto.siteName, accent: dto.accent, typography: dto.typography, surface: dto.surface, width: dto.width, spacing: dto.spacing, corners: dto.corners ?? "soft", textSize: dto.textSize ?? "medium", texture: dto.texture ?? "plain", cards: dto.cards ?? "outlined", blocks });
 }
 
 export function themeToDto(theme: Theme, idOfArticle: (slug: string) => string | undefined, idOfSeries: (slug: string) => string | undefined, registry: readonly Category[] = []): ThemeDto {

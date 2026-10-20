@@ -31,7 +31,7 @@
 .ambient-footer .ambient-error { position:absolute; bottom:100%; right:0; background:var(--panel); border:1px solid var(--line); padding:12px; width:240px; z-index:30; }
 @keyframes personal-wave { to { transform:scaleY(.4); } }
 body:has(.route-current .public-footer) .ambient-global { display:none; }
-.public-content>.theme-site>.theme-block[data-block-kind=footer] { display:none; }
+
 .public-home-scene { height:100svh; min-height:0; overflow:clip; }
 .public-home-scene .public-content { min-height:0; }
 .public-home-scene .public-content>.theme-site,.public-home-scene .public-content>.theme-site>.theme-block[data-block-kind=scene] { height:100%; min-height:0; }
@@ -387,3 +387,8 @@ html[data-motion=off] .library-v11 :is(.library-preview,.library-preview-scroll,
  .public-home-scene .public-footer nav [aria-hidden=true] { display:none; }
  .series-index-content { padding:24px 20px 28px; }
 }
+
+/* The same footer is editable in Studio, including the full-viewport character scene. */
+.public-footer.theme-block { position:relative; }
+.public-home-scene .public-footer.theme-block { position:absolute; }
+.public-footer .canvas-block-label { top:-18px; }

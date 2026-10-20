@@ -143,6 +143,8 @@ class SiteAndMediaIntegrationTest extends IntegrationTest {
         assertThat(workspace.json().get("applied").isNull()).isTrue();
         Response draft = owner.put("/api/v1/studio/theme/draft", theme(live.text("id")), Map.of("If-Match", workspace.etag()));
         assertThat(draft.status()).as(String.valueOf(draft.json())).isEqualTo(200);
+        assertThat(draft.json().get("draft").get("blocks").size()).isEqualTo(2);
+        assertThat(draft.json().get("draft").get("blocks").get(1).get("kind").asString()).isEqualTo("footer");
 
         ApiClient visitor = client();
         assertThat(visitor.get("/api/v1/site").json().has("theme")).as("draft is not public").isFalse();
@@ -152,6 +154,7 @@ class SiteAndMediaIntegrationTest extends IntegrationTest {
         assertThat(applied.status()).isEqualTo(200);
         Response site = visitor.get("/api/v1/site");
         assertThat(site.text("siteName")).isEqualTo("SATIR");
+        assertThat(site.json().get("theme").get("blocks").get(1).get("kind").asString()).isEqualTo("footer");
         assertThat(site.json().get("theme").get("blocks").get(0).get("featuredArticleId").asString()).isEqualTo(live.text("id"));
 
         // Hiding the featured article later removes the binding from the public projection.

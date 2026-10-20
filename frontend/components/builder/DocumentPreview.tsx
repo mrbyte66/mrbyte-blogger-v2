@@ -1,4 +1,5 @@
 "use client";
+import { PublicFrame } from "../PublicFrame";
 import { useEffect, useRef } from "react";
 import type { Theme } from "../../lib/builder/model";
 import { previewEvents, rectOf, type CanvasRect, type CanvasSelection } from "../../lib/builder/preview-protocol";
@@ -56,6 +57,6 @@ export function DocumentPreview({ showNotes = false, draft, theme, selection, on
     {selection.editing && draft.kind === "article" && <nav className="canvas-page-chips" aria-label="Sayfa ayarları">
       {pageChips.map(([id, label]) => <button key={id} type="button" data-chip={id} aria-pressed={selection.id === id}>{id === "cover" && draft.article.coverUrl ? <img src={draft.article.coverUrl} alt="" /> : null}{label}</button>)}
     </nav>}
-    {draft.kind === "article" ? <ArticlePageView article={draft.article} theme={theme} preview showNotes={showNotes} /> : <SeriesPageView slug={draft.series.slug} theme={theme} series={[draft.series]} preview />}
+    <PublicFrame theme={theme} includeStudioFooter preview>{draft.kind === "article" ? <ArticlePageView article={draft.article} theme={theme} preview showNotes={showNotes} /> : <SeriesPageView slug={draft.series.slug} theme={theme} series={[draft.series]} preview />}</PublicFrame>
   </div>;
 }

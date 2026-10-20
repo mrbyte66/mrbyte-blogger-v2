@@ -3029,7 +3029,7 @@ components:
     ThemeDocument:
       type: object
       additionalProperties: false
-      description: Builder allowlist (256 KiB). Header first, one lead (intro XOR scene) after it, footer last; block ids and kinds unique
+      description: Builder allowlist (256 KiB). Header first, one lead (intro XOR scene) after it, mandatory footer last; block ids and kinds unique. Missing footer is restored on read/save for legacy compatibility; authored footer text is preserved.
       required: [schemaVersion, name, siteName, accent, typography, surface, width, spacing, blocks]
       properties:
         schemaVersion: {type: integer, const: 1}

@@ -28,6 +28,17 @@ class ThemeDocumentTest {
     }
 
     @Test
+    void restoresMissingFooterWithoutChangingContentOrReusingIds() {
+        var legacyScene = new ThemeDocument.Scene("block-footer", "Başlığım", "Satır", "Metin", null, true, null, true);
+        ThemeDocument repaired = theme(List.of(legacyScene)).validated();
+        assertThat(repaired.blocks()).containsExactly(legacyScene,
+                new ThemeDocument.Footer("block-footer-1", "Her şey bir merakla başlar."));
+        assertThat(repaired.withRequiredFooter()).isSameAs(repaired);
+        assertThat(theme(List.of(SCENE, FOOTER)).validated().blocks()).containsExactly(SCENE, FOOTER);
+        assertThat(theme(List.of(SCENE)).validatedForApply().blocks().getLast()).isInstanceOf(ThemeDocument.Footer.class);
+    }
+
+    @Test
     void enforcesPlacementRules() {
         assertThatThrownBy(() -> theme(List.of(ARTICLES, HEADER)).validated()).extracting("code").isEqualTo("PLACEMENT");
         assertThatThrownBy(() -> theme(List.of(FOOTER, ARTICLES)).validated()).extracting("code").isEqualTo("PLACEMENT");

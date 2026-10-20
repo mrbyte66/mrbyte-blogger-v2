@@ -94,7 +94,7 @@ describe("rendered theme appearance and canvas interaction", () => {
     ] };
     const { container } = render(<ThemeRenderer theme={theme} />);
     expect(screen.getByRole("heading", { name: "Okuma yolları" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Seriler" }).getAttribute("href")).toBe("#seriler");
+    expect(container.querySelector('.theme-header nav a[href="#seriler"]')).toBeTruthy();
     expect(container.querySelector(".series-block-list .series-card")?.getAttribute("href")).toBe("/seriler/yapay-zeka-ile-yazilim");
   });
   it("applies all visual choices and custom accent to the renderer while preserving article urls", () => {

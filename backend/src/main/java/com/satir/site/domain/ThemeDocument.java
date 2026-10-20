@@ -113,12 +113,12 @@ public record ThemeDocument(Integer schemaVersion, String name, String siteName,
         if (!placementValid()) {
             throw new ValidationException("blocks", "PLACEMENT");
         }
-        return this;
+        return withRequiredFooter();
     }
 
     /** Additional rules before a draft can become the public theme. */
     public ThemeDocument validatedForApply() {
-        validated();
+        ThemeDocument valid = validated();
         if (name.isBlank()) {
             throw new ValidationException("name", "REQUIRED");
         }
@@ -128,12 +128,28 @@ public record ThemeDocument(Integer schemaVersion, String name, String siteName,
         if (blocks.stream().noneMatch(b -> !(b instanceof Header) && !(b instanceof Footer))) {
             throw new ValidationException("blocks", "CONTENT_REQUIRED");
         }
-        return this;
+        return valid;
     }
 
     public ThemeDocument withBlocks(List<Block> next) {
         return new ThemeDocument(schemaVersion, name, siteName, accent, typography, surface, width, spacing, corners, textSize,
                 texture, cards, next);
+    }
+
+    /** Read compatibility for early scene themes and normalization of footer-removal requests. */
+    public ThemeDocument withRequiredFooter() {
+        if (blocks.stream().anyMatch(Footer.class::isInstance)) {
+            return this;
+        }
+        Set<String> used = new HashSet<>();
+        blocks.forEach(block -> used.add(block.id()));
+        String id = "block-footer";
+        for (int n = 1; used.contains(id); n++) {
+            id = "block-footer-" + n;
+        }
+        List<Block> next = new ArrayList<>(blocks);
+        next.add(new Footer(id, "Her şey bir merakla başlar."));
+        return withBlocks(List.copyOf(next));
     }
 
     /** Header first, a single lead (intro XOR scene) directly after it, footer last. */

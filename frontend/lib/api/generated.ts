@@ -2438,7 +2438,7 @@ export interface components {
             draft: components["schemas"]["ThemeDocument"] | null;
             applied: components["schemas"]["ThemeDocument"] | null;
         };
-        /** @description Builder allowlist (256 KiB). Header first, one lead (intro XOR scene) after it, footer last; block ids and kinds unique */
+        /** @description Builder allowlist (256 KiB). Header first, one lead (intro XOR scene) after it, mandatory footer last; block ids and kinds unique. Missing footer is restored on read/save for legacy compatibility; authored footer text is preserved. */
         ThemeDocument: {
             /** @constant */
             schemaVersion: 1;

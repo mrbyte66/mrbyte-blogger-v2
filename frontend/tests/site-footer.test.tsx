@@ -1,5 +1,5 @@
-import { fireEvent, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithSite as render } from "./support/memory-site";
 import { ThemeRenderer } from "../components/builder/ThemeRenderer";
 import { DocumentPreview } from "../components/builder/DocumentPreview";
@@ -11,11 +11,40 @@ import { createTheme, type Starter, type Surface } from "../lib/builder/model";
 let path = "/";
 vi.mock("next/navigation", () => ({usePathname: () => path}));
 vi.mock("../components/Experience", () => ({Experience: () => <section className="experience">CRT</section>}));
-beforeEach(() => { path = "/"; vi.stubGlobal("matchMedia", vi.fn(() => ({matches:false}))); Object.defineProperty(Element.prototype,"scrollIntoView",{configurable:true,value:vi.fn()}); });
+beforeEach(() => { path = "/"; vi.stubGlobal("matchMedia", vi.fn(() => ({matches:false}))); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} }); vi.spyOn(window,"scrollTo").mockImplementation(()=>{}); Object.defineProperty(Element.prototype,"scrollIntoView",{configurable:true,value:vi.fn()}); });
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const starters: Starter[] = ["scene", "feed", "magazine"];
 const surfaces: Surface[] = ["paper", "night", "warm"];
 
 describe("one shared footer", () => {
+  it.each(starters)("keeps %s's selected footer in view after layout growth, until intentional scrolling", starter => {
+    path="/preview";
+    let resize: (()=>void) | undefined;
+    const disconnect=vi.fn();
+    vi.stubGlobal("ResizeObserver", class { constructor(callback:()=>void) { resize=callback; } observe() {} disconnect=disconnect; });
+    let bottom=2100;
+    vi.spyOn(Element.prototype,"getBoundingClientRect").mockImplementation(function(this:Element) { return {bottom:this.getAttribute("data-block-kind")==="footer" ? bottom : 0} as DOMRect; });
+    const theme=createTheme(starter);
+    const selection={id:"block-footer",request:1,editing:true};
+    const {rerender}=render(<ThemeRenderer theme={theme} preview selection={selection}/>);
+    expect(window.scrollTo).toHaveBeenLastCalledWith({top:bottom-window.innerHeight,behavior:"smooth"});
+    bottom=2900;
+    act(()=>resize?.());
+    expect(window.scrollTo).toHaveBeenLastCalledWith({top:bottom-window.innerHeight,behavior:"smooth"});
+    fireEvent.wheel(window);
+    expect(disconnect).toHaveBeenCalled();
+    vi.mocked(window.scrollTo).mockClear();
+    act(()=>resize?.());
+    expect(window.scrollTo).not.toHaveBeenCalled();
+    // Selecting Footer again starts a fresh reveal; reduced motion stays instant.
+    vi.stubGlobal("matchMedia", vi.fn(()=>({matches:true})));
+    rerender(<ThemeRenderer theme={theme} preview selection={{...selection,request:2}}/>);
+    expect(window.scrollTo).toHaveBeenLastCalledWith({top:bottom-window.innerHeight,behavior:"auto"});
+    rerender(<ThemeRenderer theme={theme} preview selection={{...selection,editing:false}}/>);
+    vi.mocked(window.scrollTo).mockClear();
+    act(()=>resize?.());
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
   it.each(starters.flatMap(starter => surfaces.map(surface => ({starter,surface}))))("matches public/Studio for $starter / $surface", ({starter,surface}) => {
     const theme = {...createTheme(starter),surface};
     theme.blocks = theme.blocks.map(block => block.kind === "footer" ? {...block,text:"Benim özel imzam"} : block);

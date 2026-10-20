@@ -1052,3 +1052,36 @@ html .studio[data-view] .studio-page-dialog .studio-page-menu { background:trans
 @media(max-width:700px) {
  html .studio[data-view] .studio-personal .account-dropdown--island { position:fixed; top:128px; right:12px; left:auto; width:min(280px,calc(100vw - 24px)); max-height:calc(100dvh - 144px); overflow-y:auto; }
 }
+
+/* Insertion belongs to the page sequence: the fixed footer closes the list. */
+html .studio[data-view] .studio-block-list .studio-insert-slot { background:transparent; padding:0; border:0; box-shadow:none; counter-increment:none; }
+html .studio[data-view] .studio-insert-slot .studio-add { width:100%; margin:0; }
+.studio-theme-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+html .studio[data-view] .studio-theme-controls { display:flex; align-items:center; gap:6px; min-width:0; padding:4px; border:1px solid var(--sv-glass-line); border-radius:999px; background:var(--sv-card); box-shadow:var(--sv-shadow); }
+html .studio[data-view] .studio-theme-controls .studio-starters { display:flex; gap:4px; padding:0; margin:0; background:transparent; box-shadow:none; min-width:0; }
+html .studio[data-view] .studio-theme-controls .studio-starters button { min-height:36px; height:36px; padding:0 14px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; color:var(--sv-sub); }
+html .studio[data-view] .studio-theme-controls .studio-starters button[aria-pressed=true] { background:var(--sv-primary); color:var(--sv-on-primary); }
+html .studio[data-view] .studio-theme-controls .studio-theme-actions { padding-left:6px; border-left:1px solid var(--sv-line); }
+html .studio[data-view] .studio-theme-controls .studio-theme-actions :is(a,button) { min-height:36px; padding:0 16px; font-size:13px; }
+@media(min-width:1100px) {
+ html .studio[data-view="sahne"] .studio-theme-controls { grid-column:3; grid-row:1; justify-self:center; }
+ html .studio[data-view="sahne"] .studio-theme-controls .studio-starters { grid-column:auto; grid-row:auto; justify-self:auto; }
+ html .studio[data-view="sahne"] .studio-insert-slot .studio-add { height:100px; }
+ html .studio[data-view="sahne"] .studio-structure>section[aria-labelledby="structure-heading"] { grid-template-columns:minmax(0,1fr); grid-template-areas:"title" "list" "palette"; }
+}
+@media(min-width:1100px) and (max-width:1299px) {
+ html .studio[data-view="sahne"] .studio-theme-controls { flex-direction:column; gap:2px; padding:3px; border-radius:22px; }
+ html .studio[data-view="sahne"] .studio-theme-controls .studio-starters button { min-height:28px; height:28px; font-size:12px; padding:0 12px; }
+ html .studio[data-view="sahne"] .studio-theme-controls .studio-theme-actions { border:0; padding:0; width:100%; }
+ html .studio[data-view="sahne"] .studio-theme-controls .studio-theme-actions :is(a,button) { flex:1; min-height:28px; padding:0 12px; font-size:12px; justify-content:center; }
+}
+@media(max-width:1099px) {
+ html .studio[data-view] .studio-theme-controls { order:6; flex-basis:100%; justify-content:center; }
+}
+@media(max-width:700px) {
+ html .studio[data-view] .studio-theme-controls { flex-direction:column; width:100%; border-radius:22px; }
+ html .studio[data-view] .studio-theme-controls .studio-starters,html .studio[data-view] .studio-theme-controls .studio-theme-actions { width:100%; }
+ html .studio[data-view] .studio-theme-controls .studio-starters button { flex:1; min-width:0; padding:0 6px; font-size:12px; }
+ html .studio[data-view] .studio-theme-controls .studio-theme-actions { padding:4px 0 0; border-left:0; border-top:1px solid var(--sv-line); }
+ html .studio[data-view] .studio-theme-controls .studio-theme-actions :is(a,button) { flex:1; justify-content:center; padding:0 12px; }
+}

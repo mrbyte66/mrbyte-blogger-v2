@@ -32,6 +32,20 @@ function receive(frame: HTMLIFrameElement, data: unknown, origin = window.locati
 }
 
 describe("visual theme authoring", () => {
+  it("places insertion before the fixed footer and groups Sahne's draft actions with its starters", () => {
+    document.documentElement.dataset.studioView="sahne";
+    render(<ThemeEditor />);
+    const group=screen.getByRole("group",{name:"Tema düzeni ve yayınlama"});
+    expect(within(group).getByRole("group",{name:"Başlangıç düzeni"})).toBeTruthy();
+    expect(within(group).getByRole("link",{name:"Taslağı tam ekran gör ↗"}).getAttribute("href")).toBe("/preview");
+    expect(within(group).getByRole("button",{name:/Temayı uygula/}).hasAttribute("disabled")).toBe(true);
+    const footer=document.querySelector('.studio-block-list > li[data-kind="footer"]')!;
+    const insert=screen.getByRole("button",{name:/Blok ekle/}).closest("li")!;
+    expect(insert.nextElementSibling).toBe(footer);
+    expect(footer.parentElement?.lastElementChild).toBe(footer);
+    expect(screen.getByText("2 blok")).toBeTruthy();
+    delete document.documentElement.dataset.studioView;
+  });
   it("keeps the desktop canvas at readable actual size when the workspace resizes", async () => {
     const user = userEvent.setup();
     let resize: ResizeObserverCallback | undefined;

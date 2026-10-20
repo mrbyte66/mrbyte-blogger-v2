@@ -96,7 +96,26 @@ export function ThemeRenderer({ theme, preview = false, selection, onSelect }: {
   const selectedExists = theme.blocks.some((block) => block.id === selection?.id);
   useEffect(() => {
     if (!editing || !selection?.id || !selectedExists) return;
-    nodes.current.get(selection.id)?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+    const target = nodes.current.get(selection.id);
+    if (!target) return;
+    if (target.dataset.blockKind !== "footer") {
+      target.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+      return;
+    }
+    // Progressive feeds and loaded fonts can move the footer while we travel to it.
+    // Follow that layout inside the canvas only; intentional reader scrolling wins.
+    let following = true;
+    const reveal = () => { if (following) window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().bottom - window.innerHeight), behavior: scrollBehavior() }); };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    const frame = target.closest(".public-frame");
+    if (frame) observer.observe(frame);
+    const stop = () => { following = false; observer.disconnect(); };
+    const key = (event: KeyboardEvent) => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key) && !(event.target as HTMLElement)?.closest("input,textarea,[contenteditable]")) stop(); };
+    window.addEventListener("wheel", stop, { passive: true });
+    window.addEventListener("touchstart", stop, { passive: true });
+    window.addEventListener("keydown", key);
+    return () => { stop(); window.removeEventListener("wheel", stop); window.removeEventListener("touchstart", stop); window.removeEventListener("keydown", key); };
   }, [selection?.id, selection?.request, editing, selectedExists]);
 
   const footer = footerBlock(theme);

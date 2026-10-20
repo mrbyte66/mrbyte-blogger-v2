@@ -101,6 +101,41 @@ describe("Studio views", () => {
     expect(front()).toBe("panel");
   });
 
+  it("raises Sahne's real header boxes above an open inspector when the header is display:contents", () => {
+    document.documentElement.dataset.studioView = "sahne";
+    studio();
+    // jsdom does not load the responsive stylesheet. Reproduce its desktop Sahne
+    // layout: the header has no box; its location/actions are direct grid items.
+    const header = document.querySelector<HTMLElement>(".studio-topbar")!;
+    header.style.display = "contents";
+    fireEvent.click(screen.getByRole("button", { name: /Tasarım/ }));
+    const inspector = screen.getByLabelText("Düzenleme özellikleri");
+    const view = screen.getByRole("button", { name: "Studio görünümü" });
+    fireEvent.pointerDown(view);
+    fireEvent.click(view);
+    const actions = document.querySelector<HTMLElement>(".studio-top-actions")!;
+    expect(Number(actions.style.zIndex)).toBeGreaterThan(Number(inspector.style.zIndex));
+    expect(header.style.zIndex).toBe("");
+    fireEvent.click(within(screen.getByRole("group", { name: "Studio görünümü" })).getByRole("button", { name: /^Kontakt/ }));
+    expect(root().dataset.view).toBe("kontakt");
+
+    // The page picker is a separate grid item, and must rise above the actions too.
+    const picker = screen.getByRole("button", { name: /^Sayfalar:/ });
+    fireEvent.focusIn(picker);
+    const location = document.querySelector<HTMLElement>(".studio-location")!;
+    expect(Number(location.style.zIndex)).toBeGreaterThan(Number(actions.style.zIndex));
+  });
+
+  it("raises the entire header in boxed layouts, including compact display:contents actions", () => {
+    studio();
+    const header = document.querySelector<HTMLElement>(".studio-topbar")!;
+    document.querySelector<HTMLElement>(".studio-top-actions")!.style.display = "contents";
+    fireEvent.click(screen.getByRole("button", { name: /Tasarım/ }));
+    const inspector = screen.getByLabelText("Düzenleme özellikleri");
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Studio görünümü" }));
+    expect(Number(header.style.zIndex)).toBeGreaterThan(Number(inspector.style.zIndex));
+  });
+
   it("switches back to a recently opened page from the Marjinalya rail in one press", () => {
     studio();
     selectPage(articles[0].title);

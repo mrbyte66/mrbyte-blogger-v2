@@ -96,10 +96,10 @@ export function StudioHeader({ navigation, actions, status, center, section }: {
     <header className="studio-topbar" data-layer="">
       {view !== "marjinalya" && brand}
       {view === "kontakt" && <SectionNav current={current} className="studio-pills" labelled />}
-      <div className="studio-location">{navigation}<div className="studio-header-state">{status}</div></div>
+      <div className="studio-location" data-layer="">{navigation}<div className="studio-header-state">{status}</div></div>
       {center}
       {view === "marjinalya" && <time className="studio-dateline" suppressHydrationWarning>{dateline()}</time>}
-      <div className="studio-top-actions">{actions}<UtilityIsland className="studio-personal" label="Studio araçları"><ThemeToggle /><StudioViewMenu /><AccountMenu /></UtilityIsland></div>
+      <div className="studio-top-actions" data-layer="">{actions}<UtilityIsland className="studio-personal" label="Studio araçları"><ThemeToggle /><StudioViewMenu /><AccountMenu /></UtilityIsland></div>
     </header>
   </>;
 }

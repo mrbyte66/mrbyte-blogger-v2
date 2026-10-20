@@ -874,6 +874,10 @@ html .studio[data-view="odak"],
 html .studio[data-view="kontakt"] { grid-template-columns:minmax(0,1fr); }
 html .studio[data-view] > .studio-topbar { min-width:0; }
 @media (min-width:1100px) and (max-width:1299px) {
+  /* The centre track can be narrower than the three starter labels. Let the
+     labels wrap inside that track instead of covering the page picker/actions. */
+  html .studio[data-view="sahne"] .studio-starters { justify-self:stretch; min-width:0; }
+  html .studio[data-view="sahne"] .studio-starters button { flex:1 1 auto; min-width:min-content; padding:0 6px; font-size:12px; line-height:1.2; white-space:normal; }
   html .studio[data-view] .studio-saved { display:none; }
   html .studio[data-view] .studio-state-suffix { display:inline; }
   html .studio[data-view] .studio-top-actions .studio-text-link { display:none; }

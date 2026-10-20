@@ -12,7 +12,9 @@ const order: HTMLElement[] = [];
 function layerOf(target: Element | null | undefined): HTMLElement | null {
   let found: HTMLElement | null = null;
   for (let node = target ?? null; node && !node.classList.contains("studio"); node = node.parentElement) {
-    if (node instanceof HTMLElement && node.hasAttribute("data-layer")) found = node;
+    // Sahne flattens the header into grid items; a display:contents element has no
+    // stacking box, so raising it cannot bring its menus above the canvas.
+    if (node instanceof HTMLElement && node.hasAttribute("data-layer") && getComputedStyle(node).display !== "contents") found = node;
   }
   return found;
 }

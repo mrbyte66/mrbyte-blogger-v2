@@ -36,6 +36,20 @@ function chooseView(name: string) {
 }
 
 describe("Studio views", () => {
+  it.each(["marjinalya", "odak", "kontakt", "sahne"])("keeps the clock and theme publication capsule in %s's header without publishing starter choices", view => {
+    document.documentElement.dataset.studioView=view;
+    const site=new MemorySite();
+    const applied=JSON.stringify(site.workspace.applied);
+    studio(site);
+    const header=document.querySelector(".studio-topbar")! as HTMLElement;
+    expect(within(header).getByLabelText("Tarih ve saat")).toBeTruthy();
+    const capsule=within(header).getByRole("group",{name:"Tema düzeni ve yayınlama"});
+    expect(within(capsule).getByRole("link",{name:"Taslağı tam ekran gör ↗"}).getAttribute("href")).toBe("/preview");
+    fireEvent.click(within(capsule).getByRole("button",{name:"Açık defter"}));
+    expect(JSON.stringify(site.workspace.applied)).toBe(applied);
+    expect(within(capsule).getByRole("button",{name:/Temayı uygula/})).toBeTruthy();
+    expect(screen.getAllByRole("button",{name:/Temayı uygula/})).toHaveLength(1);
+  });
   it("starts in Marjinalya with a quiet sheet and optional writing tools", () => {
     studio();
     selectPage(articles[0].title);

@@ -11,6 +11,7 @@ import { useStudioLayers } from "../../lib/studio/layers";
 import type { StudioTarget } from "../../lib/builder/document-protocol";
 import { EditorIcon } from "./EditorIcon";
 import { StudioViewSwitch } from "./StudioViewSwitch";
+import { StudioClock } from "./StudioClock";
 
 export type StudioSection = "pages" | "series" | "home" | "insights";
 /** Statistics have no entry here: the product decision removed the owner's statistics UI. */
@@ -19,12 +20,6 @@ const sections: { id: Exclude<StudioSection, "insights">; label: string; short: 
   { id: "series", label: "Seriler", short: "Seriler", hint: "Seriler", icon: "series", rail: false },
   { id: "home", label: "Ana sayfa", short: "Site", hint: "Site tasarımı", icon: "homepage", rail: true },
 ];
-
-const datelineFormat = { weekday: new Intl.DateTimeFormat("tr-TR", { weekday: "long" }), rest: new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }) };
-/** "ÇARŞAMBA · 14 EKİM 2026": the day's date as a quiet line in the top bar. */
-function dateline(now = new Date()) {
-  return `${datelineFormat.weekday.format(now)} · ${datelineFormat.rest.format(now)}`.toLocaleUpperCase("tr");
-}
 
 /** Where the author is: the editor's target, or an explicit section (the statistics page). */
 function useSection(explicit?: StudioSection): StudioSection {
@@ -93,12 +88,14 @@ export function StudioHeader({ navigation, actions, status, center, section }: {
   const brand = <Link href="/" className="studio-brand studio-brand-tile" aria-label="Siteyi aç" title="Siteyi aç"><span aria-hidden="true">s</span></Link>;
   return <>
     {view === "marjinalya" && <div className="studio-rail" data-layer="">{brand}<SectionNav current={current} className="studio-rail-nav" labelled={false} /><RecentPages /></div>}
-    <header className="studio-topbar" data-layer="">
+    <header className={`studio-topbar studio-topbar--timed${center ? " has-theme-controls" : ""}`} data-layer="">
+      <StudioClock />
+      <div className="studio-header-navigation">
       {view !== "marjinalya" && brand}
       {view === "kontakt" && <SectionNav current={current} className="studio-pills" labelled />}
       <div className="studio-location" data-layer="">{navigation}<div className="studio-header-state">{status}</div></div>
+      </div>
       {center}
-      {view === "marjinalya" && <time className="studio-dateline" suppressHydrationWarning>{dateline()}</time>}
       <div className="studio-top-actions" data-layer="">{actions}<UtilityIsland className="studio-personal" label="Studio araçları"><ThemeToggle /><StudioViewMenu /><AccountMenu /></UtilityIsland></div>
     </header>
   </>;

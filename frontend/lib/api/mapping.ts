@@ -31,21 +31,21 @@ const mediaPattern = /^\/api\/v1\/media\/([0-9a-f-]{36})$/;
 
 
 /** Body blocks → the editor's paragraph/figure/code/table model (render order preserved on save). */
-function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "paragraphMarks" | "figure" | "code" | "table" | "blockIds"> {
+function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "paragraphMarks" | "figure" | "code" | "codeLanguage" | "table" | "blockIds"> {
   const paragraphFormats: NonNullable<Article["paragraphFormats"]>[number][] = [];
   const paragraphMarks: TextMark[][] = [];
   const paragraphs: string[] = []; const ids: string[] = [];
-  let figure: Article["figure"]; let code: string | undefined; let table: Article["table"];
+  let figure: Article["figure"]; let code: string | undefined; let codeLanguage: string | undefined; let table: Article["table"];
   const blockIds: NonNullable<Article["blockIds"]> = { paragraphs: ids };
   for (const block of document.blocks) {
     if (block.type === "paragraph" || block.type === "heading" || block.type === "quote") { paragraphs.push(block.text); ids.push(block.id); paragraphMarks.push(block.type === "heading" ? [] : (block.marks ?? []).map((mark) => ({ type: mark.type, start: mark.start, end: mark.end, ...(mark.href ? { href: mark.href } : {}) }))); paragraphFormats.push({kind:block.type,...(block.type==="heading" ? {level:block.level} : {}),...(block.type==="quote" && block.attribution ? {attribution:block.attribution} : {})}); }
     else if (block.type === "image" && !figure) {
       const src = block.assetId ? mediaUrl(block.assetId) : block.staticPath ?? "";
       figure = { src, alt: block.alt ?? "", caption: block.caption ?? "", width: block.width ?? 1200, height: block.height ?? 675 }; blockIds.figure = block.id;
-    } else if (block.type === "code" && code === undefined) { code = block.text; blockIds.code = block.id; }
+    } else if (block.type === "code" && code === undefined) { code = block.text; codeLanguage = block.language; blockIds.code = block.id; }
     else if (block.type === "table" && !table) { table = { caption: block.caption ?? "", columns: block.columns, rows: block.rows }; blockIds.table = block.id; }
   }
-  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(paragraphMarks.some((marks) => marks.length) ? { paragraphMarks } : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code } : {}), ...(table ? { table } : {}), blockIds };
+  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(paragraphMarks.some((marks) => marks.length) ? { paragraphMarks } : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code, codeLanguage } : {}), ...(table ? { table } : {}), blockIds };
 }
 
 /** Editor model → blocks, in the same order ArticleContent renders them; stable IDs are reused. */
@@ -62,7 +62,7 @@ export function toDocument(article: Article): DocumentDto {
       const match = mediaPattern.exec(article.figure.src);
       blocks.push({ id: ids?.figure ?? crypto.randomUUID(), type: "image", ...(match ? { assetId: match[1] } : { staticPath: article.figure.src }), alt: article.figure.alt, caption: article.figure.caption, width: article.figure.width, height: article.figure.height });
     }
-    if (index === anchor && article.code !== undefined) blocks.push({ id: ids?.code ?? crypto.randomUUID(), type: "code", text: article.code, language: "java" });
+    if (index === anchor && article.code !== undefined) blocks.push({ id: ids?.code ?? crypto.randomUUID(), type: "code", text: article.code, language: (article.codeLanguage ?? "java") as Extract<BlockDto, {type:"code"}>["language"] });
     if (index === anchor && article.table) blocks.push({ id: ids?.table ?? crypto.randomUUID(), type: "table", caption: article.table.caption, columns: [...article.table.columns], rows: article.table.rows.map((row) => [...row]) });
   });
   return { schemaVersion: 1, blocks };
@@ -87,7 +87,7 @@ export function articleFromEdit(dto: ArticleEditDto, registry: readonly Category
     id: dto.id, version: dto.version, slug: dto.slug, authored: true, status: dto.status, visibility: dto.visibility,
     title: dto.title || "Adsız yazı", category: categories[0] ?? "", categories, categoryIds: [...dto.categoryIds], createdAt: dto.createdAt, publishedAt: dto.displayDate,
     ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt).toISOString() } : {}),
-    eyebrow: dto.eyebrow ?? "", excerpt: dto.abstract ?? "", minutes: Math.max(1, dto.readingMinutes), presentation: dto.presentation,
+    eyebrow: dto.eyebrow ?? "", excerpt: dto.abstract ?? "", minutes: Math.max(1, dto.readingMinutes), presentation: dto.presentation, seo: dto.seo,
     ...(dto.cover.media ? { coverUrl: dto.cover.media.url } : {}),
     seriesId: dto.seriesPlacement?.seriesId ?? null,
     ...fromDocument(dto.document),
@@ -101,7 +101,7 @@ export function articleWrite(article: Article, seriesId: string | null, seriesVe
     title: article.title, slug: article.slug, eyebrow: article.eyebrow, abstract: article.excerpt, displayDate: article.publishedAt,
     categoryIds: article.categoryIds ? [...article.categoryIds] : categoryIds(article.categories ?? [article.category], registry),
     document: toDocument(article), presentation: article.presentation ?? { width: "comfortable", heading: "left", showMeta: true },
-    seo: { indexable: true }, cover: cover ? { mode: "manual", assetId: cover[1] } : { mode: "auto" },
+    seo: article.seo ?? { indexable: true }, cover: cover ? { mode: "manual", assetId: cover[1] } : { mode: "auto" },
     seriesPlacement: seriesId ? { seriesId } : null, seriesVersions,
   };
 }
@@ -111,7 +111,7 @@ export function seriesFromPublic(dto: SeriesSummaryDto): BlogSeries {
 }
 
 export function seriesFromEdit(dto: SeriesEditDto, slugOfArticle: (id: string) => string | undefined): BlogSeries {
-  return { id: dto.id, version: dto.version, slug: dto.slug, title: dto.title, summary: dto.summary ?? "", status: dto.status, ongoing: dto.ongoing, presentation: dto.presentation, ...(dto.cover.media ? { coverImage: dto.cover.media.url } : {}), articleSlugs: dto.chapterIds.map(slugOfArticle).filter((s): s is string => !!s) };
+  return { id: dto.id, version: dto.version, slug: dto.slug, title: dto.title, summary: dto.summary ?? "", status: dto.status, ongoing: dto.ongoing, presentation: dto.presentation, seo: dto.seo, ...(dto.cover.media ? { coverImage: dto.cover.media.url } : {}), articleSlugs: dto.chapterIds.map(slugOfArticle).filter((s): s is string => !!s) };
 }
 
 export function seriesWrite(series: BlogSeries, idOfArticle: (slug: string) => string | undefined, articleVersions: Schema<"VersionRef">[]): Schema<"SeriesWrite"> {
@@ -119,7 +119,7 @@ export function seriesWrite(series: BlogSeries, idOfArticle: (slug: string) => s
   return {
     title: series.title, slug: series.slug, summary: series.summary, ongoing: series.ongoing,
     cover: cover ? { mode: "manual", assetId: cover[1] } : { mode: "auto" },
-    presentation: series.presentation ?? DEFAULT_SERIES_PRESENTATION, seo: { indexable: true },
+    presentation: series.presentation ?? DEFAULT_SERIES_PRESENTATION, seo: series.seo ?? { indexable: true },
     chapterIds: series.articleSlugs.map(idOfArticle).filter((id): id is string => !!id), articleVersions,
   };
 }

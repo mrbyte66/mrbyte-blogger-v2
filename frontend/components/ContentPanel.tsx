@@ -141,7 +141,7 @@ export function ContentPanel({ navigation, dispatch, siteName = "SATIR", default
           <div className="topic-filter" role="group" aria-label="Yazı kategorisi">{topics.map((topic) => <button key={topic} aria-pressed={topic === displayedNavigation.topic} onClick={() => go({ type: "filter", topic })}>{topic}</button>)}</div>
           <div className="article-list">{filtered.slice(0, feed.visible).map((item) => <ArticleCard article={item} key={item.slug} onOpen={openArticle} />)}</div>
           <div className="progressive-footer" ref={feed.sentinel}><span role="status">{feed.visible} / {filtered.length} yazı</span>{feed.hasMore && <button onClick={feed.loadMore}>Sonraki 5 yazıyı göster ↓</button>}</div>
-          <p className="sample-note">Bu ilk taslakta örnek içerikleri görüyorsun.</p>
+          {articles.some((item) => !item.authored) && <p className="sample-note">Bu ilk taslakta örnek içerikleri görüyorsun.</p>}
         </section>)}
         {displayedNavigation.section === "projects" && <section className="projects-view">
           <p className="eyebrow">FİKİRDEN ÇALIŞAN BİR ŞEYE</p>

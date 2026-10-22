@@ -1,4 +1,4 @@
-import { findArticle } from "../content";
+import { findArticle, type Article } from "../content";
 
 export type BlogSeries = {
   id: string;
@@ -9,6 +9,7 @@ export type BlogSeries = {
   summary: string;
   coverImage?: string;
   presentation?: { heading: "left" | "center"; chapterStyle: "cards" | "rows" };
+  seo?: Article["seo"];
   status: "draft" | "published" | "archived" | "trashed";
   ongoing: boolean;
   articleSlugs: string[];
@@ -46,6 +47,7 @@ export function seriesValidationError(value: unknown, articleSlugs?: readonly st
     if (typeof s.slug !== "string" || s.slug.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s.slug) || slugs.has(s.slug)) return "Seri bağlantısı benzersiz olmalı; küçük harf, rakam ve tire kullanabilirsin.";
     if (typeof s.title !== "string" || !s.title.trim() || s.title.length > 160) return "Seriye en fazla 160 karakterlik bir başlık ver.";
     if (typeof s.summary !== "string" || s.summary.length > 1000) return "Seri açıklaması en fazla 1000 karakter olabilir.";
+    if (s.seo !== undefined && (!s.seo || typeof s.seo !== "object" || typeof s.seo.indexable !== "boolean" || (s.seo.title != null && (typeof s.seo.title !== "string" || s.seo.title.length>200)) || (s.seo.description != null && (typeof s.seo.description !== "string" || s.seo.description.length>400)))) return "Seri SEO alanları geçersiz.";
     if (s.presentation && (!["left", "center"].includes(s.presentation.heading) || !["cards", "rows"].includes(s.presentation.chapterStyle))) return "Seri sayfa düzeni geçersiz.";
     if (!isValidSeriesCoverImage(s.coverImage)) return "Kapak görseli için site içi bir yol veya HTTPS bağlantısı kullan.";
     if (!["draft", "published", "archived", "trashed"].includes(s.status ?? "") || typeof s.ongoing !== "boolean") return "Seri yayın durumunu seç.";
@@ -61,7 +63,7 @@ export function seriesValidationError(value: unknown, articleSlugs?: readonly st
 }
 export function validateSeries(value: unknown, articleSlugs?: readonly string[]): BlogSeries[] | null {
   if (seriesValidationError(value, articleSlugs)) return null;
-  return (value as BlogSeries[]).map(({ id, version, slug, title, summary, coverImage, presentation, status, ongoing, articleSlugs }) => ({ id, ...(version === undefined ? {} : { version }), slug, title, summary, ...(coverImage === undefined ? {} : { coverImage }), ...(presentation ? { presentation: { ...presentation } } : {}), status, ongoing, articleSlugs: [...articleSlugs] }));
+  return (value as BlogSeries[]).map(({ id, version, slug, title, summary, coverImage, presentation, seo, status, ongoing, articleSlugs }) => ({ id, ...(version === undefined ? {} : { version }), slug, title, summary, ...(coverImage === undefined ? {} : { coverImage }), ...(presentation ? { presentation: { ...presentation } } : {}), ...(seo ? {seo:{...seo}} : {}), status, ongoing, articleSlugs: [...articleSlugs] }));
 }
 export function isValidSeriesCoverImage(value: unknown): value is string | undefined {
   if (value === undefined) return true;

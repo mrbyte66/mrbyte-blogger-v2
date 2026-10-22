@@ -10,7 +10,7 @@ import { MarkedText } from "./MarkedText";
 import { markedHtml } from "../lib/articles/marked-html";
 import { usePermalinkView } from "../lib/reactions/use-views";
 
-function CodeBlock({ code }: { code: string }) {
+function CodeBlock({ code, language = "java" }: { code: string; language?: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "error">("idle");
   async function copy() {
     try {
@@ -19,7 +19,7 @@ function CodeBlock({ code }: { code: string }) {
     } catch { setStatus("error"); }
   }
   return <div className="code-block" data-edit-field="code">
-    <div className="code-toolbar"><span>JAVA</span><button onClick={copy}>{status === "copied" ? "Kopyalandı" : "Kodu kopyala"}</button></div>
+    <div className="code-toolbar"><span>{language === "plain" ? "ÖRNEK" : language.toUpperCase()}</span><button onClick={copy}>{status === "copied" ? "Kopyalandı" : "Kodu kopyala"}</button></div>
     <pre><code>{code}</code></pre>
     <span className="copy-status" role="status">{status === "error" ? "Kopyalanamadı. Kodu seçerek kopyalayabilirsin." : ""}</span>
   </div>;
@@ -44,7 +44,7 @@ export function ArticleContent({ article, fullPage = false, preview = false, rea
     {article.paragraphs.map((paragraph, index) => <div key={index}>
       <ParagraphContent article={article} index={index} text={paragraph} preview={preview}/>
       {index === 0 && article.figure && <figure data-edit-field="figure"><img src={article.figure.src} alt={article.figure.alt} width={article.figure.width} height={article.figure.height} loading="lazy" /><figcaption>{article.figure.caption}</figcaption></figure>}
-      {index === Math.min(2, article.paragraphs.length - 1) && article.code && <CodeBlock code={article.code} />}
+      {index === Math.min(2, article.paragraphs.length - 1) && article.code && <CodeBlock code={article.code} language={article.codeLanguage} />}
       {index === Math.min(2, article.paragraphs.length - 1) && article.table && <div className="article-table-scroll" data-edit-field="table" role="region" tabIndex={0} aria-label={`${article.table.caption}. Dar ekranda yatay kaydırılabilir.`}><table><caption>{article.table.caption}</caption><thead><tr>{article.table.columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr></thead><tbody>{article.table.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>}
     </div>)}
     {!readingPreview && !article.authored && <div className="article-end"><span aria-hidden="true">✳</span><p>Şimdilik bu kadar.<br />Bir sonraki satırda görüşürüz.</p></div>}

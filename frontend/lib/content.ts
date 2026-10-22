@@ -38,6 +38,8 @@ export type Article = {
   paragraphMarks?: readonly (readonly TextMark[])[];
   paragraphs: readonly string[];
   code?: string;
+  codeLanguage?: string;
+  seo?: { title?: string | null; description?: string | null; indexable: boolean };
   figure?: { src: string; alt: string; caption: string; width: number; height: number };
   table?: { caption: string; columns: readonly string[]; rows: readonly (readonly string[])[] };
 };

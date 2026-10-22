@@ -46,6 +46,8 @@ describe("dynamic category identities (#44)", () => {
 });
 
 import { toDocument } from "../lib/api/mapping";
+import { seriesFromEdit, seriesWrite, type SeriesEditDto } from "../lib/api/mapping";
+import { validateSeries } from "../lib/series/model";
 it("round-trips headings and attributed quotes without flattening their type or anchor",()=>{
   const document={schemaVersion:1 as const,blocks:[
     {id:"10000000-0000-4000-8000-000000000001",type:"heading" as const,text:"Bölüm",level:2 as const},
@@ -54,4 +56,25 @@ it("round-trips headings and attributed quotes without flattening their type or 
   const article=validateArticle(articleFromEdit({...edit,document},[category]));
   expect(article).not.toBeNull();
   expect(toDocument(article!)).toEqual(document);
+});
+
+it("keeps authored SEO and non-Java code languages through Studio validation and save",()=>{
+  const document={schemaVersion:1 as const,blocks:[
+    {id:"10000000-0000-4000-8000-000000000001",type:"paragraph" as const,text:"Yapılandırılmış çıktı."},
+    {id:"10000000-0000-4000-8000-000000000002",type:"code" as const,text:'{"etiket":"java"}',language:"json" as const},
+  ]};
+  const seo={title:"JSON ile güvenilir çıktı",description:"Biçim ile anlamı ayır.",indexable:true};
+  const article=validateArticle(articleFromEdit({...edit,document,seo},[category]));
+  expect(article).not.toBeNull();
+  expect(toDocument(article!)).toEqual(document);
+  expect(articleWrite(article!,null,[],[category]).seo).toEqual(seo);
+  expect(validateArticle({...article,codeLanguage:"unknown"})).toBeNull();
+});
+
+it("preserves series SEO when the editor saves a different series field",()=>{
+  const dto:SeriesEditDto={id:"40000000-0000-4000-8000-000000000001",version:1,slug:"seri",title:"Seri",summary:"Özet",status:"published",ongoing:false,
+    chapterIds:[edit.id],presentation:{heading:"left",chapterStyle:"cards"},seo:{title:"Kaynaklı seri",description:"Beş seviyeli rota.",indexable:true},
+    cover:{mode:"auto",assetId:null,media:null},createdAt:edit.createdAt,updatedAt:edit.updatedAt,url:"/seriler/seri"};
+  const series=validateSeries([seriesFromEdit(dto,()=>edit.slug)],[edit.slug])![0];
+  expect(seriesWrite({...series,summary:"Yeni özet"},()=>edit.id,[]).seo).toEqual(dto.seo);
 });

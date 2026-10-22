@@ -24,6 +24,8 @@ export function validateArticle(value: unknown): Article | null {
   if (a.status === "scheduled" && !a.scheduledAt) return null;
   if (a.authored !== undefined && typeof a.authored !== "boolean") return null;
   if (a.code !== undefined && !text(a.code, 50000)) return null;
+  if (a.codeLanguage !== undefined && !["plain","java","javascript","typescript","python","bash","sql","json","yaml","html","css","kotlin","go","rust","csharp","cpp"].includes(a.codeLanguage)) return null;
+  if (a.seo !== undefined && (!a.seo || typeof a.seo !== "object" || typeof a.seo.indexable !== "boolean" || (a.seo.title != null && !text(a.seo.title,200)) || (a.seo.description != null && !text(a.seo.description,400)))) return null;
   if (a.figure && (!a.figure.src || !isValidSeriesCoverImage(a.figure.src) || !text(a.figure.alt, 500) || !text(a.figure.caption, 1000) || !Number.isFinite(a.figure.width) || a.figure.width <= 0 || !Number.isFinite(a.figure.height) || a.figure.height <= 0)) return null;
   if (a.table && (!text(a.table.caption, 500) || !Array.isArray(a.table.columns) || !a.table.columns.length || a.table.columns.length > 20 || !a.table.columns.every((c) => text(c, 1000)) || !Array.isArray(a.table.rows) || a.table.rows.length > 200 || !a.table.rows.every((row) => Array.isArray(row) && row.length === a.table!.columns.length && row.every((c) => text(c, 4000))))) return null;
   if (a.presentation && (!["comfortable", "wide"].includes(a.presentation.width) || !["left", "center"].includes(a.presentation.heading) || typeof a.presentation.showMeta !== "boolean")) return null;
@@ -35,6 +37,8 @@ export function validateArticle(value: unknown): Article | null {
     ...(a.id ? { id: a.id } : {}), ...(a.version !== undefined ? { version: a.version } : {}),
     ...(a.visibility ? { visibility: a.visibility } : {}), ...(a.coverUrl ? { coverUrl: a.coverUrl } : {}),
     ...(a.seriesId !== undefined ? { seriesId: a.seriesId } : {}),
+    ...(a.codeLanguage ? { codeLanguage: a.codeLanguage } : {}),
+    ...(a.seo ? { seo: { ...a.seo } } : {}),
     ...(a.paragraphMarks?.some((marks) => marks.length) ? { paragraphMarks: a.paragraphMarks.map((marks) => marks.map((mark: TextMark) => ({ ...mark }))) } : {}),
     ...(a.blockIds && Array.isArray(a.blockIds.paragraphs) ? { blockIds: { ...a.blockIds, paragraphs: [...a.blockIds.paragraphs] } } : {}),
   };

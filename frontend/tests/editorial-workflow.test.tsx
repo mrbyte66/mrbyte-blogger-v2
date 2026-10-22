@@ -94,16 +94,28 @@ describe("article-first editorial workflow", () => {
     await action("Taslağa geri yükle");
     expect(site.article(articles[0].slug)?.status).toBe("draft");
   });
-  it("marks writing private so it can never be published by mistake", async () => {
-    const site = studio();
+  it("keeps publication planning without offering private writing", async () => {
+    studio();
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: articles[1].title }));
     fireEvent.click(writingTool("Yayın planı"));
-    fireEvent.click(screen.getByLabelText(/Özel yazı/));
-    expect(screen.queryByLabelText("Yayın tarihi ve saati")).toBeNull();
-    await click(screen.getByRole("button", { name: /Sayfayı kaydet/ }));
-    expect(site.article(articles[1].slug)).toMatchObject({ visibility: "private", status: "draft" });
-    expect(publicArticles(site.articles).some((a) => a.slug === articles[1].slug)).toBe(false);
+    expect(screen.queryByLabelText(/Özel yazı/)).toBeNull();
+    expect(screen.getByLabelText("Yayın tarihi ve saati")).toBeTruthy();
+  });
+
+  it("saves a published article as a working draft and keeps the visitor version until explicit publication", async () => {
+    const site=studio();
+    const original=site.article(articles[1].slug)!;
+    fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
+    fireEvent.click(screen.getByRole("button", { name: original.title }));
+    writeCanvas("title", "Yarın tamamlanacak");
+    await click(screen.getByRole("button",{name:/Sayfayı kaydet/}));
+    expect(site.article(original.slug)).toMatchObject({title:"Yarın tamamlanacak",status:"draft",hasUnpublishedChanges:true});
+    expect(site.published().find(a=>a.slug===original.slug)?.title).toBe(original.title);
+    expect(screen.getByText(/Okuyucular önceki yayını/)).toBeTruthy();
+    await click(screen.getByRole("button",{name:"Değişiklikleri yayımla"}));
+    expect(site.published().find(a=>a.slug===original.slug)?.title).toBe("Yarın tamamlanacak");
+    expect(site.article(original.slug)?.hasUnpublishedChanges).toBe(false);
   });
 });
 

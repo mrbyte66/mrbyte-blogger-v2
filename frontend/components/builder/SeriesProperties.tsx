@@ -7,7 +7,7 @@ import { articleStatus, statusLabels } from "../../lib/editorial/store";
 import { CoverField } from "./CoverSearch";
 /** A series can go live only with at least one published, public chapter (API rule `SERIES_EMPTY`). */
 export function hasPublicChapter(series: BlogSeries, articles: readonly Article[]) {
-  return articles.some((article) => series.articleSlugs.includes(article.slug) && articleStatus(article) === "published" && article.visibility !== "private");
+  return articles.some((article) => series.articleSlugs.includes(article.slug) && (articleStatus(article) === "published" || (!!article.publishedRevisionId && !["archived","trashed"].includes(articleStatus(article)))) && article.visibility !== "private");
 }
 /** Marks chapters that would not be visible to visitors yet, so the owner can tell them apart in the picker. */
 function chapterState(article: Article) {

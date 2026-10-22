@@ -83,6 +83,7 @@ public class SeriesCommands {
         series.insert(id, ownerId, content.fields(json), now);
         slugs.setCurrent("SERIES", id, content.slug, ids.next(), now);
         series.replaceChapters(id, content.chapterIds);
+        articles.syncPublishedSeries(id);
         content.chapterIds.forEach(articleId -> articles.bumpVersion(articleId, now));
         audit.record(ownerId, "SERIES_CREATE", "SERIES", id, AuditLog.Outcome.SUCCESS);
         return id;
@@ -107,6 +108,7 @@ public class SeriesCommands {
         series.update(id, content.fields(json), now);
         if (!current.equals(content.chapterIds)) {
             series.replaceChapters(id, content.chapterIds);
+        articles.syncPublishedSeries(id);
             Set<UUID> changed = new HashSet<>(current);
             changed.addAll(content.chapterIds);
             changed.removeIf(articleId -> current.contains(articleId) && content.chapterIds.contains(articleId));
@@ -149,7 +151,7 @@ public class SeriesCommands {
         }
         Instant now = clock.instant();
         if ("PUBLISHED".equals(next)) {
-            boolean hasPublicChapter = series.chapters(List.of(id)).stream().anyMatch(ChapterRow::isPublic);
+            boolean hasPublicChapter = !series.publicChapters(List.of(id)).isEmpty();
             if (!hasPublicChapter) {
                 throw new ApiException(HttpStatus.CONFLICT, "SERIES_EMPTY", "Seriyi yayımlamak için en az bir yayındaki bölüm gerekli");
             }

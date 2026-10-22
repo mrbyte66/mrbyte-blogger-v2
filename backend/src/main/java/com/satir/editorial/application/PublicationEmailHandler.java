@@ -46,7 +46,7 @@ class PublicationEmailHandler implements JobHandler {
     public Outcome handle(Job job) {
         record Eligible(ArticleRow article, ProfileView owner) {
         }
-        Optional<Eligible> eligible = transactions.execute(status -> articles.find(job.aggregateId())
+        Optional<Eligible> eligible = transactions.execute(status -> articles.findPublic(job.aggregateId())
                 .filter(ArticleRow::isPublic)
                 .filter(article -> article.publicationGeneration() == job.generation())
                 .flatMap(article -> profiles.ownProfile(article.ownerId())

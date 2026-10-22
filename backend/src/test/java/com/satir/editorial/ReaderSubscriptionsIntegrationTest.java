@@ -35,6 +35,7 @@ class ReaderSubscriptionsIntegrationTest extends IntegrationTest {
         assertThat(mail.to("bekleyen@example.test")).isEmpty();
         assertThat(mail.to("kapali@example.test")).isEmpty();
         assertThat(mail.to("sonradan@example.test")).isEmpty();
+        live = owner.put("/api/v1/studio/articles/" + live.id(), article("Güncellenen yazı", "ilk-yayin", "Yeni sürüm."), Map.of("If-Match", live.etag()));
         Response draft = owner.command("/api/v1/studio/articles/" + live.id() + "/actions",
                 Map.of("action", "save-draft"), live.etag());
         owner.command("/api/v1/studio/articles/" + draft.id() + "/actions",

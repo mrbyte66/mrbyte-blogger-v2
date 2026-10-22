@@ -28,7 +28,7 @@ public class CategoryRepository {
 
     /** Categories used by at least one public article. */
     public List<CategoryRow> publiclyUsed() {
-        return jdbc.sql(SELECT + " cat WHERE EXISTS (SELECT 1 FROM article_category ac JOIN article a ON a.id = ac.article_id "
+        return jdbc.sql(SELECT + " cat WHERE EXISTS (SELECT 1 FROM article_publication_category ac JOIN article a ON a.id = ac.article_id "
                 + "WHERE ac.category_id = cat.id AND " + ArticleRepository.PUBLIC_PREDICATE + ") ORDER BY position, name COLLATE \"tr-TR-x-icu\"")
                 .query(CategoryRow.class).list();
     }

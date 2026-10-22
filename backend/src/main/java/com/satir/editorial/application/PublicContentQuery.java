@@ -90,7 +90,7 @@ public class PublicContentQuery {
 
     @Transactional(readOnly = true)
     public Optional<Resolution<EditorialViews.ArticleDetail>> articleBySlug(String slug) {
-        return slugs.find("ARTICLE", slug).flatMap(entry -> articles.find(entry.articleId())
+        return slugs.find("ARTICLE", slug).flatMap(entry -> articles.findPublic(entry.articleId())
                 .filter(ArticleRow::isPublic)
                 .map(row -> entry.current()
                         ? new Resolution.Found<>(assembler.detail(row, nav(row)))
@@ -115,7 +115,7 @@ public class PublicContentQuery {
         if (!entry.get().current()) {
             return Optional.of(new Resolution.Moved<>(EditorialAssembler.seriesPath(row.slug())));
         }
-        return Optional.of(new Resolution.Found<>(assembler.seriesDetail(row, series.chapters(List.of(row.id())))));
+        return Optional.of(new Resolution.Found<>(assembler.seriesDetail(row, series.publicChapters(List.of(row.id())))));
     }
 
     /** Public chapters only, numbered consecutively in Studio order. */
@@ -125,20 +125,20 @@ public class PublicContentQuery {
         if (!series.isPublic(seriesId)) {
             return Optional.empty();
         }
-        List<ChapterRow> visible = series.chapters(List.of(seriesId)).stream().filter(ChapterRow::isPublic).toList();
+        List<ChapterRow> visible = series.publicChapters(List.of(seriesId)).stream().filter(ChapterRow::isPublic).toList();
         int from = Math.min(page * size, visible.size());
         List<ChapterRow> slice = visible.subList(from, Math.min(from + size, visible.size()));
         Map<UUID, Integer> numbers = new HashMap<>();
         for (int i = 0; i < slice.size(); i++) {
             numbers.put(slice.get(i).articleId(), from + i + 1);
         }
-        List<ArticleRow> rows = articles.findAll(slice.stream().map(ChapterRow::articleId).toList());
+        List<ArticleRow> rows = articles.findAllPublic(slice.stream().map(ChapterRow::articleId).toList());
         return Optional.of(PageResponse.of(assembler.summaries(rows, false, numbers), page, size, visible.size(), "position"));
     }
 
     @Transactional(readOnly = true)
     public boolean isArticlePublic(UUID id) {
-        return articles.find(id).map(ArticleRow::isPublic).orElse(false);
+        return articles.findPublic(id).map(ArticleRow::isPublic).orElse(false);
     }
 
     /** Summaries of the requested articles that are public right now; hidden ones are simply absent. */
@@ -147,7 +147,7 @@ public class PublicContentQuery {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        List<ArticleRow> rows = articles.findAll(ids.stream().distinct().toList()).stream().filter(ArticleRow::isPublic).toList();
+        List<ArticleRow> rows = articles.findAllPublic(ids.stream().distinct().toList()).stream().filter(ArticleRow::isPublic).toList();
         Map<UUID, ArticleSummary> byId = new LinkedHashMap<>();
         assembler.summaries(rows, false, Map.of()).forEach(summary -> byId.put(summary.id(), summary));
         return byId;
@@ -156,7 +156,7 @@ public class PublicContentQuery {
     /** Current revision of a public article; empty when the article is hidden or missing. */
     @Transactional(readOnly = true)
     public Optional<UUID> currentPublicRevision(UUID articleId) {
-        return articles.find(articleId).filter(ArticleRow::isPublic).map(ArticleRow::revisionId);
+        return articles.findPublic(articleId).filter(ArticleRow::isPublic).map(ArticleRow::revisionId);
     }
 
     /**
@@ -165,7 +165,7 @@ public class PublicContentQuery {
      */
     @Transactional(readOnly = true)
     public Optional<RevisionText> revisionText(UUID articleId, UUID revisionId) {
-        if (!isArticlePublic(articleId)) {
+        if (!isArticlePublic(articleId) || !articles.wasPublished(articleId, revisionId)) {
             return Optional.empty();
         }
         return articles.revision(articleId, revisionId).map(revision -> {
@@ -183,7 +183,7 @@ public class PublicContentQuery {
         if (!series.isPublic(seriesId)) {
             return Optional.empty();
         }
-        return Optional.of(series.chapters(List.of(seriesId)).stream().filter(ChapterRow::isPublic)
+        return Optional.of(series.publicChapters(List.of(seriesId)).stream().filter(ChapterRow::isPublic)
                 .map(ChapterRow::articleId).toList());
     }
 
@@ -216,10 +216,10 @@ public class PublicContentQuery {
             return null;
         }
         SeriesRow owner = series.find(row.seriesId()).orElseThrow();
-        return EditorialAssembler.seriesNav(owner, series.chapters(List.of(owner.id())), row.id());
+        return EditorialAssembler.seriesNav(owner, series.publicChapters(List.of(owner.id())), row.id());
     }
 
     private Map<UUID, List<ChapterRow>> chaptersBySeries(List<UUID> ids) {
-        return series.chapters(ids).stream().collect(Collectors.groupingBy(ChapterRow::seriesId));
+        return series.publicChapters(ids).stream().collect(Collectors.groupingBy(ChapterRow::seriesId));
     }
 }

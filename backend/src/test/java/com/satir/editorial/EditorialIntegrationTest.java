@@ -150,10 +150,11 @@ class EditorialIntegrationTest extends IntegrationTest {
     void slugChangesKeepOldUrlsAsRedirectsOfTheSameArticle() {
         createOwner();
         owner = ownerClient();
-        Response live = publish(article("Eski ad", "eski-ad", "Metin."));
+        Response live = create(article("Eski ad", "eski-ad", "Metin."));
         Response renamed = owner.put("/api/v1/studio/articles/" + live.id(), article("Yeni ad", "yeni-ad", "Metin."),
                 Map.of("If-Match", live.etag()));
         assertThat(renamed.status()).isEqualTo(200);
+        renamed = act(renamed, "publish");
 
         ApiClient visitor = client();
         Response old = visitor.get("/api/v1/articles/by-slug/eski-ad");

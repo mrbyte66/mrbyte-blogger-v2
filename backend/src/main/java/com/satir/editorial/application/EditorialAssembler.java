@@ -117,7 +117,7 @@ class EditorialAssembler {
                     row.categories().stream().map(c -> c.id()).toList(), document,
                     json.articlePresentation(row.presentationJson()), json.seo(row.seoJson()),
                     new CoverView(lower(row.coverMode()), row.coverAssetId(), mediaPublic(covers.get(row.coverAssetId()))),
-                    row.seriesId() == null ? null : new SeriesPlacement(row.seriesId()), document.readingMinutes());
+                    row.seriesId() == null ? null : new SeriesPlacement(row.seriesId()), document.readingMinutes(), row.publishedRevisionId(), row.hasUnpublishedChanges());
         }).toList();
     }
 

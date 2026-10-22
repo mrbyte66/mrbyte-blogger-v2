@@ -215,7 +215,9 @@ export function StudioDataProvider({ children }: { children: ReactNode }) {
       } else {
         ({ data: dto, etag } = await api<ArticleEditDto>("PUT", `/studio/articles/${previous.id}`, { body: (body satisfies Input<"studioUpdateArticle">), ifMatch: previous.version ?? 0 }));
       }
-      for (const step of articleActions(dto.status, dto.visibility, status, visibility)) {
+      const steps = articleActions(dto.status, dto.visibility, status, visibility);
+      if (status === "published" && dto.status === "published") steps.push("publish");
+      for (const step of steps) {
         const payload = step === "publish" ? await articlePublishAction(seriesId) : step === "schedule" ? { action: step, scheduledAt: article.scheduledAt, timeZone: browserTimeZone() } : { action: step };
         ({ data: dto, etag } = await api<ArticleEditDto>("POST", `/studio/articles/${dto.id}/actions`, { body: (payload satisfies Input<"studioArticleAction">), ifMatch: etag ?? dto.version, idempotent: true }));
       }

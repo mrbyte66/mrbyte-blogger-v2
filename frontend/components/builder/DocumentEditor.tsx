@@ -30,7 +30,7 @@ import { ArticleProperties, articleFields } from "./ArticleProperties";
 import { SeriesProperties, hasPublicChapter, seriesFields } from "./SeriesProperties";
 function documentFingerprint(draft:DocumentDraft) {
   const record=draft.kind==="article" ? draft.article : draft.series;
-  const {id,version,...content}=record;
+  const {id,version,revisionId,publishedRevisionId,hasUnpublishedChanges,firstPublishedAt,...content}=record as Article;
   return JSON.stringify(content);
 }
 export function DocumentEditor({ navigation, initial, fieldRequest = null, articles, series, isNew = false, onDirty, onNavigate, onSave, onDiscard, onCreateSeries, error }: { navigation?: ReactNode; initial: DocumentDraft; fieldRequest?: { field: string; n: number } | null; articles: readonly Article[]; series: readonly BlogSeries[]; isNew?: boolean; onDirty: (dirty: boolean) => void; onNavigate: (target: StudioTarget) => void; onSave: (draft: DocumentDraft, seriesId?: string | null) => Promise<boolean>; onCreateSeries: (series: BlogSeries) => Promise<BlogSeries | null>; onDiscard: () => void; error: string | null }) {
@@ -82,7 +82,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   const canPublish = draft.kind === "article" ? draft.article.paragraphs.some((p) => p.trim()) : hasPublicChapter(draft.series, articles);
   useEffect(() => { if (creatingSeries) seriesFormRef.current?.scrollIntoView({ block: "start", behavior: scrollBehavior() }); }, [creatingSeries]);
   const valid = parseDocumentDraft(draft);
-  const missingBody = (status === "published" || status === "scheduled") && !canPublish;
+  const missingBody = status === "scheduled" && !canPublish;
   const selectedSeries = series.find((item) => item.id === seriesId);
   const seriesPublishNote = draft.kind === "article" && draft.article.visibility !== "private" && selectedSeries?.status === "draft"
     ? `Seri de yayınlanacak: ${selectedSeries.title}.` : "";
@@ -93,16 +93,16 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   // After a save the server returns a new version; adopt it in place (keeping the selected field).
   const serverVersion = initial.kind === "article" ? `${initial.article.id}:${initial.article.version}` : `${initial.series.id}:${initial.series.version}`;
   useEffect(() => {
-    if(isNew) return;
+    if(isNew || saving) return;
     if(dirty) {
       const local=latest.current;
-      if(local.kind==="article" && initial.kind==="article") commit({...local,article:{...local.article,id:initial.article.id,version:initial.article.version}});
+      if(local.kind==="article" && initial.kind==="article") commit({...local,article:{...local.article,id:initial.article.id,version:initial.article.version,revisionId:initial.article.revisionId,publishedRevisionId:initial.article.publishedRevisionId,hasUnpublishedChanges:initial.article.hasUnpublishedChanges,firstPublishedAt:initial.article.firstPublishedAt}});
       if(local.kind==="series" && initial.kind==="series") commit({...local,series:{...local.series,id:initial.series.id,version:initial.series.version}});
       setBaseline(initial); return;
     }
     commit(structuredClone(initial)); setBaseline(initial); setSeriesId(initialSeriesId); setSavedSeriesId(initialSeriesId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serverVersion]);
+  }, [serverVersion,saving]);
   useEffect(() => { onDirty(dirty); }, [dirty, onDirty]);
   useEffect(() => {
     if (!dirty) return;
@@ -178,12 +178,12 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
     const next = editDocumentText(current, patch) ?? editDocumentText(current, { ...patch, previous: documentText(current, patch.field)?.value ?? patch.previous });
     if (next) { change(next,!!patch.action); if (patch.field.startsWith("paragraph-")) { setField(patch.field); setAnchorField(patch.field); } }
   }
-  async function save(requested: ContentStatus = status) {
+  async function save(requested: ContentStatus = draft.kind === "article" && status === "published" ? "draft" : status) {
     const draft = latest.current;
     if (saving || !parseDocumentDraft(draft) || (draft.kind === "series" && requested === "scheduled")) return;
     // Private writing is never live or planned: saving it takes the article off the site.
     const nextStatus: ContentStatus = draft.kind === "article" && draft.article.visibility === "private" && (requested === "published" || requested === "scheduled") ? "draft" : requested;
-    const next: DocumentDraft = draft.kind === "article" ? { kind: "article", article: { ...draft.article, status: nextStatus, scheduledAt: nextStatus === "scheduled" ? draft.article.scheduledAt : undefined } } : { kind: "series", series: { ...draft.series, status: nextStatus as BlogSeries["status"] } };
+    const next: DocumentDraft = draft.kind === "article" ? { kind: "article", article: { ...draft.article, hasUnpublishedChanges: nextStatus === "published" ? false : !!draft.article.publishedRevisionId, status: nextStatus, scheduledAt: nextStatus === "scheduled" ? draft.article.scheduledAt : undefined } } : { kind: "series", series: { ...draft.series, status: nextStatus as BlogSeries["status"] } };
     const publishedSeriesNote = nextStatus === "published" ? seriesPublishNote : "";
     setSaving(true); setMessage("Kaydediliyor…");
     const saved = await onSave(next, draft.kind === "article" ? seriesId : undefined);
@@ -195,7 +195,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
       commit(!edited ? next : current.kind === "article" && next.kind === "article" ? { kind: "article", article: { ...current.article, status: next.article.status, scheduledAt: next.article.scheduledAt } } : current.kind === "series" && next.kind === "series" ? { kind: "series", series: { ...current.series, status: next.series.status } } : current);
       setBaseline(structuredClone(next)); setSavedSeriesId(seriesId); setSavedAt(new Date()); if (!edited) onDirty(false);
       const privateNote = next.kind === "article" && next.article.visibility === "private" ? " Yazı özel: yalnız sen görebilirsin." : "";
-      setMessage((nextStatus === "scheduled" ? "Yayın planı kaydedildi. Sunucu yazıyı planlanan zamanda yayımlayacak." : nextStatus === "trashed" ? "Çöp kutusuna taşındı. İçerik işlemlerinden geri yükleyebilirsin." : nextStatus === "archived" ? "Arşivlendi; ziyaretçilerden gizlendi." : nextStatus === "draft" ? "Taslak kaydedildi; ziyaretçilerden gizli." : "Kaydedildi ve yayında.") + privateNote + (publishedSeriesNote ? ` ${selectedSeries?.title} serisi de yayınlandı.` : ""));
+      setMessage((nextStatus === "scheduled" ? "Yayın planı kaydedildi. Sunucu yazıyı planlanan zamanda yayımlayacak." : nextStatus === "trashed" ? "Çöp kutusuna taşındı. İçerik işlemlerinden geri yükleyebilirsin." : nextStatus === "archived" ? "Arşivlendi; ziyaretçilerden gizlendi." : nextStatus === "draft" ? (draft.kind === "article" && (draft.article.publishedRevisionId || status === "published") ? "Taslak kaydedildi. Okuyucular önceki yayını görmeye devam ediyor." : "Taslak kaydedildi; ziyaretçilerden gizli.") : "Kaydedildi ve yayında.") + privateNote + (publishedSeriesNote ? ` ${selectedSeries?.title} serisi de yayınlandı.` : ""));
     } else setMessage("");
   }
   function closeSeriesForm() {
@@ -220,12 +220,12 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
     window.addEventListener("keydown",key); return ()=>window.removeEventListener("keydown",key);
   });
   const clock = savedAt ? new Intl.DateTimeFormat("tr-TR", { hour: "2-digit", minute: "2-digit" }).format(savedAt) : null;
-  const showPublish = status !== "published" && !(draft.kind === "article" && draft.article.visibility === "private");
+  const showPublish = (draft.kind === "article" || status !== "published") && !(draft.kind === "article" && draft.article.visibility === "private");
   const actionNodes = <>
-      {baseline && (baseline.kind === "article" ? articleStatus(baseline.article) : baseline.series.status) === "published" && <Link className="studio-text-link" href={baseline.kind === "article" ? `/yazilar/${baseline.article.slug}` : `/seriler/${baseline.series.slug}`} target="_blank" aria-label="Kaydedilmiş sayfayı aç ↗" title="Kaydedilmiş sayfayı aç">Site ↗</Link>}
+      {baseline && (baseline.kind === "article" ? (baseline.article.publishedRevisionId ? "published" : articleStatus(baseline.article)) : baseline.series.status) === "published" && <Link className="studio-text-link" href={baseline.kind === "article" ? `/yazilar/${baseline.article.slug}` : `/seriler/${baseline.series.slug}`} target="_blank" aria-label="Kaydedilmiş sayfayı aç ↗" title="Kaydedilmiş sayfayı aç">Site ↗</Link>}
       <DocumentActions onRevert={revert} canRevert={dirty} status={status} disabled={!ready || !valid || creatingSeries || saving} canPublish={canPublish} publishHint={publishHint} onSave={save} onSchedule={draft.kind === "article" ? () => select("publication") : undefined} />
-      <button className="studio-primary" disabled={!ready || !dirty || !valid || missingBody || creatingSeries || saving} aria-label="Sayfayı kaydet ↗" onClick={() => save()}>{saving ? "Kaydediliyor…" : "Kaydet"}</button>
-      {showPublish && <button className="studio-primary studio-publish" disabled={!ready || !valid || !canPublish || creatingSeries || saving} title={canPublish ? undefined : publishHint} onClick={() => save("published")}>Yayınla</button>}
+      <button className="studio-primary" disabled={!ready || !dirty || !valid || missingBody || creatingSeries || saving} aria-label="Sayfayı kaydet ↗" onClick={() => save()}>{saving ? "Kaydediliyor…" : draft.kind === "article" && (draft.article.publishedRevisionId || status === "published") ? "Taslağı kaydet" : "Kaydet"}</button>
+      {showPublish && <button className="studio-primary studio-publish" disabled={!ready || !valid || !canPublish || creatingSeries || saving || (draft.kind === "article" && !dirty && !!draft.article.publishedRevisionId && !draft.article.hasUnpublishedChanges)} title={canPublish ? undefined : publishHint} onClick={() => save("published")}>{draft.kind === "article" && (draft.article.publishedRevisionId || draft.article.firstPublishedAt) ? "Değişiklikleri yayımla" : "Yayınla"}</button>}
     </>;
   const settingsContent = creatingSeries ? <div ref={seriesFormRef} className="inline-series-anchor"><InlineSeriesForm onDirty={setSeriesFormDirty} onCancel={closeSeriesForm} onSave={async record => {
     const created = await onCreateSeries(record); if (!created) return false;
@@ -236,10 +236,10 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
       {fields.filter(([id]) => !["title","excerpt","summary","body","figure","code","table","publication"].includes(id)).map(([id,name]) => <button key={id} aria-pressed={settingsKind === "document" && settingsField === id} onClick={() => openSettings(id)}><EditorIcon name={id} size={16}/>{name}</button>)}
     </div>
     <h2 className="writing-setting-title">{settingsKind === "design" ? "Site tasarımı" : label}</h2>
-    <fieldset className="inspector-fields" disabled={!ready}>{settingsKind === "design" ? <SiteDesignControls/> : draft.kind === "article" && settingsField === "notes" ? <><div className="margin-card"><WordGoal current={draft.article} saved={baseline?.kind === "article" ? baseline.article : draft.article} line/></div><NotesPanel article={draft.article} field={anchorField}/></> : draft.kind === "article" ? <ArticleProperties onSchedule={() => save("scheduled")} onCancelSchedule={() => save("draft")} scheduleDisabled={!ready || !valid || !canPublish || saving} allowSlugEdit={!baseline} article={draft.article} field={settingsField} onChange={article => change({kind:"article",article})}/> : <SeriesProperties series={draft.series} collection={series} articles={articles} field={settingsField} onChange={series => change({kind:"series",series})}/>}</fieldset>
+    <fieldset className="inspector-fields" disabled={!ready}>{settingsKind === "design" ? <SiteDesignControls/> : draft.kind === "article" && settingsField === "notes" ? <><div className="margin-card"><WordGoal current={draft.article} saved={baseline?.kind === "article" ? baseline.article : draft.article} line/></div><NotesPanel article={draft.article} field={anchorField}/></> : draft.kind === "article" ? <ArticleProperties onSchedule={() => save("scheduled")} onCancelSchedule={() => save("draft")} scheduleDisabled={!ready || !valid || !canPublish || saving} allowSlugEdit={draft.kind === "article" && !draft.article.firstPublishedAt} article={draft.article} field={settingsField} onChange={article => change({kind:"article",article})}/> : <SeriesProperties series={draft.series} collection={series} articles={articles} field={settingsField} onChange={series => change({kind:"series",series})}/>}</fieldset>
   </>;
   return <main className={`studio document-studio writing-studio ${panelOpen ? "has-writing-panel has-inspector" : ""} ${focused ? "studio-focus" : ""}`} data-view={view}>
-    <StudioHeader navigation={navigation} status={<><span className={`studio-state status-${status}`} title={dirty ? "Kaydedilmemiş değişiklikler var" : "Kaydedildi"}>{statusLabels[status]}{dirty && <span className="studio-state-suffix"> · düzenleniyor</span>}</span><span className={`studio-saved${dirty ? " is-dirty" : ""}`}>{dirty ? "Kaydedilmedi" : isNew && !baseline ? "Henüz kaydedilmedi" : clock ? `Kayıtlı · ${clock}` : "Kayıtlı"}</span></>} actions={actionNodes}/>
+    <StudioHeader navigation={navigation} status={<><span className={`studio-state status-${status}`} title={dirty ? "Kaydedilmemiş değişiklikler var" : "Kaydedildi"}>{draft.kind === "article" && draft.article.publishedRevisionId && status !== "archived" && status !== "trashed" ? (status === "scheduled" ? "Yayında · güncelleme planlandı" : dirty || draft.article.hasUnpublishedChanges ? "Yayında · çalışma taslağı" : "Yayında") : statusLabels[status]}{dirty && <span className="studio-state-suffix"> · düzenleniyor</span>}</span><span className={`studio-saved${dirty ? " is-dirty" : ""}`}>{dirty ? "Kaydedilmedi" : isNew && !baseline ? "Henüz kaydedilmedi" : clock ? `Kayıtlı · ${clock}` : "Kayıtlı"}</span></>} actions={actionNodes}/>
     <div className="studio-workspace">
       <section ref={canvasRef} className="studio-preview" aria-label="Canlı sayfa tuvali">
         <CanvasToolbar focused={focused} onFocus={panelOpen || focused ? setFocused : undefined} title={title} mobile={mobile} editing={editing} onMobile={setMobile} onEditing={setEditing}>

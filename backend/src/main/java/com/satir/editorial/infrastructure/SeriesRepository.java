@@ -33,8 +33,8 @@ public class SeriesRepository {
     /** A series is public when published and at least one chapter is a public article. */
     public static final String PUBLIC_PREDICATE = """
             s.status = 'PUBLISHED' AND EXISTS (
-                SELECT 1 FROM series_chapter pc JOIN article pa ON pa.id = pc.article_id
-                WHERE pc.series_id = s.id AND pa.status = 'PUBLISHED' AND pa.visibility = 'PUBLIC')
+                SELECT 1 FROM article_publication pc JOIN article pa ON pa.id = pc.article_id
+                WHERE pc.series_id = s.id AND pa.status NOT IN ('ARCHIVED','TRASHED') AND pa.visibility = 'PUBLIC')
             """;
 
     public record Fields(String title, String summary, boolean ongoing, String coverMode, UUID coverAssetId,
@@ -87,6 +87,11 @@ public class SeriesRepository {
     /** Membership/public-content change: bump version and the public modification time. */
     public void touch(UUID id, Instant now) {
         jdbc.sql("UPDATE series SET version = version + 1, updated_at = :now, public_modified_at = :now WHERE id = :id")
+                .param("id", id).param("now", Timestamp.from(now)).update();
+    }
+
+    public void bumpVersion(UUID id, Instant now) {
+        jdbc.sql("UPDATE series SET version = version + 1, updated_at = :now WHERE id = :id")
                 .param("id", id).param("now", Timestamp.from(now)).update();
     }
 
@@ -159,6 +164,22 @@ public class SeriesRepository {
                         rs.getInt("position"), rs.getString("slug"), rs.getString("title"), rs.getString("status"),
                         rs.getString("visibility"), rs.getLong("version"), instant(rs, "created_at")))
                 .list();
+    }
+
+    /** Reader navigation uses published titles and membership, never working drafts. */
+    public List<ChapterRow> publicChapters(List<UUID> seriesIds) {
+        if (seriesIds.isEmpty()) return List.of();
+        return jdbc.sql("""
+                SELECT p.series_id, p.article_id, p.series_position, sl.slug, r.title, a.visibility, a.version, a.created_at
+                FROM article_publication p JOIN article a ON a.id = p.article_id
+                JOIN article_revision r ON r.id = p.revision_id
+                JOIN slug_registry sl ON sl.article_id = a.id AND sl.is_current
+                WHERE p.series_id IN (:ids) AND a.visibility = 'PUBLIC' AND a.status NOT IN ('ARCHIVED','TRASHED')
+                ORDER BY p.series_id, p.series_position, a.created_at, a.id
+                """).param("ids", seriesIds)
+                .query((rs, n) -> new ChapterRow(rs.getObject("series_id", UUID.class), rs.getObject("article_id", UUID.class),
+                        rs.getInt("series_position"), rs.getString("slug"), rs.getString("title"), "PUBLISHED",
+                        rs.getString("visibility"), rs.getLong("version"), instant(rs, "created_at"))).list();
     }
 
     public Optional<UUID> seriesOf(UUID articleId) {

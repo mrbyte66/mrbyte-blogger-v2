@@ -85,6 +85,7 @@ export function articleFromEdit(dto: ArticleEditDto, registry: readonly Category
   const categories = categoryNames(dto.categoryIds, registry);
   return {
     id: dto.id, version: dto.version, slug: dto.slug, authored: true, status: dto.status, visibility: dto.visibility,
+    revisionId: dto.revisionId, publishedRevisionId: dto.publishedRevisionId, hasUnpublishedChanges: dto.hasUnpublishedChanges, firstPublishedAt: dto.firstPublishedAt,
     title: dto.title || "Adsız yazı", category: categories[0] ?? "", categories, categoryIds: [...dto.categoryIds], createdAt: dto.createdAt, publishedAt: dto.displayDate,
     ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt).toISOString() } : {}),
     eyebrow: dto.eyebrow ?? "", excerpt: dto.abstract ?? "", minutes: Math.max(1, dto.readingMinutes), presentation: dto.presentation, seo: dto.seo,

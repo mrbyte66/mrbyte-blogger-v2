@@ -9,7 +9,7 @@ import com.satir.editorial.infrastructure.SeriesRepository;
 import com.satir.media.application.MediaReferencePolicy;
 
 /**
- * Editorial side of media access: an asset is public only while the *current* revision of a
+ * Editorial side of media access: an asset is public only while the published revision of a
  * public article, or the cover of a public series, uses it. Old revisions grant nothing.
  */
 @Component

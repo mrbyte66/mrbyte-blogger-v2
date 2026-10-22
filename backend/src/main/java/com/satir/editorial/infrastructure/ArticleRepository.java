@@ -25,20 +25,59 @@ import com.satir.editorial.infrastructure.EditorialRows.PageResult;
 @Repository
 public class ArticleRepository {
 
-    public static final String PUBLIC_PREDICATE = "a.status = 'PUBLISHED' AND a.visibility = 'PUBLIC'";
+    public static final String PUBLIC_PREDICATE = "a.status NOT IN ('ARCHIVED', 'TRASHED') AND a.visibility = 'PUBLIC' AND EXISTS (SELECT 1 FROM article_publication pub WHERE pub.article_id = a.id)";
 
-    private static final String SELECT = """
-            SELECT a.id, a.owner_id, a.status, a.visibility, a.display_date, a.first_published_at, a.last_published_at,
-                   a.public_modified_at, a.scheduled_at, a.schedule_zone, a.schedule_generation, a.publication_generation,
-                   a.created_at, a.updated_at, a.version,
-                   r.id AS revision_id, r.revision_number, r.title, r.eyebrow, r.abstract, r.document::text AS document,
-                   r.presentation::text AS presentation, r.seo::text AS seo, r.cover_mode, r.cover_asset_id,
-                   s.slug, c.series_id, c.position AS series_position
-            FROM article a
-            JOIN article_revision r ON r.id = a.current_revision_id
-            JOIN slug_registry s ON s.article_id = a.id AND s.is_current
-            LEFT JOIN series_chapter c ON c.article_id = a.id
-            """;
+    private static final String SELECT = select(false);
+    private static final String PUBLIC_READ = select(true);
+
+    private static String select(boolean published) {
+        return """
+                SELECT a.id, a.owner_id, a.status, a.visibility, %s AS display_date, a.first_published_at, a.last_published_at,
+                       a.public_modified_at, a.scheduled_at, a.schedule_zone, a.schedule_generation, a.publication_generation,
+                       a.created_at, a.updated_at, a.version,
+                       r.id AS revision_id, r.revision_number, r.title, r.eyebrow, r.abstract, r.document::text AS document,
+                       r.presentation::text AS presentation, r.seo::text AS seo, r.cover_mode, r.cover_asset_id,
+                       s.slug, %s AS series_id, %s AS series_position, p.revision_id AS published_revision_id
+                FROM article a
+                LEFT JOIN article_publication p ON p.article_id = a.id
+                JOIN article_revision r ON r.id = %s
+                JOIN slug_registry s ON s.article_id = a.id AND s.is_current
+                LEFT JOIN series_chapter c ON c.article_id = a.id
+                """.formatted(published ? "p.display_date" : "a.display_date", published ? "p.series_id" : "c.series_id",
+                        published ? "p.series_position" : "c.position", published ? "p.revision_id" : "a.current_revision_id");
+    }
+
+    public void publishSnapshot(UUID id, UUID revisionId, LocalDate date) {
+        jdbc.sql("""
+                INSERT INTO article_publication(article_id, revision_id, display_date, series_id, series_position)
+                SELECT a.id, :revision, :date, c.series_id, c.position FROM article a
+                LEFT JOIN series_chapter c ON c.article_id = a.id WHERE a.id = :id
+                ON CONFLICT(article_id) DO UPDATE SET revision_id = EXCLUDED.revision_id,
+                    display_date = EXCLUDED.display_date, series_id = EXCLUDED.series_id, series_position = EXCLUDED.series_position
+                """).param("id", id).param("revision", revisionId).param("date", Date.valueOf(date)).update();
+        jdbc.sql("DELETE FROM article_publication_category WHERE article_id = :id").param("id", id).update();
+        jdbc.sql("INSERT INTO article_publication_category SELECT * FROM article_category WHERE article_id = :id").param("id", id).update();
+        jdbc.sql("INSERT INTO article_published_revision VALUES (:id, :revision) ON CONFLICT DO NOTHING")
+                .param("id", id).param("revision", revisionId).update();
+    }
+
+    public void withdrawSnapshot(UUID id) {
+        jdbc.sql("DELETE FROM article_publication WHERE article_id = :id").param("id", id).update();
+    }
+
+    public boolean wasPublished(UUID articleId, UUID revisionId) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM article_published_revision WHERE article_id = :id AND revision_id = :revision)")
+                .param("id", articleId).param("revision", revisionId).query(Boolean.class).single();
+    }
+
+    /** Explicit series edits apply to published membership; article draft saves do not call this. */
+    public void syncPublishedSeries(UUID seriesId) {
+        jdbc.sql("""
+                UPDATE article_publication p SET series_id = c.series_id, series_position = c.position
+                FROM article a LEFT JOIN series_chapter c ON c.article_id = a.id
+                WHERE p.article_id = a.id AND (p.series_id = :series OR c.series_id = :series)
+                """).param("series", seriesId).update();
+    }
 
     public record NewRevision(UUID id, UUID articleId, int number, String title, String eyebrow, String abstractText,
             String documentJson, String presentationJson, String seoJson, String coverMode, UUID coverAssetId,
@@ -147,9 +186,21 @@ public class ArticleRepository {
         return exists ? find(id) : Optional.empty();
     }
 
+    public Optional<ArticleRow> findPublic(UUID id) {
+        return withCategories(jdbc.sql(PUBLIC_READ + " WHERE a.id = :id AND " + PUBLIC_PREDICATE).param("id", id).query(ArticleRepository::map).list(), true).stream().findFirst();
+    }
+
     public Optional<ArticleRow> find(UUID id) {
         return withCategories(jdbc.sql(SELECT + " WHERE a.id = :id").param("id", id).query(ArticleRepository::map).list())
                 .stream().findFirst();
+    }
+
+    public List<ArticleRow> findAllPublic(List<UUID> ids) {
+        if (ids.isEmpty()) return List.of();
+        Map<UUID, ArticleRow> byId = new HashMap<>();
+        withCategories(jdbc.sql(PUBLIC_READ + " WHERE a.id IN (:ids) AND " + PUBLIC_PREDICATE).param("ids", ids)
+                .query(ArticleRepository::map).list(), true).forEach(row -> byId.put(row.id(), row));
+        return ids.stream().map(byId::get).filter(java.util.Objects::nonNull).toList();
     }
 
     public List<ArticleRow> findAll(List<UUID> ids) {
@@ -163,6 +214,7 @@ public class ArticleRepository {
     }
 
     public PageResult<ArticleRow> page(Filter filter, String orderBy, int page, int size) {
+        String categoryTable = filter.publicOnly() ? "article_publication_category" : "article_category";
         Map<String, Object> params = new HashMap<>();
         StringBuilder where = new StringBuilder(" WHERE TRUE");
         if (filter.publicOnly()) {
@@ -181,7 +233,7 @@ public class ArticleRepository {
             params.put("series", filter.seriesId());
         }
         if (filter.categoryId() != null) {
-            where.append(" AND EXISTS (SELECT 1 FROM article_category ac WHERE ac.article_id = a.id AND ac.category_id = :category)");
+            where.append(" AND EXISTS (SELECT 1 FROM " + categoryTable + " ac WHERE ac.article_id = a.id AND ac.category_id = :category)");
             params.put("category", filter.categoryId());
         }
         if (filter.query() != null) {
@@ -192,16 +244,15 @@ public class ArticleRepository {
                     """);
             params.put("q", "%" + likeEscape(filter.query()) + "%");
         }
-        long total = jdbc.sql("""
-                SELECT count(*) FROM article a
-                JOIN article_revision r ON r.id = a.current_revision_id
-                LEFT JOIN series_chapter c ON c.article_id = a.id
-                """ + where).params(params).query(Long.class).single();
+        String select = filter.publicOnly() ? PUBLIC_READ : SELECT;
+        String condition = where.toString().replace("article_category ac", categoryTable + " ac");
+        if (filter.publicOnly()) { condition = condition.replace("c.series_id", "p.series_id"); orderBy = orderBy.replace("a.display_date", "p.display_date"); }
+        long total = jdbc.sql("SELECT count(*) FROM (" + select + condition + ") matching").params(params).query(Long.class).single();
         params.put("limit", size);
         params.put("offset", (long) page * size);
-        List<ArticleRow> rows = jdbc.sql(SELECT + where + " ORDER BY " + orderBy + " LIMIT :limit OFFSET :offset")
+        List<ArticleRow> rows = jdbc.sql(select + condition + " ORDER BY " + orderBy + " LIMIT :limit OFFSET :offset")
                 .params(params).query(ArticleRepository::map).list();
-        return new PageResult<>(withCategories(rows), total);
+        return new PageResult<>(withCategories(rows, filter.publicOnly()), total);
     }
 
     /** IDs of scheduled public articles whose time has come, oldest first. */
@@ -215,9 +266,9 @@ public class ArticleRepository {
 
     /** Public, indexable articles for the sitemap (seo.indexable not false). */
     public List<ArticleRow> indexable() {
-        return withCategories(jdbc.sql(SELECT + " WHERE " + PUBLIC_PREDICATE
-                + " AND COALESCE((r.seo ->> 'indexable')::boolean, true) ORDER BY a.display_date DESC, a.id DESC")
-                .query(ArticleRepository::map).list());
+        return withCategories(jdbc.sql(PUBLIC_READ + " WHERE " + PUBLIC_PREDICATE
+                + " AND COALESCE((r.seo ->> 'indexable')::boolean, true) ORDER BY p.display_date DESC, a.id DESC")
+                .query(ArticleRepository::map).list(), true);
     }
 
     /** Abstract and body of one revision, only if it belongs to {@code articleId}. */
@@ -236,7 +287,7 @@ public class ArticleRepository {
     }
 
     public boolean categoryInUse(UUID categoryId) {
-        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM article_category WHERE category_id = :id)")
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM article_category WHERE category_id = :id UNION ALL SELECT 1 FROM article_publication_category WHERE category_id = :id)")
                 .param("id", categoryId).query(Boolean.class).single();
     }
 
@@ -244,8 +295,9 @@ public class ArticleRepository {
     public boolean assetUsedByCurrentRevision(UUID assetId, String visibility, UUID exceptArticleId) {
         return jdbc.sql("""
                 SELECT EXISTS (
-                    SELECT 1 FROM article_media_ref m JOIN article a ON a.current_revision_id = m.revision_id
-                    WHERE m.asset_id = :asset AND a.visibility = :visibility AND a.status <> 'TRASHED'
+                    SELECT 1 FROM article_media_ref m JOIN article a ON a.id = m.article_id
+                    LEFT JOIN article_publication p ON p.article_id = a.id
+                    WHERE (a.current_revision_id = m.revision_id OR p.revision_id = m.revision_id) AND m.asset_id = :asset AND a.visibility = :visibility AND a.status <> 'TRASHED'
                       AND (CAST(:except AS uuid) IS NULL OR a.id <> CAST(:except AS uuid)))
                 """)
                 .param("asset", assetId).param("visibility", visibility).param("except", exceptArticleId)
@@ -255,8 +307,9 @@ public class ArticleRepository {
     public boolean assetPubliclyReferenced(UUID assetId) {
         return jdbc.sql("""
                 SELECT EXISTS (
-                    SELECT 1 FROM article_media_ref m JOIN article a ON a.current_revision_id = m.revision_id
-                    WHERE m.asset_id = :asset AND a.status = 'PUBLISHED' AND a.visibility = 'PUBLIC')
+                    SELECT 1 FROM article_media_ref m JOIN article_publication p ON p.revision_id = m.revision_id
+                    JOIN article a ON a.id = p.article_id
+                    WHERE m.asset_id = :asset AND a.visibility = 'PUBLIC' AND a.status NOT IN ('ARCHIVED','TRASHED'))
                 """)
                 .param("asset", assetId).query(Boolean.class).single();
     }
@@ -266,7 +319,9 @@ public class ArticleRepository {
                 .param("asset", assetId).query(Boolean.class).single();
     }
 
-    private List<ArticleRow> withCategories(List<ArticleRow> rows) {
+    private List<ArticleRow> withCategories(List<ArticleRow> rows) { return withCategories(rows, false); }
+
+    private List<ArticleRow> withCategories(List<ArticleRow> rows, boolean published) {
         if (rows.isEmpty()) {
             return rows;
         }
@@ -275,7 +330,7 @@ public class ArticleRepository {
                 SELECT ac.article_id, cat.id, cat.slug, cat.name, cat.position, cat.version
                 FROM article_category ac JOIN category cat ON cat.id = ac.category_id
                 WHERE ac.article_id IN (:ids) ORDER BY ac.position
-                """)
+                """.replace("article_category", published ? "article_publication_category" : "article_category"))
                 .param("ids", rows.stream().map(ArticleRow::id).toList())
                 .query((rs, n) -> {
                     categories.computeIfAbsent(rs.getObject("article_id", UUID.class), k -> new ArrayList<>())
@@ -297,7 +352,7 @@ public class ArticleRepository {
                 rs.getString("eyebrow"), rs.getString("abstract"), rs.getString("document"), rs.getString("presentation"),
                 rs.getString("seo"), rs.getString("cover_mode"), rs.getObject("cover_asset_id", UUID.class),
                 rs.getString("slug"), rs.getObject("series_id", UUID.class), (Integer) rs.getObject("series_position"),
-                List.of());
+                List.of(), rs.getObject("published_revision_id", UUID.class));
     }
 
     static Instant instant(ResultSet rs, String column) throws SQLException {

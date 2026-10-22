@@ -2219,6 +2219,13 @@ export interface components {
             lastPublishedAt: string | null;
             /** Format: uuid */
             revisionId: string;
+            /**
+             * Format: uuid
+             * @description Reader-visible revision; null when not live
+             */
+            publishedRevisionId?: string | null;
+            /** @description Working revision differs from the reader-visible revision */
+            hasUnpublishedChanges?: boolean;
             title: string;
             slug: string;
             url: string;

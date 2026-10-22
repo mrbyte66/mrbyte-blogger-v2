@@ -82,9 +82,9 @@ public final class Fixtures {
         return published;
     }
 
-    /** Moves a published article back to draft (it disappears from every public surface). */
+    /** Withdraws a published article (archive; working draft alone keeps the old publication). */
     public static ApiClient.Response unpublish(ApiClient owner, ApiClient.Response edit) {
         ApiClient.Response current = owner.get("/api/v1/studio/articles/" + edit.id());
-        return owner.command("/api/v1/studio/articles/" + edit.id() + "/actions", action("save-draft"), current.etag());
+        return owner.command("/api/v1/studio/articles/" + edit.id() + "/actions", action("archive"), current.etag());
     }
 }

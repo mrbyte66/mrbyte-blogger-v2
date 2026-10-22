@@ -38,6 +38,9 @@ export type Article = {
   paragraphMarks?: readonly (readonly TextMark[])[];
   paragraphs: readonly string[];
   code?: string;
+  publishedRevisionId?: string | null;
+  hasUnpublishedChanges?: boolean;
+  firstPublishedAt?: string | null;
   codeLanguage?: string;
   seo?: { title?: string | null; description?: string | null; indexable: boolean };
   figure?: { src: string; alt: string; caption: string; width: number; height: number };

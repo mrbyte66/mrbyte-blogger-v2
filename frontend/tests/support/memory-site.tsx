@@ -23,6 +23,7 @@ export class MemorySite {
   workspace: Workspace = createWorkspace();
   failNext: ApiError | null = null;
   calls: string[] = [];
+  private publications = new Map<string, Article>();
   private listeners = new Set<() => void>();
   private snapshots = new Map<string, { content: ContentState; workspace: WorkspaceState }>();
 
@@ -31,6 +32,8 @@ export class MemorySite {
       ...a, id: a.id ?? uuid(), version: a.version ?? 0, visibility: a.visibility ?? "public", status: a.status ?? "published",
       createdAt: a.createdAt ?? new Date(Date.UTC(2026, 8, 1 + index)).toISOString(),
     }));
+    this.articles = this.articles.map(a => a.status === "published" && a.visibility !== "private" ? {...a, publishedRevisionId:a.publishedRevisionId ?? uuid(), firstPublishedAt:a.firstPublishedAt ?? a.createdAt, hasUnpublishedChanges:false} : a);
+    for(const a of this.articles) if(a.publishedRevisionId) this.publications.set(a.id!,structuredClone(a));
     this.categories = [...new Set(this.articles.flatMap((a) => a.categories ?? [a.category]))].map((name) => ({ id: uuid(), slug: name, name }));
     const bySlug = (slug: string) => this.articles.find((a) => a.slug === slug);
     this.series = (options.series ?? initialSeries.map((s) => ({ ...s, articleSlugs: s.articleSlugs.filter((slug) => bySlug(slug)) })))
@@ -45,7 +48,7 @@ export class MemorySite {
     if (this.failNext) { const error = this.failNext; this.failNext = null; throw error; }
   }
 
-  published(): Article[] { return this.articles.filter((a) => a.status === "published" && a.visibility !== "private"); }
+  published(): Article[] { return [...this.publications.values()].map(a=>({...a,status:"published"})); }
   article(slug: string) { return this.articles.find((a) => a.slug === slug); }
 
   readonly studio: StudioOperations = {
@@ -90,6 +93,9 @@ export class MemorySite {
         if (step === "prepare-public") currentVisibility = "public";
       }
       const saved: Article = { ...article, id: previous?.id ?? uuid(), version: (previous?.version ?? -1) + 1, status: current, visibility: currentVisibility, seriesId, createdAt: previous?.createdAt ?? new Date().toISOString(), authored: true };
+      if(status === "archived" || status === "trashed" || visibility === "private") { this.publications.delete(saved.id!); saved.publishedRevisionId=null; }
+      else if(status === "published") { saved.publishedRevisionId=uuid(); saved.firstPublishedAt=previous?.firstPublishedAt ?? new Date().toISOString(); saved.hasUnpublishedChanges=false; this.publications.set(saved.id!,structuredClone(saved)); }
+      else if(this.publications.has(saved.id!)) { saved.publishedRevisionId=this.publications.get(saved.id!)!.publishedRevisionId; saved.hasUnpublishedChanges=true; }
       this.articles = previous ? this.articles.map((a) => a.id === saved.id ? saved : a) : [saved, ...this.articles];
       this.series = this.series.map((s) => {
         const without = s.articleSlugs.filter((slug) => slug !== (previous?.slug ?? saved.slug) && slug !== saved.slug);

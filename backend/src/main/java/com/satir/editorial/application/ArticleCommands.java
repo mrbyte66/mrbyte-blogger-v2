@@ -136,13 +136,14 @@ public class ArticleCommands {
         Instant now = clock.instant();
         Status status = Status.valueOf(row.status());
 
-        if (status == Status.PUBLISHED || status == Status.SCHEDULED) {
+        if (status == Status.SCHEDULED) {
             checkPublishable(content);
         }
         if (status == Status.SCHEDULED && !row.scheduledAt().isAfter(now)) {
             throw new ApiException(HttpStatus.CONFLICT, "SCHEDULE_ALREADY_DUE", "Planlanan zaman geldi; yazıyı yeniden yükle");
         }
         if (!content.slug.equals(row.slug())) {
+            if (row.firstPublishedAt() != null) throw new ApiException(HttpStatus.CONFLICT, "SLUG_LOCKED", "İlk yayından sonra kalıcı bağlantı değiştirilemez");
             checkSlugFree(content.slug, id);
             slugs.setCurrent("ARTICLE", id, content.slug, ids.next(), now);
         }
@@ -154,13 +155,9 @@ public class ArticleCommands {
         if (!Objects.equals(row.seriesId(), input.seriesId())) {
             changeMembership(id, now, row.seriesId(), input.seriesId(), input.seriesVersions(), false);
         }
-        boolean live = row.isPublic();
         articles.updateState(id, new StateUpdate(row.status(), row.visibility(), content.displayDate,
-                row.firstPublishedAt(), row.lastPublishedAt(), live ? now : row.publicModifiedAt(), row.scheduledAt(),
+                row.firstPublishedAt(), row.lastPublishedAt(), row.publicModifiedAt(), row.scheduledAt(),
                 row.scheduleZone(), row.scheduleGeneration(), row.publicationGeneration(), revisionId, now));
-        if (live && row.seriesId() != null && row.seriesId().equals(input.seriesId())) {
-            series.touch(row.seriesId(), now);
-        }
         audit.record(ownerId, "ARTICLE_UPDATE", "ARTICLE", id, AuditLog.Outcome.SUCCESS);
     }
 
@@ -173,7 +170,7 @@ public class ArticleCommands {
             throw new ValidationException("action", "INVALID");
         }
         ArticleRow before = articles.find(id).orElseThrow(ArticleCommands::notFound);
-        lockInOrder(id, before.seriesId(), null);
+        lockInOrder(id, before.seriesId(), articles.findPublic(id).map(ArticleRow::seriesId).orElse(null));
         ArticleRow row = articles.find(id).orElseThrow(ArticleCommands::notFound);
         Preconditions.check(expectedVersion, row.version());
         apply(ownerId, row, action, input, clock.instant());
@@ -182,11 +179,11 @@ public class ArticleCommands {
     /** Scheduler entry point: publishes one due article if it is still scheduled, public and valid. */
     @Transactional
     public boolean publishDue(UUID id) {
-        Optional<ArticleRow> locked = articles.lock(id);
-        if (locked.isEmpty()) {
-            return false;
-        }
-        ArticleRow row = locked.get();
+        Optional<ArticleRow> before = articles.find(id);
+        if (before.isEmpty()) return false;
+        lockInOrder(id, before.get().seriesId(), articles.findPublic(id).map(ArticleRow::seriesId).orElse(null));
+        ArticleRow row = articles.find(id).orElseThrow(ArticleCommands::notFound);
+        if (row.version() != before.get().version()) return false; // retry on the next scheduler tick after a concurrent edit
         Instant now = clock.instant();
         if (!"SCHEDULED".equals(row.status()) || !"PUBLIC".equals(row.visibility()) || row.scheduledAt().isAfter(now)) {
             return false; // cancelled, rescheduled or already handled by a concurrent command
@@ -212,10 +209,15 @@ public class ArticleCommands {
         } catch (ArticleLifecycle.Rejected rejected) {
             throw new ApiException(HttpStatus.CONFLICT, rejected.code(), rejectedTitle(rejected.code()));
         }
-        if (!transition.changed()) {
+        if (action == Action.PUBLISH && row.isPublic() && !row.hasUnpublishedChanges()) {
+            if (!"PUBLISHED".equals(row.status())) setState(row, new State(Status.PUBLISHED, Visibility.PUBLIC), now, false);
+            return;
+        }
+        boolean publishingRevision = action == Action.PUBLISH && row.isPublic() && row.hasUnpublishedChanges();
+        if (!transition.changed() && !publishingRevision) {
             return; // same-state action: no generation, no mail, no version bump
         }
-        if (transition.requiresPublishable()) {
+        if (transition.requiresPublishable() || publishingRevision) {
             checkPublishable(Normalized.of(row, json));
         }
         State next = transition.next();
@@ -236,7 +238,7 @@ public class ArticleCommands {
                 assertNotSharedWithPrivate(row);
                 setState(row, next, now, false);
             }
-            default -> setState(row, next, now, row.isPublic());
+            default -> setState(row, next, now, action != Action.SAVE_DRAFT && action != Action.CANCEL_SCHEDULE && row.isPublic());
         }
         audit.record(ownerId, "ARTICLE_" + action.name(), "ARTICLE", row.id(), AuditLog.Outcome.SUCCESS);
     }
@@ -244,6 +246,9 @@ public class ArticleCommands {
     /** Non-published → published: first publish time once, new publication generation and one mail job. */
     private void publish(ArticleRow row, Instant now) {
         long generation = row.publicationGeneration() + 1;
+        UUID oldPublicSeries = articles.findPublic(row.id()).map(ArticleRow::seriesId).orElse(null);
+        articles.publishSnapshot(row.id(), row.revisionId(), row.displayDate());
+        if (oldPublicSeries != null && !Objects.equals(oldPublicSeries, row.seriesId())) series.touch(oldPublicSeries, now);
         articles.updateState(row.id(), new StateUpdate("PUBLISHED", row.visibility(), row.displayDate(),
                 row.firstPublishedAt() != null ? row.firstPublishedAt() : now, now, now, null, null,
                 row.scheduleGeneration() + (row.scheduledAt() != null ? 1 : 0), generation, row.revisionId(), now));
@@ -280,6 +285,9 @@ public class ArticleCommands {
     }
 
     private void setState(ArticleRow row, State next, Instant now, boolean publicChange) {
+        if (next.status() == Status.ARCHIVED || next.status() == Status.TRASHED || next.visibility() == Visibility.PRIVATE) {
+            articles.withdrawSnapshot(row.id());
+        }
         boolean leavingSchedule = row.scheduledAt() != null && next.status() != Status.SCHEDULED;
         articles.updateState(row.id(), new StateUpdate(next.status().name(), next.visibility().name(), row.displayDate(),
                 row.firstPublishedAt(), row.lastPublishedAt(), publicChange ? now : row.publicModifiedAt(),
@@ -321,8 +329,8 @@ public class ArticleCommands {
             List<UUID> remaining = new ArrayList<>(chapterIds(oldSeriesId));
             remaining.remove(articleId);
             series.replaceChapters(oldSeriesId, remaining);
-            series.touch(oldSeriesId, now);
-            if (remaining.isEmpty() && "PUBLISHED".equals(old.status())) {
+            series.bumpVersion(oldSeriesId, now);
+            if (remaining.isEmpty() && series.publicChapters(List.of(oldSeriesId)).isEmpty() && "PUBLISHED".equals(old.status())) {
                 series.updateStatus(oldSeriesId, "DRAFT", now, now);
             }
         }
@@ -333,7 +341,7 @@ public class ArticleCommands {
             requireSeriesVersion(target, expected);
             series.removeChapter(articleId);
             series.replaceChapters(newSeriesId, insertByCreation(newSeriesId, articleId, creating ? clock.instant() : null));
-            series.touch(newSeriesId, now);
+            series.bumpVersion(newSeriesId, now);
         }
     }
 

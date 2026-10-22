@@ -14,6 +14,11 @@ type Sort = "newest" | "oldest" | "title";
 export type LibraryKind = "article" | "series";
 
 const filterLabels: Record<Filter, string> = { all: "Tümü", published: "Yayında", draft: "Taslak", scheduled: "Planlandı", archived: "Arşiv", trashed: "Çöp kutusu" };
+function articleInFilter(article: Article, filter: Filter) {
+  const status = articleStatus(article);
+  const live = !!article.publishedRevisionId && !["archived","trashed"].includes(status);
+  return filter === "all" ? status !== "trashed" : filter === "published" ? status === "published" || live : filter === "draft" ? status === "draft" || !!article.hasUnpublishedChanges : status === filter;
+}
 const toneOf: Record<ContentStatus, Tone> = { draft: "peach", scheduled: "sky", published: "mint", archived: "sand", trashed: "rose" };
 const scheduleFormat = new Intl.DateTimeFormat("tr-TR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
 const shortDate = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -21,6 +26,7 @@ const shortDate = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "sho
 function tagOf(article: Article): { label: string; tone: Tone } {
   const status = articleStatus(article);
   if (article.visibility === "private" && status !== "trashed" && status !== "archived") return { label: "Özel", tone: "lilac" };
+  if (article.publishedRevisionId && article.hasUnpublishedChanges && status !== "scheduled") return {label:"Yayında · taslak var",tone:"mint"};
   if (status === "scheduled" && article.scheduledAt) return { label: `Planlandı · ${scheduleFormat.format(new Date(article.scheduledAt))}`, tone: "sky" };
   return { label: statusLabels[status], tone: toneOf[status] };
 }
@@ -71,14 +77,13 @@ export function LibraryGallery({ articles, series, target, ready, error, kind, o
     const total: Record<Filter, number> = { all: 0, published: 0, draft: 0, scheduled: 0, archived: 0, trashed: 0 };
     for (const article of articleItems) {
       const status = articleStatus(article);
-      total[status] += 1;
-      if (status !== "trashed") total.all += 1;
+      for (const key of Object.keys(total) as Filter[]) if (articleInFilter(article,key)) total[key] += 1;
     }
     return total;
   }, [articleItems]);
 
   const visibleArticles = articleItems
-    .filter((article) => filter === "all" ? articleStatus(article) !== "trashed" : articleStatus(article) === filter)
+    .filter((article) => articleInFilter(article,filter))
     .sort((a, b) => sort === "title" ? a.title.localeCompare(b.title, "tr") : sort === "oldest" ? dateOf(a) - dateOf(b) : dateOf(b) - dateOf(a));
   const visibleSeries = series
     .filter((item) => matches(item.title))

@@ -31,7 +31,7 @@ class ReaderPublicationEmailHandler implements JobHandler {
     @Override public Outcome handle(Job job) {
         record Eligible(ArticleRow article, ProfileView reader) { }
         UUID recipient = UUID.fromString(job.payload().get("recipientId").toString());
-        var eligible = transactions.execute(status -> articles.find(job.aggregateId())
+        var eligible = transactions.execute(status -> articles.findPublic(job.aggregateId())
             .filter(ArticleRow::isPublic)
             .filter(article -> article.firstPublishedAt() != null && !article.ownerId().equals(recipient))
             .flatMap(article -> profiles.ownProfile(recipient)

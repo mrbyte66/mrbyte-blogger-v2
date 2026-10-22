@@ -2793,6 +2793,8 @@ components:
         firstPublishedAt: {type: [string, 'null'], format: date-time}
         lastPublishedAt: {type: [string, 'null'], format: date-time}
         revisionId: {type: string, format: uuid}
+        publishedRevisionId: {type: [string, 'null'], format: uuid, description: Reader-visible revision; null when not live}
+        hasUnpublishedChanges: {type: boolean, description: Working revision differs from the reader-visible revision}
         title: {type: string}
         slug: {type: string}
         url: {type: string}

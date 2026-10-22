@@ -81,7 +81,7 @@ public final class EditorialViews {
             Instant lastPublishedAt, UUID revisionId, String title, String slug, String url, String eyebrow,
             @com.fasterxml.jackson.annotation.JsonProperty("abstract") String abstractText, LocalDate displayDate,
             List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation, Seo seo,
-            CoverView cover, SeriesPlacement seriesPlacement, int readingMinutes) {
+            CoverView cover, SeriesPlacement seriesPlacement, int readingMinutes, UUID publishedRevisionId, boolean hasUnpublishedChanges) {
     }
 
     public record ChapterRef(UUID id, String slug, String title) {

@@ -19,17 +19,21 @@ public final class EditorialRows {
             String scheduleZone, long scheduleGeneration, long publicationGeneration, Instant createdAt,
             Instant updatedAt, long version, UUID revisionId, int revisionNumber, String title, String eyebrow,
             String abstractText, String documentJson, String presentationJson, String seoJson, String coverMode,
-            UUID coverAssetId, String slug, UUID seriesId, Integer seriesPosition, List<CategoryRow> categories) {
+            UUID coverAssetId, String slug, UUID seriesId, Integer seriesPosition, List<CategoryRow> categories, UUID publishedRevisionId) {
 
         public ArticleRow withCategories(List<CategoryRow> categories) {
             return new ArticleRow(id, ownerId, status, visibility, displayDate, firstPublishedAt, lastPublishedAt,
                     publicModifiedAt, scheduledAt, scheduleZone, scheduleGeneration, publicationGeneration, createdAt,
                     updatedAt, version, revisionId, revisionNumber, title, eyebrow, abstractText, documentJson,
-                    presentationJson, seoJson, coverMode, coverAssetId, slug, seriesId, seriesPosition, categories);
+                    presentationJson, seoJson, coverMode, coverAssetId, slug, seriesId, seriesPosition, categories, publishedRevisionId);
+        }
+
+        public boolean hasUnpublishedChanges() {
+            return publishedRevisionId != null && !publishedRevisionId.equals(revisionId);
         }
 
         public boolean isPublic() {
-            return "PUBLISHED".equals(status) && "PUBLIC".equals(visibility);
+            return publishedRevisionId != null && !"ARCHIVED".equals(status) && !"TRASHED".equals(status) && "PUBLIC".equals(visibility);
         }
     }
 

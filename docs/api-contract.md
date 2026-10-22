@@ -47,3 +47,11 @@ Geçerli şifre + doğrulanmamış hesap `403 EMAIL_VERIFICATION_REQUIRED` döne
 ## İletişim formu
 
 `POST /api/v1/contact` herkese açık, CSRF zorunlu iletişim gönderimidir. `name` (1–80), `email` (geçerli adres, en fazla 254), `subject` (1–120, tek satır), `message` (1–5000) alır. İstemci alıcı veremez; aktif site sahibinin adresi kullanılır. SMTP kabulünde 204, alan hatasında 422, sınırlamada Retry-After ile 429, sağlayıcı/alıcı yoksa veya SMTP hatasında 503 döner. Reply-To doğrulanmış gönderen, From yapılandırılmış uygulama adresidir. İçerik uygulama DB/log’unda saklanmaz. Saatlik limitler IP 5, e-posta 3, site 30. Sözleşme: backend/docs/openapi.yaml.
+
+## Yayın ve çalışma taslağı (#3)
+
+`PUT /studio/articles/{id}` yalnız çalışma sürümünü kaydeder. Okuyucu yanıtları, arama/kategori/seri listeleri, kitaplık, medya, SEO ve bildirimler son yayımlanmış snapshot'ı kullanır. `ArticleEdit.publishedRevisionId` mevcut yayını, `hasUnpublishedChanges` çalışma sürümünün farklı olduğunu belirtir. `revisionId` Studio'da çalışma sürümüdür; public detail'da yayın sürümüdür. Bu üç alan istemcinin yayın kararı vermesi için sunucudan okunur, write body'ye gönderilmez.
+
+`save-draft` veya `cancel-schedule` mevcut yayını kaldırmaz. `publish` geçerli çalışma sürümünü atomik olarak yayına alır; zaten aynı sürüm yayındaysa no-op'tur. Planlı güncellemede eski yayın saat gelene kadar görünürdür. `archive`/`trash`/eski `make-private` yayını kaldırır; `restore` tek başına yeniden yayımlamaz. İlk yayından sonra slug değişimi 409 `SLUG_LOCKED` döner. Taslakta eksik başlık/kategori/metin saklanabilir; yayımlama ve planlama bunları doğrular.
+
+Public annotation/history kaynağı yalnız gerçekten yayımlanmış revision olabilir; owner Studio önizlemesi ayrı yetkili okumadır. Yeni özel yazı seçeneği Studio'dan kaldırıldı; eski özel kayıtların güvenli API/medya sınırı ve kamu taslağına dönüştürme yolu korunur.

@@ -23,7 +23,7 @@ pg_restore --list "$work/satir.dump" > /dev/null   # the dump must be readable
   echo "created_at=$stamp"
   echo "release=${APP_RELEASE:-unknown}"
   echo "postgres=$(pg_dump --version)"
-  echo "migration=$(psql --tuples-only --no-align -c "SELECT max(version) FROM flyway_schema_history WHERE success")"
+  echo "migration=$(psql --tuples-only --no-align -c "SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1")"
   echo "dump_sha256=$(sha256sum "$work/satir.dump" | cut -d' ' -f1)"
 } > "$work/manifest.txt"
 rm -f /tmp/.pgpass

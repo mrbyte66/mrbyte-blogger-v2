@@ -28,6 +28,7 @@ import { SitePreferences } from "../components/SitePreferences";
 import { SiteDataProvider } from "../components/data/SiteData";
 import { PublicContentRefresh } from "../components/data/PublicContentRefresh";
 import { BackendUnavailable, loadPublicContent, siteOrigin, type PublicContent } from "../lib/api/server";
+import { DEFAULT_SITE_NAME } from "../lib/builder/model";
 
 // Content comes from the API on every request; nothing published is baked in at build time.
 export const dynamic = "force-dynamic";
@@ -40,7 +41,7 @@ async function publicContent(): Promise<PublicContent | null> {
 export async function generateMetadata(): Promise<Metadata> {
   const content = await publicContent();
   const site = content?.site;
-  const name = site?.siteName ?? "SATIR";
+  const name = site?.siteName ?? DEFAULT_SITE_NAME;
   return {
     metadataBase: new URL(siteOrigin()),
     title: { default: site?.seo?.title ?? `${name}. — Kod, kelime ve aradakiler`, template: `%s — ${name}.` },

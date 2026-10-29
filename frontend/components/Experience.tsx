@@ -1,5 +1,6 @@
 "use client";
 import { SlideLink } from "./SlideLink";
+import { DEFAULT_SITE_NAME } from "../lib/builder/model";
 import { NotebookControl } from "./reading/NotebookControl";
 import { SavedLibraryLink } from "./saved/SaveArticleButton";
 import { UtilityIsland } from "./UtilityIsland";
@@ -23,7 +24,7 @@ const destinations: { section: Section; number: string; label: string; detail: s
   { section: "about", number: "03", label: "Hakkımda", detail: "EKRANIN ARKASINDAKİ" },
 ];
 
-export function Experience({ editing = false, siteName = "SATIR", title = "Kod yazarım.", emphasis = "Bazen de satır.", description = "Yazılım, edebiyat ve\nikisinin arasında bir insan.", headingLevel = "h1", colorMode = "remember", featuredArticleSlug = "yapay-zeka-ile-dusunmek", showFeaturedArticle = true, featuredSeriesSlug = "yapay-zeka-ile-yazilim", showFeaturedSeries = true }: { editing?: boolean; siteName?: string; title?: string; emphasis?: string; description?: string; headingLevel?: "h1" | "h2"; colorMode?: "light" | "dark" | "remember"; featuredArticleSlug?: string; showFeaturedArticle?: boolean; featuredSeriesSlug?: string; showFeaturedSeries?: boolean }) {
+export function Experience({ editing = false, siteName = DEFAULT_SITE_NAME, title = "Kod yazarım.", emphasis = "Bazen de satır.", description = "Yazılım, edebiyat ve\nikisinin arasında bir insan.", headingLevel = "h1", colorMode = "remember", featuredArticleSlug = "yapay-zeka-ile-dusunmek", showFeaturedArticle = true, featuredSeriesSlug = "yapay-zeka-ile-yazilim", showFeaturedSeries = true }: { editing?: boolean; siteName?: string; title?: string; emphasis?: string; description?: string; headingLevel?: "h1" | "h2"; colorMode?: "light" | "dark" | "remember"; featuredArticleSlug?: string; showFeaturedArticle?: boolean; featuredSeriesSlug?: string; showFeaturedSeries?: boolean }) {
   const Heading = headingLevel;
   const { articles: storedArticles } = useArticles();
   const articles = publicArticles(storedArticles);

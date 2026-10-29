@@ -98,7 +98,7 @@ describe("visual theme authoring", () => {
     await user.clear(screen.getByLabelText("Site adı"));
     await user.type(screen.getByLabelText("Site adı"), "MRBYTE");
     expect(savedWorkspace()?.draft.siteName).toBe("MRBYTE");
-    expect(savedWorkspace()?.applied.siteName).toBe("SATIR");
+    expect(savedWorkspace()?.applied.siteName).toBe("MrByte Studio");
     await user.click(screen.getByRole("button", { name: /Temayı uygula/ }));
     expect(savedWorkspace()?.applied.siteName).toBe("MRBYTE");
     expect(editorStatus()).toContain("Tema uygulandı");

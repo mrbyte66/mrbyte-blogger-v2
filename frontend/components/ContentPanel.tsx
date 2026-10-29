@@ -3,6 +3,7 @@ import { NotebookControl } from "./reading/NotebookControl";
 import { ThemeToggle } from "./SitePreferences";
 import { UtilityIsland } from "./UtilityIsland";
 import { AccountMenu } from "./auth/AccountMenu";
+import { DEFAULT_SITE_NAME } from "../lib/builder/model";
 import { articleCategories } from "../lib/articles/metadata";
 
 import { useEffect, useRef, useState, type Dispatch, type PointerEvent } from "react";
@@ -24,7 +25,7 @@ import type { Navigation, NavigationAction } from "../lib/navigation";
 
 const sectionNames = { writing: "Yazılar", projects: "Projeler", about: "Hakkımda" };
 
-export function ContentPanel({ navigation, dispatch, siteName = "SATIR", defaultDark = false }: { navigation: Navigation; dispatch: Dispatch<NavigationAction>; siteName?: string; defaultDark?: boolean }) {
+export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAME, defaultDark = false }: { navigation: Navigation; dispatch: Dispatch<NavigationAction>; siteName?: string; defaultDark?: boolean }) {
   const { series } = useSeriesWorkspace();
   const { articles: storedArticles } = useArticles();
   const articles = publicArticles(storedArticles);

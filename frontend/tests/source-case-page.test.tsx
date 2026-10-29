@@ -10,7 +10,7 @@ const sample=()=>screen.getByRole("region",{name:"Küçük bir düzeltme"});
 
 it("keeps one clear action, demonstrates the real change and undo, and uses shared site chrome",()=>{
  localStorage.clear();renderWithSite(<SourceCasePage/>);
- expect(screen.getByRole("link",{name:"SATIR."})).toBeTruthy();
+ expect(screen.getByRole("link",{name:"MrByte Studio."})).toBeTruthy();
  expect(screen.getByRole("contentinfo",{name:"Site alt bilgisi"})).toBeTruthy();
  expect(screen.queryByRole("combobox")).toBeNull();
  expect(screen.queryByRole("switch",{name:"Notları göster"})).toBeNull();

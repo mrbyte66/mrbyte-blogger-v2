@@ -88,7 +88,7 @@ export function SourceCasePage(){
  return <PublicFrame includeStudioFooter><main id="top" className={`${appearance.className} source-cases-page`} style={appearance.style}>
   <SitePageHeader theme={workspace.applied}/>
   <div className="mirror-content">
-   <header className="mirror-intro"><div><small>SATIR AYNASI</small><h1>Bir dokunuşta anla.</h1></div><Link href="/studio">← Studio</Link></header>
+   <header className="mirror-intro"><div><small>OKUMA AYNASI</small><h1>Bir dokunuşta anla.</h1></div><Link href="/studio">← Studio</Link></header>
    <Lesson key={selected} example={lessons[selected]} index={selected} focusAction={focusAction} onPrevious={()=>move(Math.max(0,selected-1))} onNext={()=>move((selected+1)%lessons.length)}/>
    <p className="mirror-reassurance">Dilediğin gibi dene. Gerçek yazıların ve notların değişmez.</p>
   </div>

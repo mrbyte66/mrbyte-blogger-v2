@@ -1,5 +1,7 @@
 import { type Topic } from "../content";
 
+/** Site name shown until the owner sets one in Studio. */
+export const DEFAULT_SITE_NAME = "MrByte Studio";
 export const blockKinds = ["header", "intro", "scene", "articles", "series", "quote", "about", "projects", "footer"] as const;
 export type BlockKind = (typeof blockKinds)[number];
 export type Accent = string;
@@ -111,7 +113,7 @@ export function createTheme(starter: Starter): Theme {
   return {
     ...defaultAppearance,
     name: { scene: "Karakterli evren", feed: "Açık defter", magazine: "Merak dergisi" }[starter],
-    siteName: "SATIR",
+    siteName: DEFAULT_SITE_NAME,
     accent: starter === "magazine" ? "#af552f" : "mint",
     ...(starter === "magazine" ? { typography: "editorial" as const, surface: "warm" as const, width: "wide" as const } : {}),
     blocks,

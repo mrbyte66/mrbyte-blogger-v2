@@ -377,6 +377,14 @@ html[data-motion=off] .library-v11 :is(.library-preview,.library-preview-scroll,
 .saved-category-tabs .collection-add { width:36px; height:36px; min-width:36px; min-height:36px; border-radius:10px; padding:0; margin:0 2px 4px 4px; align-self:end; position:sticky; right:0; z-index:1; box-shadow:0 0 0 5px var(--panel); }
 .series-index-content { max-width:1100px; margin:auto; padding:36px 32px 40px; }
 .series-index-content>h1 { font:600 clamp(36px,4vw,54px)/1.1 'DM Sans',sans-serif; letter-spacing:-.055em; margin:0 0 32px; }
+.legal-content { max-width:720px; margin:auto; padding:36px 32px 56px; line-height:1.7; }
+.legal-content>h1 { font:600 clamp(36px,4vw,54px)/1.1 'DM Sans',sans-serif; letter-spacing:-.055em; margin:0 0 8px; }
+.legal-content>h2 { font:600 20px/1.3 'DM Sans',sans-serif; letter-spacing:-.02em; margin:36px 0 10px; }
+.legal-content .legal-updated { opacity:.6; font-size:14px; margin:0 0 28px; }
+.legal-content ul { padding-left:20px; }
+.legal-content li+li { margin-top:8px; }
+.legal-content a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+@media(max-width:600px) { .legal-content { padding:28px 16px 48px; } }
 @media(max-width:800px) {
  .public-home-scene .public-footer nav { gap:10px; }
  .public-home-scene .public-footer nav :is(a,button) { font-size:10px; }

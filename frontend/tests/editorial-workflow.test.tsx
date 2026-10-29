@@ -1,5 +1,5 @@
 import { writingTool } from "./helpers/canvas";
-import { discardWriting, readCanvas, writeCanvas } from "./helpers/canvas";
+import { discardWriting, postCanvasEdit, readCanvas, writeCanvas } from "./helpers/canvas";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { SiteEditor } from "../components/builder/SiteEditor";
@@ -139,6 +139,20 @@ describe("standalone series creation on the live canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Sayfalar:/ }));
     fireEvent.click(screen.getByRole("button", { name: /Yeni seri/ }));
   }
+  it("keeps fast typing in a new series title while its slug follows the title", () => {
+    studio(); openSeries();
+    const series = () => (readCanvas() as Extract<ReturnType<typeof readCanvas>, {kind:"series"}>).series;
+    const startSlug = series().slug;
+    // The frame posts every keystroke under the slug it last saw; the Studio re-derives the slug meanwhile.
+    postCanvasEdit({ scope: "document", id: startSlug, field: "title", value: "G", previous: "Yeni seri" });
+    postCanvasEdit({ scope: "document", id: startSlug, field: "title", value: "Gü", previous: "G" });
+    postCanvasEdit({ scope: "document", id: startSlug, field: "title", value: "Güdümsüz", previous: "Gü" });
+    expect(series().title).toBe("Güdümsüz");
+    expect(series().slug).toBe("gudumsuz");
+    // A slug this document never had is still another document's edit.
+    postCanvasEdit({ scope: "document", id: "baska-seri", field: "title", value: "Yabancı", previous: "Güdümsüz" });
+    expect(series().title).toBe("Güdümsüz");
+  });
   it("opens an unsaved draft on the canvas, creates it on Save and starts its first chapter", async () => {
     const site = studio(); const count = site.articles.length; const seriesCount = site.series.length;
     openSeries();

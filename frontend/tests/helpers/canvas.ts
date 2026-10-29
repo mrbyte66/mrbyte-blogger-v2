@@ -58,7 +58,11 @@ export function writeCanvas(field: string, value: string) {
   const text = documentText(draft, field);
   if (!text) throw new Error(`Tuvalde düzenlenebilir alan yok: ${field}`);
   const id = draft.kind === "article" ? draft.article.slug : draft.series.slug;
-  const edit = { scope: "document" as const, id, field, value, previous: text.value };
+  postCanvasEdit({ scope: "document" as const, id, field, value, previous: text.value });
+}
+
+/** Sends one raw inline-edit message from the canvas, e.g. one written before the frame saw the latest draft. */
+export function postCanvasEdit(edit: { scope: "document"; id: string; field: string; value: string; previous: string }) {
   act(() => {
     window.dispatchEvent(new MessageEvent("message", { data: { type: inlineEditEvent, edit }, source: frame().contentWindow, origin: window.location.origin }));
   });

@@ -41,6 +41,9 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   const [draft, setDraft] = useState<DocumentDraft>(() => structuredClone(initial));
   // Canvas edits can arrive faster than React renders: each one is applied to the newest draft, never to a render's copy.
   const latest = useRef(draft);
+  // Slugs this document has had while its slug followed the title. The canvas names the slug it last saw, so
+  // a keystroke written before the frame got the newly derived slug still belongs to this document.
+  const ownSlugs = useRef(new Set<string>());
   latest.current = draft;
   function commit(next: DocumentDraft) { latest.current = next; setDraft(next); }
   // Bumped when the draft is replaced from outside the canvas, so writing there ends and shows the new text.
@@ -155,6 +158,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
       if (record.slug !== oldRecord.slug) setSlugEdited(true);
       else if (!slugEdited && record.title !== oldRecord.title) {
         const slug = slugifySeriesTitle(record.title) || oldRecord.slug;
+        ownSlugs.current.add(oldRecord.slug);
         next = next.kind === "article" ? { kind: "article", article: { ...next.article, slug } } : { kind: "series", series: { ...next.series, slug } };
       }
     }
@@ -175,6 +179,8 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   function canvasEdit(patch: InlineEdit) {
     if (!ready) return;
     const current = latest.current;
+    const slug = current.kind === "article" ? current.article.slug : current.series.slug;
+    if (patch.id !== slug && ownSlugs.current.has(patch.id)) patch = { ...patch, id: slug };
     const next = editDocumentText(current, patch) ?? editDocumentText(current, { ...patch, previous: documentText(current, patch.field)?.value ?? patch.previous });
     if (next) { change(next,!!patch.action); if (patch.field.startsWith("paragraph-")) { setField(patch.field); setAnchorField(patch.field); } }
   }

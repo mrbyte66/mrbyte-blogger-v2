@@ -55,7 +55,7 @@ export const blockLabels: Record<BlockKind, string> = {
 };
 export const blockDescriptions: Record<BlockKind, string> = {
   header: "Site adı ve içeriklere yönlendiren menü.", intro: "Güçlü bir başlık ve kısa bir giriş.",
-  scene: "Karakter, hareket ve sahne içi gezinme.", articles: "Yazıları kategoriye göre listele.",
+  scene: "Karakter, hareket ve sahne içi gezinme.", articles: "Yazıları etikete göre listele.",
   series: "Sıralı yazı serilerini bir öğrenme yolculuğuna dönüştür.",
   quote: "Bir düşünceye nefes alacak yer aç.", about: "Ekranın arkasındaki insanı anlat.",
   projects: "Projelerin için bir bölüm ayır.", footer: "Sayfayı bir imzayla tamamla.",

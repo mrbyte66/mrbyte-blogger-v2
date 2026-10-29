@@ -91,7 +91,7 @@ class EditorialAssembler {
                     document.readingMinutes(), mediaPublic(covers.get(row.coverAssetId())),
                     stats.getOrDefault(row.id(), ArticleStats.ZERO),
                     withDocument ? json.articlePresentation(row.presentationJson()) : null,
-                    withDocument ? document : null, chapterNumbers.get(row.id()), json.tags(row.tagsJson()));
+                    withDocument ? document : null, chapterNumbers.get(row.id()));
         }).toList();
     }
 
@@ -103,7 +103,7 @@ class EditorialAssembler {
                 document.readingMinutes(), mediaPublic(cover),
                 stats(List.of(row.id())).getOrDefault(row.id(), ArticleStats.ZERO), row.revisionId(), document,
                 json.articlePresentation(row.presentationJson()), json.seo(row.seoJson()), row.firstPublishedAt(),
-                row.publicModifiedAt(), series, json.tags(row.tagsJson()));
+                row.publicModifiedAt(), series);
     }
 
     List<ArticleEdit> edits(List<ArticleRow> rows) {
@@ -117,8 +117,7 @@ class EditorialAssembler {
                     row.categories().stream().map(c -> c.id()).toList(), document,
                     json.articlePresentation(row.presentationJson()), json.seo(row.seoJson()),
                     new CoverView(lower(row.coverMode()), row.coverAssetId(), mediaPublic(covers.get(row.coverAssetId()))),
-                    row.seriesId() == null ? null : new SeriesPlacement(row.seriesId()), document.readingMinutes(), row.publishedRevisionId(), row.hasUnpublishedChanges(),
-                    json.tags(row.tagsJson()));
+                    row.seriesId() == null ? null : new SeriesPlacement(row.seriesId()), document.readingMinutes(), row.publishedRevisionId(), row.hasUnpublishedChanges());
         }).toList();
     }
 

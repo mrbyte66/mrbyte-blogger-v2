@@ -373,13 +373,6 @@ html[data-theme=dark] .studio .studio-state.status-published { color:#bee69d; }h
 
 /* API-backed editorial categories: quiet controls, one focused management surface. */
 .category-field { margin-bottom:24px; }
-.tag-chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; padding:0; list-style:none; }
-.tag-chips li { display:inline-flex; align-items:center; gap:4px; padding:4px 6px 4px 10px; border:1px solid var(--line); border-radius:999px; font-size:13px; }
-.tag-chips button { width:22px; height:22px; border-radius:50%; line-height:1; }
-.tag-chips button:hover { background:var(--surface); }
-.tag-suggestions { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 0; }
-.tag-suggestions button { padding:5px 10px; border:1px dashed var(--line); border-radius:999px; font-size:12px; }
-.tag-suggestions button:hover:not(:disabled) { border-style:solid; border-color:var(--ink); }
 .category-field-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px; font-size:15px; font-weight:500; }
 .category-field .studio-category-options { margin:0; padding:0; border:0; display:flex; flex-wrap:wrap; gap:8px; }
 .category-field .studio-category-options label { display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:7px; padding:9px 12px; color:var(--ink); background:transparent; cursor:pointer; }

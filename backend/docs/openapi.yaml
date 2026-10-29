@@ -2248,14 +2248,6 @@ components:
         claps: {type: integer, format: int64, description: Active claps}
         saves: {type: integer, format: int64, description: Members who saved the article}
 
-    SeriesTags:
-      type: array
-      maxItems: 10
-      description: >-
-        Free-form tags that filter chapters inside the article's own series (not global categories). The server trims,
-        drops a leading '#', collapses spaces and removes case-insensitive duplicates.
-      items: {type: string, minLength: 1, maxLength: 40}
-
     ArticleSummary:
       type: object
       description: Public article summary (API contract §2). Optional members are omitted when empty
@@ -2276,7 +2268,6 @@ components:
         presentation: {$ref: '#/components/schemas/ArticlePresentation'}
         document: {$ref: '#/components/schemas/Document', description: 'Only with `expand=document`'}
         chapterNumber: {type: integer, description: Only in series chapter lists}
-        tags: {$ref: '#/components/schemas/SeriesTags'}
 
     Collection:
       type: object
@@ -2698,7 +2689,7 @@ components:
 
     ArticleDetail:
       type: object
-      required: [id, slug, url, title, categories, displayDate, readingMinutes, stats, revisionId, document, presentation, seo, tags]
+      required: [id, slug, url, title, categories, displayDate, readingMinutes, stats, revisionId, document, presentation, seo]
       properties:
         id: {type: string, format: uuid}
         slug: {type: string}
@@ -2731,7 +2722,6 @@ components:
                 total: {type: integer}
                 previous: {oneOf: [{$ref: '#/components/schemas/Link'}, {type: 'null'}]}
                 next: {oneOf: [{$ref: '#/components/schemas/Link'}, {type: 'null'}]}
-        tags: {$ref: '#/components/schemas/SeriesTags'}
 
     ArticleWrite:
       type: object
@@ -2753,7 +2743,6 @@ components:
             - type: 'null'
             - {type: object, additionalProperties: false, required: [seriesId], properties: {seriesId: {type: string, format: uuid}}}
         seriesVersions: {type: array, items: {$ref: '#/components/schemas/VersionRef'}, description: Versions of the old and new series when membership changes}
-        tags: {$ref: '#/components/schemas/SeriesTags'}
 
     ArticleCreate:
       type: object
@@ -2775,7 +2764,6 @@ components:
             - type: 'null'
             - {type: object, additionalProperties: false, required: [seriesId], properties: {seriesId: {type: string, format: uuid}}}
         seriesVersions: {type: array, items: {$ref: '#/components/schemas/VersionRef'}}
-        tags: {$ref: '#/components/schemas/SeriesTags'}
         visibility: {type: string, enum: [public, private], default: public}
 
     ArticleAction:
@@ -2793,7 +2781,7 @@ components:
       type: object
       required: [id, version, createdAt, updatedAt, status, visibility, scheduledAt, scheduleZone, firstPublishedAt,
                  lastPublishedAt, revisionId, title, slug, url, eyebrow, abstract, displayDate, categoryIds, document,
-                 presentation, seo, cover, seriesPlacement, readingMinutes, tags]
+                 presentation, seo, cover, seriesPlacement, readingMinutes]
       properties:
         id: {type: string, format: uuid}
         version: {type: integer, format: int64}
@@ -2824,7 +2812,6 @@ components:
             - type: 'null'
             - {type: object, required: [seriesId], properties: {seriesId: {type: string, format: uuid}}}
         readingMinutes: {type: integer}
-        tags: {$ref: '#/components/schemas/SeriesTags'}
 
     ChapterRef:
       type: object

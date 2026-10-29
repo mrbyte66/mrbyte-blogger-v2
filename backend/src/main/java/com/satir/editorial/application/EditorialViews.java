@@ -51,8 +51,7 @@ public final class EditorialViews {
     public record ArticleSummary(UUID id, String slug, String url, String title, String eyebrow,
             @com.fasterxml.jackson.annotation.JsonProperty("abstract") String abstractText, String bodyPreview,
             List<CategoryView> categories, LocalDate displayDate, int readingMinutes, MediaPublic cover,
-            ArticleStats stats, ArticlePresentation presentation, ArticleDocument document, Integer chapterNumber,
-            List<String> tags) {
+            ArticleStats stats, ArticlePresentation presentation, ArticleDocument document, Integer chapterNumber) {
     }
 
     public record SeriesNav(UUID id, String slug, String title, int position, int total, Link previous, Link next) {
@@ -62,7 +61,7 @@ public final class EditorialViews {
             @com.fasterxml.jackson.annotation.JsonProperty("abstract") String abstractText, String bodyPreview,
             List<CategoryView> categories, LocalDate displayDate, int readingMinutes, MediaPublic cover,
             ArticleStats stats, UUID revisionId, ArticleDocument document, ArticlePresentation presentation, Seo seo,
-            Instant firstPublishedAt, Instant publicModifiedAt, SeriesNav series, List<String> tags) {
+            Instant firstPublishedAt, Instant publicModifiedAt, SeriesNav series) {
     }
 
     public record Redirect(String resolution, String canonicalPath) {
@@ -82,8 +81,7 @@ public final class EditorialViews {
             Instant lastPublishedAt, UUID revisionId, String title, String slug, String url, String eyebrow,
             @com.fasterxml.jackson.annotation.JsonProperty("abstract") String abstractText, LocalDate displayDate,
             List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation, Seo seo,
-            CoverView cover, SeriesPlacement seriesPlacement, int readingMinutes, UUID publishedRevisionId, boolean hasUnpublishedChanges,
-            List<String> tags) {
+            CoverView cover, SeriesPlacement seriesPlacement, int readingMinutes, UUID publishedRevisionId, boolean hasUnpublishedChanges) {
     }
 
     public record ChapterRef(UUID id, String slug, String title) {

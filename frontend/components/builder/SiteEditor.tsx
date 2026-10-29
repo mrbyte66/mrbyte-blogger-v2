@@ -114,9 +114,9 @@ export function SiteEditor() {
   }
   function addArticle() {
     if (dirty && !confirmLeave()) { setNotice("Yeni bir yazı açmadan önce düzenlemelerini kaydet veya geri al."); return; }
-    const firstCategory = content.categories?.[0];
     // Writing started from a saved series becomes its next chapter (membership is stored on the article's Save).
-    const record = { ...createArticle(), seriesId: target.kind === "series" && !newSeries ? series?.id : undefined, category: firstCategory?.name ?? "", categories: firstCategory ? [firstCategory.name] : [], categoryIds: firstCategory ? [firstCategory.id] : undefined };
+    // Tags are optional and chosen by the writer, so a new article starts untagged.
+    const record = { ...createArticle(), seriesId: target.kind === "series" && !newSeries ? series?.id : undefined, categoryIds: [] as string[] };
     setEditorEpoch(n=>n+1); setNewSeries(null); setDirty(false); setNewArticle(record); setTarget({ kind: "article", slug: record.slug }); setNotice(""); setSaveError(null);
   }
   const navigation = <PageNavigator target={target} articles={availableArticles} series={availableSeries} ready={content.ready} onNavigate={navigate} onCreateArticle={addArticle} onCreateSeries={addSeries} />;

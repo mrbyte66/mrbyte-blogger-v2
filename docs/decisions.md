@@ -127,3 +127,11 @@ Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zo
 - 2026-10-19: Kullanıcı açık not kartlarının boş üst alanı kullanarak yukarıdan aşağı otomatik ve animasyonlu hizalanmasını istedi. Geniş ekranda sütun yazı alanının üstünden başlar; kaynak sırası ve ölçülen kart yükseklikleriyle sıkı dizilir. Kart açma/kapatma/boyut değişiminde boşluk kapanır ve kaynak köprüleri hareketi takip eder. Dar ekranda aynı sıra yazı sonundan başlar. Header/footer tasarımı korunur. #7.
 
 - 22 Ekim 2026 (#3): Yayımlanmış yazıyı günler boyunca düzenlerken Kaydet yalnız çalışma taslağını saklar; okuyucu eski snapshot'ı görür. Yeni başlık/metin, kategori, tarih, kapak, SEO ve seri yerleşimi ancak açık yayımlama ile devreye girer. Planlı güncellemede de eski yayın korunur. Arşiv/çöp kutusu yayından kaldırır; geri yükleme otomatik yayınlamaz. İlk yayından sonra yazı adresi kilitlenir. Kullanıcı bu davranışı sunucu kurulumundan önce istedi.
+
+## Etiketler (2026-10-30)
+
+- Kategori ve etiket tek kavramdır; arayüzde her yerde **Etiket** denir. Kodda, API'de ve veritabanında mevcut adı `category` olarak kalır (toplu yeniden adlandırma yapılmadı); yeni kodda bu ikisi aynı şeyi anlatır.
+- Etiketler yazarken oluşturulur; hazır (seed) etiket yoktur. Canlıdaki Yazılım/Edebiyat/Kültür silindi.
+- Etiket isteğe bağlıdır; etiketsiz yazı yayınlanabilir.
+- Yazılar sayfası ve seri sayfası aynı etiketlerle süzer. Seri sayfası yalnız kendi bölümlerinde kullanılan etiketleri gösterir; birden çok etiket seçilebilir (hepsini taşıyan bölümler kalır).
+- Ayrı "seri etiketi" alanı (#38) bu kararla kaldırıldı.

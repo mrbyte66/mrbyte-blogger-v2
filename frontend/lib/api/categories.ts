@@ -3,12 +3,12 @@ import type { Schema } from "./contract";
 export type Category = Schema<"Category">;
 export type StudioCategory = Schema<"StudioCategory">;
 export function categoryNames(ids: readonly string[], categories: readonly Category[]): string[] {
-  return ids.map((id) => categories.find((c) => c.id === id)?.name ?? "Kategori bulunamadı");
+  return ids.map((id) => categories.find((c) => c.id === id)?.name ?? "Etiket bulunamadı");
 }
 export function categoryIds(names: readonly string[], categories: readonly Category[]): string[] {
   return names.map((name) => {
     const category = categories.find((c) => c.name === name);
-    if (!category) throw new Error(`Kategori bulunamadı: ${name}. Kategorileri yeniden seç.`);
+    if (!category) throw new Error(`Etiket bulunamadı: ${name}. Etiketleri yeniden seç.`);
     return category.id;
   });
 }

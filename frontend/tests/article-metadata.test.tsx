@@ -11,7 +11,8 @@ describe("article categories and dates", () => {
   it("migrates legacy metadata deterministically and rejects invalid dates/categories", () => {
     const { categories, createdAt, publishedAt, ...legacy } = articles[0];
     expect(validateArticle(legacy)).toMatchObject({ categories: [legacy.category], createdAt, publishedAt });
-    expect(validateArticle({ ...legacy, categories: [] })).toBeNull();
+    // Tags are optional: no tags is valid, an untagged article reads as having none.
+    expect(validateArticle({ ...legacy, category: "", categories: [] })).toMatchObject({ category: "", categories: [] });
     expect(validateArticle({ ...legacy, categories: ["Tümü"] })).toBeNull();
     expect(validateArticle({ ...legacy, publishedAt: "2026-02-30" })).toBeNull();
     expect(isArticleDate("2024-02-29")).toBe(true);
@@ -36,6 +37,7 @@ describe("article categories and dates", () => {
     expect(articleCategories(updated)).toEqual(["Yazılım", "Kültür"]);
     fireEvent.change(screen.getByLabelText("Yazı tarihi"), { target: { value: "2026-10-01" } });
     expect(updated.publishedAt).toBe("2026-10-01");
-    expect(screen.getByLabelText("Yazılım").hasAttribute("disabled")).toBe(true);
+    // The last tag can be removed too.
+    expect(screen.getByLabelText("Yazılım").hasAttribute("disabled")).toBe(false);
   });
 });

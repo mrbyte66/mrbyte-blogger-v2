@@ -16,10 +16,11 @@ export function validateArticle(value: unknown): Article | null {
   if (!value || typeof value !== "object") return null;
   const a = value as Article;
   const text = (v: unknown, max: number) => typeof v === "string" && v.length <= max;
-  if (!isArticleSlug(a.slug) || !text(a.title, 160) || !a.title.trim() || !text(a.excerpt, 4000) || !text(a.eyebrow, 200) || !text(a.category, 80) || !a.category.trim() || !Number.isInteger(a.minutes) || a.minutes < 1 || a.minutes > 240) return null;
-  if (a.categoryIds !== undefined && (!Array.isArray(a.categoryIds) || !a.categoryIds.length || new Set(a.categoryIds).size !== a.categoryIds.length || !a.categoryIds.every((id) => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id)) || a.categoryIds.length !== (a.categories ?? [a.category]).length)) return null;
-  const categories = a.categories ?? [a.category];
-  if (!Array.isArray(categories) || !categories.length || categories.length > 10 || new Set(categories).size !== categories.length || !categories.every((c) => text(c, 80) && c.trim() && c !== "Tümü")) return null;
+  if (!isArticleSlug(a.slug) || !text(a.title, 160) || !a.title.trim() || !text(a.excerpt, 4000) || !text(a.eyebrow, 200) || !text(a.category, 80) || !Number.isInteger(a.minutes) || a.minutes < 1 || a.minutes > 240) return null;
+  if (a.categoryIds !== undefined && (!Array.isArray(a.categoryIds) || new Set(a.categoryIds).size !== a.categoryIds.length || !a.categoryIds.every((id) => typeof id === "string" && /^[0-9a-f-]{36}$/i.test(id)) || a.categoryIds.length !== (a.categories ?? [a.category]).length)) return null;
+  // Tags are optional (docs/decisions.md · Etiketler): an untagged article has none.
+  const categories = a.categories ?? (a.category ? [a.category] : []);
+  if (!Array.isArray(categories) || categories.length > 10 || new Set(categories).size !== categories.length || !categories.every((c) => text(c, 80) && c.trim() && c !== "Tümü")) return null;
   if (a.publishedAt !== undefined && !isArticleDate(a.publishedAt)) return null;
   if (a.createdAt !== undefined && (typeof a.createdAt !== "string" || !/^\d{4}-\d{2}-\d{2}T/.test(a.createdAt) || !Number.isFinite(Date.parse(a.createdAt)))) return null;
   const fixture = fixtures.find((f) => f.slug === a.slug);
@@ -35,7 +36,6 @@ export function validateArticle(value: unknown): Article | null {
   if (a.code !== undefined && !text(a.code, 50000)) return null;
   if (a.codeLanguage !== undefined && !["plain","java","javascript","typescript","python","bash","sql","json","yaml","html","css","kotlin","go","rust","csharp","cpp"].includes(a.codeLanguage)) return null;
   if (a.seo !== undefined && (!a.seo || typeof a.seo !== "object" || typeof a.seo.indexable !== "boolean" || (a.seo.title != null && !text(a.seo.title,200)) || (a.seo.description != null && !text(a.seo.description,400)))) return null;
-  if (a.tags !== undefined && (!Array.isArray(a.tags) || a.tags.length > 10 || !a.tags.every((t) => text(t, 40) && t.trim()))) return null;
   if (a.figure && !validImage(a.figure, false)) return null;
   if (a.table && (!text(a.table.caption, 500) || !Array.isArray(a.table.columns) || !a.table.columns.length || a.table.columns.length > 20 || !a.table.columns.every((c) => text(c, 1000)) || !Array.isArray(a.table.rows) || a.table.rows.length > 200 || !a.table.rows.every((row) => Array.isArray(row) && row.length === a.table!.columns.length && row.every((c) => text(c, 4000))))) return null;
   if (a.presentation && (!["comfortable", "wide"].includes(a.presentation.width) || !["left", "center"].includes(a.presentation.heading) || typeof a.presentation.showMeta !== "boolean")) return null;
@@ -55,7 +55,7 @@ export function validateArticle(value: unknown): Article | null {
     ...(a.paragraphMarks?.some((marks) => marks.length) ? { paragraphMarks: a.paragraphMarks.map((marks) => marks.map((mark: TextMark) => ({ ...mark }))) } : {}),
     ...(a.blockIds && Array.isArray(a.blockIds.paragraphs) ? { blockIds: { ...a.blockIds, paragraphs: [...a.blockIds.paragraphs] } } : {}),
   };
-  return { ...server, slug: a.slug, ...(a.status ? { status: a.status } : {}), ...(a.authored ? { authored: true } : {}), title: a.title, category: categories[0], categories: [...new Set(categories)], ...(a.categoryIds ? { categoryIds: [...a.categoryIds] } : {}), createdAt, publishedAt, ...(a.scheduledAt ? { scheduledAt: a.scheduledAt } : {}), eyebrow: a.eyebrow, excerpt: a.excerpt, minutes: a.minutes, paragraphs: [...a.paragraphs], ...(a.paragraphFormats ? {paragraphFormats:a.paragraphFormats.map(format=>({...format}))} : {}), ...(a.code !== undefined ? { code: a.code } : {}), ...(a.figure ? { figure: { ...a.figure } } : {}), ...(a.table ? { table: { caption: a.table.caption, columns: [...a.table.columns], rows: a.table.rows.map((r) => [...r]) } } : {}), ...(a.presentation ? { presentation: { ...a.presentation } } : {}) };
+  return { ...server, slug: a.slug, ...(a.status ? { status: a.status } : {}), ...(a.authored ? { authored: true } : {}), title: a.title, category: categories[0] ?? "", categories: [...new Set(categories)], ...(a.categoryIds ? { categoryIds: [...a.categoryIds] } : {}), createdAt, publishedAt, ...(a.scheduledAt ? { scheduledAt: a.scheduledAt } : {}), eyebrow: a.eyebrow, excerpt: a.excerpt, minutes: a.minutes, paragraphs: [...a.paragraphs], ...(a.paragraphFormats ? {paragraphFormats:a.paragraphFormats.map(format=>({...format}))} : {}), ...(a.code !== undefined ? { code: a.code } : {}), ...(a.figure ? { figure: { ...a.figure } } : {}), ...(a.table ? { table: { caption: a.table.caption, columns: [...a.table.columns], rows: a.table.rows.map((r) => [...r]) } } : {}), ...(a.presentation ? { presentation: { ...a.presentation } } : {}) };
 }
 export function parseArticles(raw: string): Article[] | null {
   try {
@@ -71,5 +71,5 @@ export function isArticleSlug(value: unknown): value is string {
   return typeof value === "string" && value.length <= 100 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 export function createArticle(now = new Date()): Article {
-  return { slug: `yeni-yazi-${crypto.randomUUID().slice(0, 8)}`, title: "Yeni yazı", authored: true, status: "draft", category: "Yazılım", categories: ["Yazılım"], createdAt: now.toISOString(), publishedAt: localCalendarDate(now), eyebrow: "YAZILIM", excerpt: "", minutes: 1, paragraphs: [""] };
+  return { slug: `yeni-yazi-${crypto.randomUUID().slice(0, 8)}`, title: "Yeni yazı", authored: true, status: "draft", category: "", categories: [], createdAt: now.toISOString(), publishedAt: localCalendarDate(now), eyebrow: "", excerpt: "", minutes: 1, paragraphs: [""] };
 }

@@ -70,10 +70,10 @@ class EditorialIntegrationTest extends IntegrationTest {
     void publishingRequiresCompleteContent() {
         createOwner();
         owner = ownerClient();
-        Response noCategory = create(with(article("Konusuz", "konusuz", "Metin."), "categoryIds", List.of()));
-        Response rejected = act(noCategory, "publish");
-        assertThat(rejected.status()).isEqualTo(422);
-        assertThat(rejected.json().get("errors").get(0).get("field").asString()).isEqualTo("categoryIds");
+        // Tags (categories) are optional: an untagged article is published.
+        Response untagged = create(with(article("Etiketsiz", "etiketsiz", "Metin."), "categoryIds", List.of()));
+        assertThat(act(untagged, "publish").status()).isEqualTo(200);
+        assertThat(client().get("/api/v1/articles/by-slug/etiketsiz").json().get("categories").size()).isZero();
 
         Response empty = create(article("Boş", "bos", "   "));
         assertThat(act(empty, "publish").json().get("errors").get(0).get("code").asString()).isEqualTo("PARAGRAPH_REQUIRED");

@@ -32,31 +32,31 @@ function mount(options: { items?: StudioCategory[]; failDelete?: boolean } = {})
 async function click(name: string | RegExp) { await act(async () => { fireEvent.click(screen.getByRole("button", { name })); }); }
 
 describe("Studio category management (#44)", () => {
-  it("keeps one category and adds a newly created category without discarding the existing selection", async () => {
-    mount(); expect((screen.getByRole("checkbox", { name: "Bilim" }) as HTMLInputElement).disabled).toBe(true);
-    await click("+ Yeni kategori"); fireEvent.change(screen.getByLabelText("Yeni kategori adı"), { target: { value: "Astronomi" } });
+  it("lets the only tag be removed and adds a newly created tag without discarding the existing selection", async () => {
+    mount(); expect((screen.getByRole("checkbox", { name: "Bilim" }) as HTMLInputElement).disabled).toBe(false);
+    await click("+ Yeni etiket"); fireEvent.change(screen.getByLabelText("Yeni etiket adı"), { target: { value: "Astronomi" } });
     await click("Ekle ve seç");
     expect((screen.getByRole("checkbox", { name: "Astronomi" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByTestId("selected").textContent).toContain(one.id);
   });
   it("renames by stable identity and preserves the article selection", async () => {
     const { rename } = mount(); await click("Yönet"); await click("Düzenle: Bilim");
-    fireEvent.change(screen.getByLabelText("Kategori adı"), { target: { value: "Doğa bilimi" } }); await click("Kaydet");
+    fireEvent.change(screen.getByLabelText("Etiket adı"), { target: { value: "Doğa bilimi" } }); await click("Kaydet");
     expect(rename).toHaveBeenCalledWith(one, "Doğa bilimi");
     expect(screen.getByTestId("selected").textContent).toBe(JSON.stringify([one.id]));
     expect((screen.getByRole("checkbox", { name: "Doğa bilimi" }) as HTMLInputElement).checked).toBe(true);
   });
   it("warns and blocks deletion of a category used by an article", async () => {
     const { remove } = mount(); await click("Yönet"); await click("Sil: Bilim");
-    expect((screen.getByRole("button", { name: "Kategoriyi sil" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Etiketi sil" }) as HTMLButtonElement).disabled).toBe(true);
     expect(remove).not.toHaveBeenCalled();
   });
   it("requires confirmation before removing an unused category", async () => {
     const { remove } = mount(); await click("Yönet"); await click("Sil: Tarih"); expect(remove).not.toHaveBeenCalled();
-    await click("Kategoriyi sil"); expect(remove).toHaveBeenCalledOnce(); expect(screen.queryByRole("checkbox", { name: "Tarih" })).toBeNull();
+    await click("Etiketi sil"); expect(remove).toHaveBeenCalledOnce(); expect(screen.queryByRole("checkbox", { name: "Tarih" })).toBeNull();
   });
   it("keeps the category and current selection when the server reports a newly discovered usage", async () => {
-    mount({ failDelete: true }); await click("Yönet"); await click("Sil: Tarih"); await click("Kategoriyi sil");
+    mount({ failDelete: true }); await click("Yönet"); await click("Sil: Tarih"); await click("Etiketi sil");
     expect(screen.getByRole("alert").textContent).toContain("yayındaki yazılarda");
     expect(screen.getByRole("checkbox", { name: "Tarih" })).toBeTruthy(); expect(screen.getByTestId("selected").textContent).toContain(one.id);
   });

@@ -36,7 +36,7 @@ public class ArticleRepository {
                        a.public_modified_at, a.scheduled_at, a.schedule_zone, a.schedule_generation, a.publication_generation,
                        a.created_at, a.updated_at, a.version,
                        r.id AS revision_id, r.revision_number, r.title, r.eyebrow, r.abstract, r.document::text AS document,
-                       r.presentation::text AS presentation, r.seo::text AS seo, r.tags::text AS tags, r.cover_mode, r.cover_asset_id,
+                       r.presentation::text AS presentation, r.seo::text AS seo, r.cover_mode, r.cover_asset_id,
                        s.slug, %s AS series_id, %s AS series_position, p.revision_id AS published_revision_id
                 FROM article a
                 LEFT JOIN article_publication p ON p.article_id = a.id
@@ -81,7 +81,7 @@ public class ArticleRepository {
 
     public record NewRevision(UUID id, UUID articleId, int number, String title, String eyebrow, String abstractText,
             String documentJson, String presentationJson, String seoJson, String coverMode, UUID coverAssetId,
-            String tagsJson, UUID authoredBy, Instant createdAt) {
+            UUID authoredBy, Instant createdAt) {
     }
 
     public record StateUpdate(String status, String visibility, LocalDate displayDate, Instant firstPublishedAt,
@@ -111,14 +111,14 @@ public class ArticleRepository {
     public void insertRevision(NewRevision revision) {
         jdbc.sql("""
                 INSERT INTO article_revision (id, article_id, revision_number, title, eyebrow, abstract, document, presentation,
-                    seo, tags, cover_mode, cover_asset_id, authored_by, created_at)
+                    seo, cover_mode, cover_asset_id, authored_by, created_at)
                 VALUES (:id, :article, :number, :title, :eyebrow, :abstract, CAST(:document AS jsonb), CAST(:presentation AS jsonb),
-                    CAST(:seo AS jsonb), CAST(:tags AS jsonb), :coverMode, :coverAsset, :author, :createdAt)
+                    CAST(:seo AS jsonb), :coverMode, :coverAsset, :author, :createdAt)
                 """)
                 .param("id", revision.id()).param("article", revision.articleId()).param("number", revision.number())
                 .param("title", revision.title()).param("eyebrow", revision.eyebrow()).param("abstract", revision.abstractText())
                 .param("document", revision.documentJson()).param("presentation", revision.presentationJson())
-                .param("seo", revision.seoJson()).param("tags", revision.tagsJson()).param("coverMode", revision.coverMode())
+                .param("seo", revision.seoJson()).param("coverMode", revision.coverMode())
                 .param("coverAsset", revision.coverAssetId()).param("author", revision.authoredBy())
                 .param("createdAt", Timestamp.from(revision.createdAt()))
                 .update();
@@ -350,7 +350,7 @@ public class ArticleRepository {
                 instant(rs, "created_at"), instant(rs, "updated_at"), rs.getLong("version"),
                 rs.getObject("revision_id", UUID.class), rs.getInt("revision_number"), rs.getString("title"),
                 rs.getString("eyebrow"), rs.getString("abstract"), rs.getString("document"), rs.getString("presentation"),
-                rs.getString("seo"), rs.getString("tags"), rs.getString("cover_mode"), rs.getObject("cover_asset_id", UUID.class),
+                rs.getString("seo"), rs.getString("cover_mode"), rs.getObject("cover_asset_id", UUID.class),
                 rs.getString("slug"), rs.getObject("series_id", UUID.class), (Integer) rs.getObject("series_position"),
                 List.of(), rs.getObject("published_revision_id", UUID.class));
     }

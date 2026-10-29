@@ -46,8 +46,6 @@ export type Article = {
   firstPublishedAt?: string | null;
   codeLanguage?: string;
   seo?: { title?: string | null; description?: string | null; indexable: boolean };
-  /** Free tags that filter chapters inside the article's own series (not global categories). */
-  tags?: readonly string[];
   /** The lead picture shown after the first paragraph; further pictures are "image" entries of `paragraphFormats`. */
   figure?: ArticleImage;
   table?: { caption: string; columns: readonly string[]; rows: readonly (readonly string[])[] };

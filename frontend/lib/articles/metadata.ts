@@ -2,7 +2,8 @@ import type { Article } from "../content";
 
 export const legacyArticleDate = "2026-09-30";
 export function articleCategories(article: Article): readonly Article["category"][] {
-  return article.categories?.length ? article.categories : [article.category];
+  // Tags are optional; an untagged article has none (not an empty name).
+  return article.categories?.length ? article.categories : article.category ? [article.category] : [];
 }
 export function isArticleDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;

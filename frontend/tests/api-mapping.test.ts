@@ -23,7 +23,7 @@ import { articleFromEdit, articleFromPublic, articleWrite, themeFromDto, themeTo
 import { createTheme } from "../lib/builder/model";
 import { validateArticle } from "../lib/articles/model";
 const category = { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", slug: "bilim", name: "Bilim" };
-const edit: ArticleEditDto = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", version: 1, updatedAt: "2026-10-08T00:00:00Z", url: "/yazilar/yildizlar", scheduledAt: null, scheduleZone: null, firstPublishedAt: null, lastPublishedAt: null, revisionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", createdAt: "2026-10-08T00:00:00Z", status: "draft", visibility: "public", title: "Yıldızlar", slug: "yildizlar", eyebrow: "", abstract: "", displayDate: "2026-10-08", categoryIds: [category.id], document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Bir yazı." }] }, presentation: { heading: "left", width: "comfortable", showMeta: true }, seo: { indexable: true }, cover: { mode: "auto", assetId: null, media: null }, seriesPlacement: null, readingMinutes: 1, tags: [] };
+const edit: ArticleEditDto = { id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", version: 1, updatedAt: "2026-10-08T00:00:00Z", url: "/yazilar/yildizlar", scheduledAt: null, scheduleZone: null, firstPublishedAt: null, lastPublishedAt: null, revisionId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", createdAt: "2026-10-08T00:00:00Z", status: "draft", visibility: "public", title: "Yıldızlar", slug: "yildizlar", eyebrow: "", abstract: "", displayDate: "2026-10-08", categoryIds: [category.id], document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Bir yazı." }] }, presentation: { heading: "left", width: "comfortable", showMeta: true }, seo: { indexable: true }, cover: { mode: "auto", assetId: null, media: null }, seriesPlacement: null, readingMinutes: 1 };
 describe("dynamic category identities (#44)", () => {
   it("reads public names from the DTO rather than guessing seed topics", () => {
     expect(articleFromPublic({ ...edit, categories: [category], cover: undefined, stats: { views: 0, claps: 0, saves: 0 }, abstract: "Özet" }).categories).toEqual(["Bilim"]);
@@ -34,7 +34,7 @@ describe("dynamic category identities (#44)", () => {
     expect(articleWrite(article!, null, [], [{ ...category, name: "Astronomi" }]).categoryIds).toEqual([category.id]);
   });
   it("never silently replaces an unknown category with a seeded topic", () => {
-    expect(() => articleWrite({ ...articleFromEdit(edit, [category]), categoryIds: undefined }, null, [], [])).toThrow("Kategori bulunamadı");
+    expect(() => articleWrite({ ...articleFromEdit(edit, [category]), categoryIds: undefined }, null, [], [])).toThrow("Etiket bulunamadı");
   });
   it("retains theme filter identity when its name changes", () => {
     const theme = createTheme("scene");

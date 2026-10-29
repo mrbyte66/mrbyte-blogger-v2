@@ -31,7 +31,9 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
   const { articles: storedArticles } = useArticles();
   const articles = publicArticles(storedArticles);
   const { categories } = useContent();
-  const topics = ["Tümü", ...new Set(categories?.map((c) => c.name) ?? articles.flatMap(articleCategories))];
+  // Only tags that listed articles carry; the shared list's order first, then any others.
+  const used = new Set(articles.flatMap(articleCategories));
+  const topics = ["Tümü", ...new Set([...(categories ?? []).map((c) => c.name).filter((name) => used.has(name)), ...used])];
   const [backward, setBackward] = useState(false);
   const [animated, setAnimated] = useState(false);
   const lastAction = useRef<NavigationAction["type"] | null>(null);
@@ -140,7 +142,7 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
         {displayedNavigation.section === "writing" && !article && displayedNavigation.writingView === "series" && <section>{!displayedNavigation.seriesSlug && <div className="catalog-heading"><h2 id="panel-title">Seriler</h2><p>Bir konuyu, adım adım.</p></div>}<SeriesCatalog series={series} selectedSeriesSlug={displayedNavigation.seriesSlug ?? undefined} onOpenSeries={(slug) => go({ type: "series", slug })} onOpenArticle={openArticle} chapterLimit={chapterLimits[displayedNavigation.seriesSlug ?? ""] ?? 5} onChapterLimitChange={(count) => setChapterLimits((value) => ({ ...value, [displayedNavigation.seriesSlug ?? ""]: count }))} /></section>}
         {displayedNavigation.section === "writing" && (article || displayedNavigation.writingView !== "series") && (article ? <div key={article.slug} id="panel-reading-content"><SeriesArticleNav articleSlug={article.slug} onOpenArticle={openArticle} onOpenSeries={(slug) => go({ type: "series", slug })} /><ArticleContent article={article} /></div> : <section className="writing-view">
           <div className="catalog-heading"><h2 id="panel-title">Yazılar</h2><p>Kod, kelime ve aradakiler.</p><span>{articles.length} yazı</span></div>
-          <div className="topic-filter" role="group" aria-label="Yazı kategorisi">{topics.map((topic) => <button key={topic} aria-pressed={topic === displayedNavigation.topic} onClick={() => go({ type: "filter", topic })}>{topic}</button>)}</div>
+          <div className="topic-filter" role="group" aria-label="Yazıları etikete göre süz">{topics.map((topic) => <button key={topic} aria-pressed={topic === displayedNavigation.topic} onClick={() => go({ type: "filter", topic })}>{topic}</button>)}</div>
           <div className="article-list">{filtered.slice(0, feed.visible).map((item) => <ArticleCard article={item} key={item.slug} onOpen={openArticle} />)}</div>
           <div className="progressive-footer" ref={feed.sentinel}><span role="status">{feed.visible} / {filtered.length} yazı</span>{feed.hasMore && <button onClick={feed.loadMore}>Sonraki 5 yazıyı göster ↓</button>}</div>
           {articles.some((item) => !item.authored) && <p className="sample-note">Bu ilk taslakta örnek içerikleri görüyorsun.</p>}

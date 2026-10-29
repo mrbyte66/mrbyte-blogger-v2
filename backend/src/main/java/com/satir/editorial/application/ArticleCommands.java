@@ -67,7 +67,7 @@ public class ArticleCommands {
 
     public record ArticleInput(String title, String slug, String eyebrow, String abstractText, LocalDate displayDate,
             List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation, Seo seo, Cover cover,
-            UUID seriesId, List<VersionRef> seriesVersions, List<String> tags) {
+            UUID seriesId, List<VersionRef> seriesVersions) {
     }
 
     public record ActionInput(String action, Instant scheduledAt, String timeZone, boolean publishSeries, Long seriesVersion) {
@@ -398,14 +398,13 @@ public class ArticleCommands {
 
     /** Input after structural validation and defaults. */
     private record Normalized(String title, String slug, String eyebrow, String abstractText, LocalDate displayDate,
-            List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation, Seo seo, Cover cover,
-            List<String> tags) {
+            List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation, Seo seo, Cover cover) {
 
         static Normalized of(ArticleRow row, EditorialJson json) {
             return new Normalized(row.title(), row.slug(), row.eyebrow(), row.abstractText(), row.displayDate(),
                     row.categories().stream().map(c -> c.id()).toList(), json.document(row.documentJson()),
                     json.articlePresentation(row.presentationJson()), json.seo(row.seoJson()),
-                    new Cover(CoverMode.valueOf(row.coverMode()), row.coverAssetId()), json.tags(row.tagsJson()));
+                    new Cover(CoverMode.valueOf(row.coverMode()), row.coverAssetId()));
         }
 
         List<UUID> assetIds() {
@@ -448,7 +447,7 @@ public class ArticleCommands {
         Seo seo = input.seo() == null ? Seo.defaults() : input.seo().validated();
         Cover cover = input.cover() == null ? new Cover(CoverMode.AUTO, null) : input.cover().validated();
         Normalized normalized = new Normalized(title, slug, eyebrow, abstractText, displayDate, categoryIds, document,
-                presentation, seo, cover, EditorialValues.tags(input.tags()));
+                presentation, seo, cover);
         List<UUID> assets = normalized.assetIds();
         if (!media.allReady(assets)) {
             throw new ValidationException(cover.assetId() != null && !media.allReady(List.of(cover.assetId()))
@@ -461,9 +460,6 @@ public class ArticleCommands {
     private static void checkPublishable(Normalized content) {
         if (content.title.isBlank()) {
             throw new ValidationException("title", "REQUIRED");
-        }
-        if (content.categoryIds.isEmpty()) {
-            throw new ValidationException("categoryIds", "REQUIRED");
         }
         if (!content.document.hasNonBlankParagraph()) {
             throw new ValidationException("document.blocks", "PARAGRAPH_REQUIRED");
@@ -527,7 +523,7 @@ public class ArticleCommands {
     private void insertRevision(UUID articleId, UUID revisionId, int number, Normalized content, UUID authorId, Instant now) {
         articles.insertRevision(new NewRevision(revisionId, articleId, number, content.title, content.eyebrow,
                 content.abstractText, json.write(content.document), json.write(content.presentation), json.write(content.seo),
-                content.cover.mode().name(), content.cover.assetId(), json.write(content.tags), authorId, now));
+                content.cover.mode().name(), content.cover.assetId(), authorId, now));
         articles.insertMediaRefs(revisionId, articleId, content.cover.assetId(), content.document.assetIds());
     }
 

@@ -1,5 +1,9 @@
 package com.satir.editorial.domain;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 import com.satir.platform.validation.ValidationException;
@@ -78,6 +82,35 @@ public final class EditorialValues {
             }
             return this;
         }
+    }
+
+    public static final int MAX_TAGS = 10;
+    public static final int MAX_TAG_LENGTH = 40;
+
+    /**
+     * Series tags: trimmed, inner whitespace collapsed, a leading '#' dropped, duplicates (ignoring Turkish case)
+     * removed while keeping the first spelling and order.
+     */
+    public static List<String> tags(List<String> raw) {
+        if (raw == null) {
+            return List.of();
+        }
+        Locale turkish = Locale.forLanguageTag("tr-TR");
+        Map<String, String> unique = new LinkedHashMap<>();
+        for (String value : raw) {
+            String tag = value == null ? "" : value.strip().replaceAll("^#+", "").replaceAll("\\s+", " ").strip();
+            if (tag.isEmpty()) {
+                throw new ValidationException("tags", "REQUIRED");
+            }
+            if (tag.codePointCount(0, tag.length()) > MAX_TAG_LENGTH) {
+                throw new ValidationException("tags", "LENGTH");
+            }
+            unique.putIfAbsent(tag.toLowerCase(turkish), tag);
+        }
+        if (unique.size() > MAX_TAGS) {
+            throw new ValidationException("tags", "INVALID");
+        }
+        return List.copyOf(unique.values());
     }
 
     public static String requireText(String field, String value, int min, int max) {

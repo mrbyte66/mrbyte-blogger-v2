@@ -76,6 +76,7 @@ export function articleFromPublic(dto: ArticleSummaryDto | ArticleDetailDto): Ar
     ...(dto.presentation ? { presentation: dto.presentation } : {}),
     ...(dto.cover ? { coverUrl: dto.cover.url } : {}),
     ...(dto.stats ? { stats: dto.stats } : {}),
+    ...(dto.tags?.length ? { tags: [...dto.tags] } : {}),
     ...("revisionId" in dto && dto.revisionId ? { revisionId: dto.revisionId } : {}),
     ...fromDocument(dto.document ?? { schemaVersion: 1, blocks: [] }),
   };
@@ -90,7 +91,7 @@ export function articleFromEdit(dto: ArticleEditDto, registry: readonly Category
     ...(dto.scheduledAt ? { scheduledAt: new Date(dto.scheduledAt).toISOString() } : {}),
     eyebrow: dto.eyebrow ?? "", excerpt: dto.abstract ?? "", minutes: Math.max(1, dto.readingMinutes), presentation: dto.presentation, seo: dto.seo,
     ...(dto.cover.media ? { coverUrl: dto.cover.media.url } : {}),
-    seriesId: dto.seriesPlacement?.seriesId ?? null,
+    seriesId: dto.seriesPlacement?.seriesId ?? null, tags: [...(dto.tags ?? [])],
     ...fromDocument(dto.document),
   };
 }
@@ -103,7 +104,7 @@ export function articleWrite(article: Article, seriesId: string | null, seriesVe
     categoryIds: article.categoryIds ? [...article.categoryIds] : categoryIds(article.categories ?? [article.category], registry),
     document: toDocument(article), presentation: article.presentation ?? { width: "comfortable", heading: "left", showMeta: true },
     seo: article.seo ?? { indexable: true }, cover: cover ? { mode: "manual", assetId: cover[1] } : { mode: "auto" },
-    seriesPlacement: seriesId ? { seriesId } : null, seriesVersions,
+    seriesPlacement: seriesId ? { seriesId } : null, seriesVersions, tags: [...(article.tags ?? [])],
   };
 }
 

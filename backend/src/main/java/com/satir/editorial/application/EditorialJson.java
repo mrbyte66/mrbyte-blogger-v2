@@ -1,5 +1,7 @@
 package com.satir.editorial.application;
 
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
 import com.satir.editorial.domain.ArticleDocument;
@@ -37,5 +39,9 @@ public class EditorialJson {
 
     public Seo seo(String raw) {
         return json.readValue(raw, Seo.class);
+    }
+
+    public List<String> tags(String raw) {
+        return raw == null ? List.of() : List.of(json.readValue(raw, String[].class));
     }
 }

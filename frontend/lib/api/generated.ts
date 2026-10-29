@@ -1708,6 +1708,8 @@ export interface components {
              */
             saves: number;
         };
+        /** @description Free-form tags that filter chapters inside the article's own series (not global categories). The server trims, drops a leading '#', collapses spaces and removes case-insensitive duplicates. */
+        SeriesTags: string[];
         /** @description Public article summary (API contract §2). Optional members are omitted when empty */
         ArticleSummary: {
             /** Format: uuid */
@@ -1729,6 +1731,7 @@ export interface components {
             document?: components["schemas"]["Document"];
             /** @description Only in series chapter lists */
             chapterNumber?: number;
+            tags?: components["schemas"]["SeriesTags"];
         };
         Collection: {
             /** Format: uuid */
@@ -2136,6 +2139,7 @@ export interface components {
                 previous: components["schemas"]["Link"] | null;
                 next: components["schemas"]["Link"] | null;
             };
+            tags: components["schemas"]["SeriesTags"];
         };
         /** @description Full replacement of the editable content */
         ArticleWrite: {
@@ -2157,6 +2161,7 @@ export interface components {
             };
             /** @description Versions of the old and new series when membership changes */
             seriesVersions?: components["schemas"]["VersionRef"][];
+            tags?: components["schemas"]["SeriesTags"];
         };
         /** @description ArticleWrite fields; slug and displayDate may be omitted. Visibility can only be chosen here */
         ArticleCreate: {
@@ -2176,6 +2181,7 @@ export interface components {
                 seriesId: string;
             };
             seriesVersions?: components["schemas"]["VersionRef"][];
+            tags?: components["schemas"]["SeriesTags"];
             /**
              * @default public
              * @enum {string}
@@ -2243,6 +2249,7 @@ export interface components {
                 seriesId: string;
             };
             readingMinutes: number;
+            tags: components["schemas"]["SeriesTags"];
         };
         ChapterRef: {
             /** Format: uuid */

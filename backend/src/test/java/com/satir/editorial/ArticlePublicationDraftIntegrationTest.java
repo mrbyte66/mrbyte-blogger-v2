@@ -71,6 +71,26 @@ class ArticlePublicationDraftIntegrationTest extends IntegrationTest {
         assertThat(jdbc.sql("SELECT publication_generation FROM article WHERE id = :id").param("id", live.id()).query(Long.class).single()).isEqualTo(generation);
     }
 
+    @Test void seriesTagsAreNormalizedAndFollowThePublishedRevision() {
+        createOwner(); var owner = ownerClient(); var visitor = client();
+        var live = publish(owner, with(article("Güdüm kiti", "gudum-kiti", "Metin."), "tags", List.of("#İHA", " güdüm   kiti ", "iha")));
+        String url = "/api/v1/articles/by-slug/gudum-kiti";
+        assertThat(visitor.get(url).json().get("tags").toString()).isEqualTo("[\"İHA\",\"güdüm kiti\"]");
+        assertThat(visitor.get("/api/v1/articles").json().get("items").get(0).get("tags").toString()).isEqualTo("[\"İHA\",\"güdüm kiti\"]");
+        var saved = owner.put("/api/v1/studio/articles/" + live.id(), with(article("Güdüm kiti", "gudum-kiti", "Metin."), "tags", List.of("Lazer")),
+                Map.of("If-Match", live.etag()));
+        assertThat(saved.status()).as(saved.json().toString()).isEqualTo(200);
+        assertThat(saved.json().get("tags").toString()).isEqualTo("[\"Lazer\"]");
+        assertThat(visitor.get(url).json().get("tags").toString()).isEqualTo("[\"İHA\",\"güdüm kiti\"]");
+        act(owner, saved, "publish");
+        assertThat(visitor.get(url).json().get("tags").toString()).isEqualTo("[\"Lazer\"]");
+        var current = owner.get("/api/v1/studio/articles/" + live.id());
+        var tooMany = with(article("Güdüm kiti", "gudum-kiti", "Metin."), "tags", java.util.stream.IntStream.range(0, 11).mapToObj(i -> "etiket " + i).toList());
+        assertThat(owner.put("/api/v1/studio/articles/" + live.id(), tooMany, Map.of("If-Match", current.etag())).status()).isEqualTo(422);
+        var tooLong = with(article("Güdüm kiti", "gudum-kiti", "Metin."), "tags", List.of("x".repeat(41)));
+        assertThat(owner.put("/api/v1/studio/articles/" + live.id(), tooLong, Map.of("If-Match", current.etag())).status()).isEqualTo(422);
+    }
+
     @Test void unfinishedDraftMayBeIncompleteAndArchiveRestoreDoesNotRepublishIt() {
         createOwner(); var owner = ownerClient(); var live = publish(owner, article("Tam", "tam", "Yayındaki metin."));
         var incomplete = with(article("", "tam", ""), "categoryIds", List.of());

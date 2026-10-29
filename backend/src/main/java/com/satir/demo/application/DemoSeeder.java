@@ -186,7 +186,7 @@ public class DemoSeeder {
         Cover cover = spec.cover() ? new Cover(CoverMode.MANUAL, image(owner, spec.slug())) : Cover.none();
         ArticleCommands.ArticleInput input = new ArticleCommands.ArticleInput(spec.title(), spec.slug(), spec.eyebrow(),
                 spec.abstractText(), spec.displayDate(), ids, document(spec.blocks()), ArticlePresentation.defaults(),
-                Seo.defaults(), cover, null, List.of());
+                Seo.defaults(), cover, null, List.of(), List.of());
         UUID id = articles.create(owner, input, spec.locked());
         switch (spec.status()) {
             case "published" -> act(owner, id, new ArticleCommands.ActionInput("publish", null, null, false, null));

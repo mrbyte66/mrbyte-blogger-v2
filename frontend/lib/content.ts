@@ -43,6 +43,8 @@ export type Article = {
   firstPublishedAt?: string | null;
   codeLanguage?: string;
   seo?: { title?: string | null; description?: string | null; indexable: boolean };
+  /** Free tags that filter chapters inside the article's own series (not global categories). */
+  tags?: readonly string[];
   figure?: { src: string; alt: string; caption: string; width: number; height: number };
   table?: { caption: string; columns: readonly string[]; rows: readonly (readonly string[])[] };
 };

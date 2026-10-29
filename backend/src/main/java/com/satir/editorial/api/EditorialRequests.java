@@ -43,12 +43,13 @@ final class EditorialRequests {
     /** Full replacement of an article's editable content (PUT). */
     record ArticleWrite(String title, String slug, String eyebrow, @JsonProperty("abstract") String abstractText,
             LocalDate displayDate, List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation,
-            Seo seo, CoverInput cover, SeriesPlacementInput seriesPlacement, List<VersionRef> seriesVersions) {
+            Seo seo, CoverInput cover, SeriesPlacementInput seriesPlacement, List<VersionRef> seriesVersions,
+            List<String> tags) {
 
         ArticleCommands.ArticleInput toInput() {
             return new ArticleCommands.ArticleInput(title, slug, eyebrow, abstractText, displayDate, categoryIds, document,
                     presentation, seo, cover == null ? null : cover.toCover(),
-                    seriesPlacement == null ? null : seriesPlacement.seriesId(), seriesVersions);
+                    seriesPlacement == null ? null : seriesPlacement.seriesId(), seriesVersions, tags);
         }
     }
 
@@ -56,11 +57,11 @@ final class EditorialRequests {
     record ArticleCreate(String title, String slug, String eyebrow, @JsonProperty("abstract") String abstractText,
             LocalDate displayDate, List<UUID> categoryIds, ArticleDocument document, ArticlePresentation presentation,
             Seo seo, CoverInput cover, SeriesPlacementInput seriesPlacement, List<VersionRef> seriesVersions,
-            String visibility) {
+            List<String> tags, String visibility) {
 
         ArticleCommands.ArticleInput toInput() {
             return new ArticleWrite(title, slug, eyebrow, abstractText, displayDate, categoryIds, document, presentation,
-                    seo, cover, seriesPlacement, seriesVersions).toInput();
+                    seo, cover, seriesPlacement, seriesVersions, tags).toInput();
         }
 
         boolean privateArticle() {

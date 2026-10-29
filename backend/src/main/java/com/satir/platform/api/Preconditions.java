@@ -22,6 +22,8 @@ public final class Preconditions {
         if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
             value = value.substring(1, value.length() - 1);
         }
+        // A compressing proxy (Caddy encode) marks the representation as "7-zstd"; the version is unchanged.
+        value = value.replaceFirst("-(?:zstd|gzip|br|deflate)$", "");
         try {
             return Long.parseLong(value);
         } catch (NumberFormatException e) {

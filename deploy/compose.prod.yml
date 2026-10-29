@@ -116,6 +116,7 @@ services:
     environment:
       BACKEND_INTERNAL_URL: http://backend:8080
       PUBLIC_SITE_ORIGIN: ${PUBLIC_SITE_ORIGIN:?set PUBLIC_SITE_ORIGIN}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
     networks: [app]
     mem_limit: 768m
     depends_on:
@@ -133,6 +134,7 @@ services:
     environment:
       SITE_HOST: ${SITE_HOST:?set SITE_HOST}
       SITE_ALT_HOST: ${SITE_ALT_HOST:?set SITE_ALT_HOST}
+      STATS_HOST: ${STATS_HOST:?set STATS_HOST}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -144,6 +146,26 @@ services:
       backend:
         condition: service_healthy
       frontend:
+        condition: service_healthy
+      umami:
+        condition: service_started
+    logging: *logging
+
+  # Cookie-free visitor statistics. Dashboard on STATS_HOST; the site loads /u/script.js through the proxy.
+  # Its own database and role in the same cluster (runbooks/first-deploy.md); not part of the backup set.
+  umami:
+    image: ${UMAMI_IMAGE:?set UMAMI_IMAGE}
+    restart: unless-stopped
+    env_file:
+      # DATABASE_URL and APP_SECRET
+      - ${SATIR_SECRETS_DIR:-/etc/satir/secrets}/umami.env
+    environment:
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+    networks: [db, app]
+    mem_limit: 512m
+    depends_on:
+      postgres:
         condition: service_healthy
     logging: *logging
 

@@ -22,17 +22,18 @@ export function PrivacyPage() {
         <li><strong>Kişisel alanın:</strong> kaydettiğin yazılar, koleksiyonlar, okuma geçmişin, notların, işaretlemelerin, ses kayıtlı notların ve görünüm tercihlerin. Bunlar yalnız senin hesabına açıktır.</li>
         <li><strong>Etkileşim:</strong> alkışlar ve yazı görüntülenme sayıları. Üye değilsen alkış için tarayıcına rastgele bir kimlik çerezi yerleştirilir; sunucuda bunun yalnız özeti tutulur, parmak izi çıkarılmaz.</li>
         <li><strong>İletişim formu:</strong> gönderdiğin mesaj ve yanıt için verdiğin e-posta adresi.</li>
+        <li><strong>Ziyaret istatistikleri:</strong> hangi sayfaların okunduğunu, ziyaretçilerin hangi siteden geldiğini, ülke, tarayıcı ve cihaz türünü toplu olarak görmek için kendi sunucumuzda çalışan Umami’yi kullanırız. Umami çerez kullanmaz, seni siteler arasında izlemez ve IP adresini saklamaz; ziyaretler kimliğe bağlanmadan sayılır. Tarayıcında “İzleme” (Do Not Track) kapalıysa hiç sayılmazsın.</li>
         <li><strong>Teknik kayıtlar:</strong> güvenlik ve kötüye kullanımı önleme için IP adresi, tarayıcı bilgisi ve istek zamanı kısa süreli sunucu kayıtlarında tutulur.</li>
       </ul>
 
       <h2>Çerezler ve tarayıcı depolama</h2>
-      <p>Yalnız sitenin çalışması için gereken çerezleri kullanırız: oturum çerezi, form güvenliği (CSRF) çerezi ve üye olmayanlar için alkış çerezi. Tema, hareket ve okuma tercihlerin tarayıcının yerel depolamasında tutulur. Reklam, izleme veya üçüncü taraf analiz çerezi kullanmıyoruz.</p>
+      <p>Yalnız sitenin çalışması için gereken çerezleri kullanırız: oturum çerezi, form güvenliği (CSRF) çerezi ve üye olmayanlar için alkış çerezi. Tema, hareket ve okuma tercihlerin tarayıcının yerel depolamasında tutulur. Ziyaret istatistikleri çerezsiz tutulur. Reklam, izleme veya üçüncü taraf analiz çerezi kullanmıyoruz.</p>
 
       <h2>Neden işliyoruz</h2>
-      <p>Verilerini hesabını oluşturmak ve korumak, sana kişisel okuma alanını sunmak, e-posta doğrulama ve parola sıfırlama gibi hesap e-postalarını göndermek, iletişim mesajlarına yanıt vermek ve siteyi güvenli tutmak için işleriz. Hukuki sebep, üyelik sözleşmesinin kurulması ve ifası ile sitenin güvenliğine ilişkin meşru menfaattir. Verilerini satmayız ve reklam amacıyla kullanmayız.</p>
+      <p>Verilerini hesabını oluşturmak ve korumak, sana kişisel okuma alanını sunmak, e-posta doğrulama ve parola sıfırlama gibi hesap e-postalarını göndermek, iletişim mesajlarına yanıt vermek, hangi içeriklerin okunduğunu toplu olarak görüp siteyi geliştirmek ve siteyi güvenli tutmak için işleriz. Hukuki sebep, üyelik sözleşmesinin kurulması ve ifası ile sitenin güvenliğine ilişkin meşru menfaattir. Verilerini satmayız ve reklam amacıyla kullanmayız.</p>
 
       <h2>Kimlerle paylaşılır</h2>
-      <p>Verilerin yalnız hizmeti sağlamak için gereken altyapı sağlayıcılarında işlenir: sunucu barındırma (GoDaddy), Google ile giriş (Google) ve hesap e-postalarının gönderimi için e-posta sağlayıcısı. Bu sağlayıcıların bir kısmı yurt dışında bulunabilir. Yasal bir zorunluluk olmadıkça başka kimseyle paylaşılmaz.</p>
+      <p>Verilerin yalnız hizmeti sağlamak için gereken altyapı sağlayıcılarında işlenir: sunucu barındırma (GoDaddy), Google ile giriş (Google) ve hesap e-postalarının gönderimi için e-posta sağlayıcısı. Ziyaret istatistikleri kendi sunucumuzda kalır, üçüncü bir tarafa gönderilmez. Bu sağlayıcıların bir kısmı yurt dışında bulunabilir. Yasal bir zorunluluk olmadıkça başka kimseyle paylaşılmaz.</p>
 
       <h2>Ne kadar süre saklanır</h2>
       <p>Hesap verilerin hesabın açık kaldığı sürece saklanır. Hesabını sildiğinde kişisel alanındaki veriler silinir; yedeklerdeki kopyalar yedekleme döngüsü içinde kendiliğinden ortadan kalkar. Oturumlar ve teknik kayıtlar kısa süre sonra silinir.</p>

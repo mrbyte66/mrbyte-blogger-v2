@@ -19,6 +19,16 @@
 		-Server
 	}
 
+	# Cookie-free statistics (Umami): only the tracker script and its collect endpoint, never the dashboard.
+	@stats path /u/script.js /u/api/send
+	handle @stats {
+		request_body {
+			max_size 64KB
+		}
+		uri strip_prefix /u
+		reverse_proxy umami:3000
+	}
+
 	# Owner image uploads (10 MiB file + multipart overhead).
 	@upload path /api/v1/studio/media
 	handle @upload {
@@ -85,6 +95,19 @@
 			resp_headers>Set-Cookie delete
 		}
 	}
+}
+
+# Umami dashboard (owner sign-in).
+{$STATS_HOST} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=86400"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "frame-ancestors 'none'"
+		-Server
+	}
+	reverse_proxy umami:3000
 }
 
 {$SITE_ALT_HOST} {

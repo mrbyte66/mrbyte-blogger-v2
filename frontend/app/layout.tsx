@@ -48,7 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: site?.seo?.description ?? "Yazılım, yapay zekâ, edebiyat ve kültür üzerine kişisel bir evren.",
     // Indexing needs both the owner's site setting and the deployment gate (backend decides).
     robots: site?.indexingEnabled ? { index: true, follow: true } : { index: false, follow: false },
-    icons: { icon: "/favicon.svg" },
+    icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
   };
 }
 

@@ -7,6 +7,7 @@ import { api, ApiError, describe } from "../../lib/api/http";
 import { useWorkspace } from "../../lib/builder/use-workspace";
 import { AuthIcon, GoogleLogo } from "./AuthIcon";
 import { useAuth } from "./AuthProvider";
+import { BrandLogo } from "../BrandLogo";
 
 const headings: Record<AuthScreen, [string, string]> = {
   login: ["Tekrar hoş geldin", "Kendi kitaplığına, kaldığın satıra."],
@@ -121,7 +122,7 @@ export function AuthCard({ initial = "login", onComplete }: { initial?: AuthScre
   }
   const submitLabel = login ? "Giriş yap" : register ? "Hesap oluştur" : screen === "forgot" ? "Sıfırlama bağlantısı gönder" : screen === "reset" ? "Şifreyi güncelle" : link.token ? (link.emailChange ? "Yeni adresimi onayla" : "E-postamı doğrula") : "Doğrulama bağlantısını yeniden gönder";
   return <section className="auth-card" data-screen={screen} data-tab-motion={tabMotion} aria-labelledby={`${id}-title`} aria-busy={busy}>
-    <span className="auth-wordmark">{workspace.applied.siteName}<span>.</span></span>
+    <span className="auth-wordmark"><BrandLogo label={workspace.applied.siteName} /></span>
     <h1 id={`${id}-title`} tabIndex={-1} ref={heading}>{result?.title ?? headings[screen][0]}</h1>
     {(login || register) && !result ? <p key={screen} className="auth-subtitle auth-wave" data-screen={screen} aria-label={headings[screen][1]}>{headings[screen][1].split(" ").map((word, wordIndex, words) => <span className="auth-wave-word" aria-hidden="true" key={wordIndex}>{[...word].map((letter, index) => <span key={index} style={{ "--letter": words.slice(0, wordIndex).join("").length + index } as CSSProperties}>{letter}</span>)}{wordIndex < words.length - 1 ? " " : ""}</span>)}</p> : <p className="auth-subtitle">{result?.text ?? (screen === "reset" && !link.token ? "Bu ekran, e-postana gelen sıfırlama bağlantısıyla açılır." : headings[screen][1])}</p>}
     {result ? <div className="auth-message-actions">

@@ -22,6 +22,7 @@ import { AmbientAudioToggle } from "./audio/AmbientAudio";
 import { SavedLibraryLink } from "./saved/SaveArticleButton";
 import { ArticleCard } from "./ArticleCard";
 import type { Navigation, NavigationAction } from "../lib/navigation";
+import { BrandLogo } from "./BrandLogo";
 
 const sectionNames = { writing: "Yazılar", projects: "Projeler", about: "Hakkımda" };
 
@@ -121,7 +122,7 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
     }}
     onClick={(event) => { if (event.target === event.currentTarget) go({ type: "close" }); }}>
     <div className="panel-shell">
-      <div className="panel-topbar"><span className="panel-mark">{siteName}<span>.</span></span>
+      <div className="panel-topbar"><span className="panel-mark"><BrandLogo label={siteName} /></span>
         {displayedNavigation.section === "writing" && !article ? <div className="panel-content-switch"><span className="panel-switch-label">DEFTER</span><div className="writing-tabs" role="tablist" aria-label="Defter içerikleri">{(["articles", "series"] as const).map((view) => {
           const active = (displayedNavigation.writingView ?? "articles") === view;
           return <RippleButton key={view} id={`reader-tab-${view}`} role="tab" aria-selected={active} aria-controls="reader-tabpanel" tabIndex={active ? 0 : -1} onClick={() => selectTab(view)} onKeyDown={(event) => {

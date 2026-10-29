@@ -28,6 +28,7 @@ import { studioNotesEvent, documentEvent, navigateEvent, parseDocumentDraft, tar
 import { useProgressiveItems } from "../../lib/use-progressive-items";
 import { useVisibleArticleView } from "../../lib/reactions/use-views";
 import type { Article } from "../../lib/content";
+import { BrandLogo } from "../BrandLogo";
 
 type ArticlesBlock = Extract<PageBlock, { kind: "articles" }>;
 function FeedArticle({ article, index, preview }: { article: Article; index: number; preview: boolean }) {
@@ -57,7 +58,7 @@ function ArticleFeed({ block, preview }: { block: ArticlesBlock; preview: boolea
 
 export function ThemeNavigation({ theme, preview = false }: { theme: Theme; preview?: boolean }) {
   const links = [{ kind: "articles", id: "yazilar", label: "Yazılar" }, { kind: "series", id: "seriler", label: "Seriler" }, { kind: "projects", id: "projeler", label: "Projeler" }, { kind: "about", id: "hakkimda", label: "Hakkımda" }];
-  return <header className="theme-header"><a className="theme-wordmark" href="#top">{theme.siteName}<span>.</span></a><nav aria-label="Site menüsü">{links.filter((link) => theme.blocks.some((block) => block.kind === link.kind)).map((link) => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav><UtilityIsland><ThemeToggle defaultDark={theme.surface === "night"} />{!preview && <><SavedLibraryLink /><AccountMenu /></>}</UtilityIsland><span className="theme-header-note">KİŞİSEL BİR DEFTER <span aria-hidden="true">✳</span></span></header>;
+  return <header className="theme-header"><a className="theme-wordmark" href="#top"><BrandLogo label={theme.siteName} /></a><nav aria-label="Site menüsü">{links.filter((link) => theme.blocks.some((block) => block.kind === link.kind)).map((link) => <a key={link.id} href={`#${link.id}`}>{link.label}</a>)}</nav><UtilityIsland><ThemeToggle defaultDark={theme.surface === "night"} />{!preview && <><SavedLibraryLink /><AccountMenu /></>}</UtilityIsland><span className="theme-header-note">KİŞİSEL BİR DEFTER <span aria-hidden="true">✳</span></span></header>;
 }
 
 function SeriesBlock({ block }: { block: Extract<PageBlock, { kind: "series" }> }) {

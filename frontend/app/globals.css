@@ -268,6 +268,7 @@ pre { font: 12px/1.9 var(--mono); overflow-x: auto; padding: 8px 20px 16px; tab-
 .article-view { min-width:0; overflow-wrap:anywhere; }
 .article-view figure { margin:28px 0; }
 .article-view figure img { display:block; width:100%; max-width:100%; height:auto; border:1px solid var(--line); border-radius:8px; }
+.article-figure-pending { display:grid; place-items:center; min-height:180px; border:1px dashed var(--line); border-radius:8px; color:var(--muted); font-size:13px; }
 .article-view figcaption { font-size:13px; line-height:1.6; color:var(--muted); margin-top:10px; }
 .article-table-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; border:1px solid var(--line); border-radius:8px; margin:28px 0; }
 .article-table-scroll:focus-visible { outline:2px solid var(--ink); outline-offset:4px; }

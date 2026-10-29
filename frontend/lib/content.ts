@@ -2,6 +2,8 @@ import type { TextMark } from "./articles/marks";
 export type Topic = string;
 /** Public totals from the server: visible-card/permalink views, active claps and member saves. */
 import type { Schema } from "./api/contract";
+export type ArticleImage = { src: string; alt: string; caption: string; width: number; height: number };
+
 export type ArticleStats = Schema<"ArticleStatsInline">;
 export type Article = {
   /** Server identity and optimistic-lock version (absent until the article is saved to the API). */
@@ -33,7 +35,8 @@ export type Article = {
   excerpt: string;
   minutes: number;
   presentation?: { width: "comfortable" | "wide"; heading: "left" | "center"; showMeta: boolean };
-  paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote"; level?: 2 | 3; attribution?: string }[];
+  /** Parallel to `paragraphs`. An "image" entry is a picture placed at that point of the text (its paragraph is ""). */
+  paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote" | "image"; level?: 2 | 3; attribution?: string; image?: ArticleImage }[];
   /** Inline formatting per paragraph, parallel to `paragraphs` (offsets are UTF-16 units of the plain text). */
   paragraphMarks?: readonly (readonly TextMark[])[];
   paragraphs: readonly string[];
@@ -45,7 +48,8 @@ export type Article = {
   seo?: { title?: string | null; description?: string | null; indexable: boolean };
   /** Free tags that filter chapters inside the article's own series (not global categories). */
   tags?: readonly string[];
-  figure?: { src: string; alt: string; caption: string; width: number; height: number };
+  /** The lead picture shown after the first paragraph; further pictures are "image" entries of `paragraphFormats`. */
+  figure?: ArticleImage;
   table?: { caption: string; columns: readonly string[]; rows: readonly (readonly string[])[] };
 };
 

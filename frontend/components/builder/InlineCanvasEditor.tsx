@@ -452,7 +452,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const rect = rectOf(item.node);
     clearSlash(); setMenu(null);
     finish(true);
-    window.parent.postMessage({ type: previewEvents.select, id: choice.id, rect }, window.location.origin);
+    // "Görsel" from the menu asks for a new picture; clicking an existing one selects it instead.
+    window.parent.postMessage({ type: previewEvents.select, id: choice.id === "figure" ? "figure-new" : choice.id, rect }, window.location.origin);
   }
 
   /** Removes every mark (links too) from the selection; with only a caret, from the word under it. */

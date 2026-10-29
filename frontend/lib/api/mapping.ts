@@ -39,9 +39,12 @@ function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "para
   const blockIds: NonNullable<Article["blockIds"]> = { paragraphs: ids };
   for (const block of document.blocks) {
     if (block.type === "paragraph" || block.type === "heading" || block.type === "quote") { paragraphs.push(block.text); ids.push(block.id); paragraphMarks.push(block.type === "heading" ? [] : (block.marks ?? []).map((mark) => ({ type: mark.type, start: mark.start, end: mark.end, ...(mark.href ? { href: mark.href } : {}) }))); paragraphFormats.push({kind:block.type,...(block.type==="heading" ? {level:block.level} : {}),...(block.type==="quote" && block.attribution ? {attribution:block.attribution} : {})}); }
-    else if (block.type === "image" && !figure) {
+    else if (block.type === "image") {
       const src = block.assetId ? mediaUrl(block.assetId) : block.staticPath ?? "";
-      figure = { src, alt: block.alt ?? "", caption: block.caption ?? "", width: block.width ?? 1200, height: block.height ?? 675 }; blockIds.figure = block.id;
+      const image = { src, alt: block.alt ?? "", caption: block.caption ?? "", width: block.width ?? 1200, height: block.height ?? 675 };
+      // The lead picture renders after the first paragraph; any other picture keeps its place in the text.
+      if (!figure && paragraphs.length === 1 && paragraphFormats[0]?.kind !== "image") { figure = image; blockIds.figure = block.id; }
+      else { paragraphs.push(""); ids.push(block.id); paragraphMarks.push([]); paragraphFormats.push({ kind: "image", image }); }
     } else if (block.type === "code" && code === undefined) { code = block.text; codeLanguage = block.language; blockIds.code = block.id; }
     else if (block.type === "table" && !table) { table = { caption: block.caption ?? "", columns: block.columns, rows: block.rows }; blockIds.table = block.id; }
   }
@@ -55,9 +58,14 @@ export function toDocument(article: Article): DocumentDto {
   const anchor = Math.min(2, article.paragraphs.length - 1);
   article.paragraphs.forEach((text, index) => {
     const format=article.paragraphFormats?.[index]; const id=ids?.paragraphs[index] ?? crypto.randomUUID();
+    if (format?.kind === "image") {
+      // An image entry still waiting for its upload is not saved.
+      const image = format.image; const match = image?.src ? mediaPattern.exec(image.src) : null;
+      if (image?.src) blocks.push({ id, type: "image", ...(match ? { assetId: match[1] } : { staticPath: image.src }), alt: image.alt, caption: image.caption, width: image.width, height: image.height });
+    }
     const marks = article.paragraphMarks?.[index];
     const withMarks = marks?.length ? { marks: marks.map((mark) => ({ ...mark })) } : {};
-    blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {}),...withMarks} : {id,type:"paragraph",text,...withMarks});
+    if (format?.kind !== "image") blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {}),...withMarks} : {id,type:"paragraph",text,...withMarks});
     if (index === 0 && article.figure) {
       const match = mediaPattern.exec(article.figure.src);
       blocks.push({ id: ids?.figure ?? crypto.randomUUID(), type: "image", ...(match ? { assetId: match[1] } : { staticPath: article.figure.src }), alt: article.figure.alt, caption: article.figure.caption, width: article.figure.width, height: article.figure.height });

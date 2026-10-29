@@ -3,6 +3,15 @@ import { isArticleDate, legacyArticleDate, localCalendarDate } from "./metadata"
 import { isValidSeriesCoverImage } from "../series/model";
 import { validMarks, type TextMark } from "./marks";
 
+/** A picture's fields; an image entry may wait for its upload (empty src) while it is being written. */
+function validImage(image: unknown, allowEmptySrc: boolean): boolean {
+  if (!image || typeof image !== "object") return false;
+  const { src, alt, caption, width, height } = image as Record<string, unknown>;
+  const ok = (v: unknown, max: number) => typeof v === "string" && v.length <= max;
+  return typeof src === "string" && (src ? isValidSeriesCoverImage(src) : allowEmptySrc) && ok(alt, 500) && ok(caption, 1000)
+    && typeof width === "number" && Number.isFinite(width) && width > 0 && typeof height === "number" && Number.isFinite(height) && height > 0;
+}
+
 export function validateArticle(value: unknown): Article | null {
   if (!value || typeof value !== "object") return null;
   const a = value as Article;
@@ -19,7 +28,7 @@ export function validateArticle(value: unknown): Article | null {
   if (!Array.isArray(a.paragraphs) || !a.paragraphs.length || a.paragraphs.length > 200 || !a.paragraphs.every((p) => text(p, 20000))) return null;
   if (a.status !== undefined && !["draft", "scheduled", "published", "archived", "trashed"].includes(a.status)) return null;
   if (a.scheduledAt !== undefined && (typeof a.scheduledAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(a.scheduledAt) || !Number.isFinite(Date.parse(a.scheduledAt)) || new Date(a.scheduledAt).toISOString() !== a.scheduledAt)) return null;
-  if (a.paragraphFormats !== undefined && (!Array.isArray(a.paragraphFormats) || a.paragraphFormats.length !== a.paragraphs.length || a.paragraphFormats.some((format, i) => !format || !["paragraph","heading","quote"].includes(format.kind) || (format.kind === "heading" && (![2,3].includes(format.level ?? 2) || !a.paragraphs[i].trim() || a.paragraphs[i].length>300)) || (format.kind === "quote" && (!a.paragraphs[i].trim() || a.paragraphs[i].length>4000 || (format.attribution !== undefined && !text(format.attribution,200))))))) return null;
+  if (a.paragraphFormats !== undefined && (!Array.isArray(a.paragraphFormats) || a.paragraphFormats.length !== a.paragraphs.length || a.paragraphFormats.some((format, i) => !format || !["paragraph","heading","quote","image"].includes(format.kind) || (format.kind === "image" && (a.paragraphs[i] !== "" || !validImage(format.image, true))) || (format.kind === "heading" && (![2,3].includes(format.level ?? 2) || !a.paragraphs[i].trim() || a.paragraphs[i].length>300)) || (format.kind === "quote" && (!a.paragraphs[i].trim() || a.paragraphs[i].length>4000 || (format.attribution !== undefined && !text(format.attribution,200))))))) return null;
   if (a.paragraphMarks !== undefined && (!Array.isArray(a.paragraphMarks) || a.paragraphMarks.length !== a.paragraphs.length || a.paragraphMarks.some((marks, i) => !validMarks(a.paragraphs[i], marks) || (marks.length > 0 && a.paragraphFormats?.[i]?.kind === "heading")))) return null;
   if (a.status === "scheduled" && !a.scheduledAt) return null;
   if (a.authored !== undefined && typeof a.authored !== "boolean") return null;
@@ -27,7 +36,7 @@ export function validateArticle(value: unknown): Article | null {
   if (a.codeLanguage !== undefined && !["plain","java","javascript","typescript","python","bash","sql","json","yaml","html","css","kotlin","go","rust","csharp","cpp"].includes(a.codeLanguage)) return null;
   if (a.seo !== undefined && (!a.seo || typeof a.seo !== "object" || typeof a.seo.indexable !== "boolean" || (a.seo.title != null && !text(a.seo.title,200)) || (a.seo.description != null && !text(a.seo.description,400)))) return null;
   if (a.tags !== undefined && (!Array.isArray(a.tags) || a.tags.length > 10 || !a.tags.every((t) => text(t, 40) && t.trim()))) return null;
-  if (a.figure && (!a.figure.src || !isValidSeriesCoverImage(a.figure.src) || !text(a.figure.alt, 500) || !text(a.figure.caption, 1000) || !Number.isFinite(a.figure.width) || a.figure.width <= 0 || !Number.isFinite(a.figure.height) || a.figure.height <= 0)) return null;
+  if (a.figure && !validImage(a.figure, false)) return null;
   if (a.table && (!text(a.table.caption, 500) || !Array.isArray(a.table.columns) || !a.table.columns.length || a.table.columns.length > 20 || !a.table.columns.every((c) => text(c, 1000)) || !Array.isArray(a.table.rows) || a.table.rows.length > 200 || !a.table.rows.every((row) => Array.isArray(row) && row.length === a.table!.columns.length && row.every((c) => text(c, 4000))))) return null;
   if (a.presentation && (!["comfortable", "wide"].includes(a.presentation.width) || !["left", "center"].includes(a.presentation.heading) || typeof a.presentation.showMeta !== "boolean")) return null;
   if (a.id !== undefined && (typeof a.id !== "string" || !/^[0-9a-f-]{36}$/.test(a.id))) return null;

@@ -164,7 +164,8 @@ describe("writing shortcuts in the canvas", () => {
     fireEvent.click(screen.getByRole("button", { name: "Blok ekle" }));
     fireEvent.click(screen.getByRole("option", { name: /Görsel/ }));
     const select = (post.mock.calls as unknown[][]).map((call) => call[0] as { type: string; id?: string; rect?: unknown }).find((message) => message.type === "mrbyte:select-block");
-    expect(select).toMatchObject({ id: "figure" });
+    // The Studio decides: the lead picture first, otherwise a new picture after this line.
+    expect(select).toMatchObject({ id: "figure-new" });
     expect(select?.rect).toBeTruthy();
     expect(node).toBeTruthy();
   });

@@ -77,7 +77,7 @@ public class MediaService {
         }
         ImageInspection.Format format = ImageInspection.detect(bytes);
         if (format == null) {
-            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "MEDIA_TYPE_UNSUPPORTED", "Yalnız JPEG ve PNG görseller yüklenebilir");
+            throw new ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "MEDIA_TYPE_UNSUPPORTED", "Yalnız JPEG, PNG ve GIF görseller yüklenebilir");
         }
         byte[] clean = reencode(bytes, format);
         BufferedImage dimensions = decode(clean);
@@ -137,6 +137,15 @@ public class MediaService {
     }
 
     private static byte[] reencode(byte[] bytes, ImageInspection.Format format) {
+        if (format == ImageInspection.Format.GIF) {
+            try {
+                return GifReencoder.reencode(bytes);
+            } catch (GifReencoder.LimitException e) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, e.code, e.getMessage());
+            } catch (IOException | RuntimeException e) {
+                throw decodeFailed();
+            }
+        }
         try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<ImageReader> readers = ImageIO.getImageReadersByFormatName(format.imageIoName);
             if (!readers.hasNext()) {

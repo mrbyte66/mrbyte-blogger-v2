@@ -1,7 +1,7 @@
 package com.satir.media.domain;
 
 /**
- * Upload acceptance rules (architecture §6): JPEG/PNG identified by their byte signature, at most
+ * Upload acceptance rules (architecture §6): JPEG/PNG/GIF identified by their byte signature, at most
  * 10 MiB and 20 megapixels. SVG/HTML and anything unrecognised is rejected. WebP is listed in the
  * architecture but the JDK has no WebP decoder, so it is refused until a vetted decoder is added.
  */
@@ -12,7 +12,9 @@ public final class ImageInspection {
 
     public enum Format {
         JPEG("image/jpeg", "jpg", "jpeg"),
-        PNG("image/png", "png", "png");
+        PNG("image/png", "png", "png"),
+        /** Possibly animated; re-encoded frame by frame (GifReencoder). */
+        GIF("image/gif", "gif", "gif");
 
         public final String mime;
         public final String extension;
@@ -36,6 +38,10 @@ public final class ImageInspection {
         if (head.length >= 8 && (head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N' && head[3] == 'G'
                 && head[4] == 0x0D && head[5] == 0x0A && head[6] == 0x1A && head[7] == 0x0A) {
             return Format.PNG;
+        }
+        if (head.length >= 6 && head[0] == 'G' && head[1] == 'I' && head[2] == 'F' && head[3] == '8'
+                && (head[4] == '7' || head[4] == '9') && head[5] == 'a') {
+            return Format.GIF;
         }
         return null;
     }

@@ -1300,6 +1300,7 @@ paths:
           content:
             image/jpeg: {schema: {type: string, format: binary}}
             image/png: {schema: {type: string, format: binary}}
+            image/gif: {schema: {type: string, format: binary}}
             image/webp: {schema: {type: string, format: binary}}
         '404': {description: 'Missing, not ready, or not visible to the caller', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
 
@@ -1898,7 +1899,7 @@ paths:
         '403': {$ref: '#/components/responses/Problem'}
         '413': {description: '`MEDIA_TOO_LARGE` or `PAYLOAD_TOO_LARGE`', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
         '415': {description: '`MEDIA_TYPE_UNSUPPORTED`', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
-        '422': {description: '`MEDIA_EMPTY`, `MEDIA_DECODE_FAILED`, `MEDIA_TOO_MANY_PIXELS`', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
+        '422': {description: '`MEDIA_EMPTY`, `MEDIA_DECODE_FAILED`, `MEDIA_TOO_MANY_PIXELS`, `MEDIA_TOO_MANY_FRAMES` (GIF over 300 frames or too many pixels in total)', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
 
   /studio/media/{id}:
     parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
@@ -3189,7 +3190,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         state: {type: string, enum: [quarantined, ready, failed]}
-        mime: {type: string, enum: [image/jpeg, image/png, image/webp]}
+        mime: {type: string, enum: [image/jpeg, image/png, image/gif, image/webp]}
         size: {type: integer, format: int64}
         width: {type: integer}
         height: {type: integer}

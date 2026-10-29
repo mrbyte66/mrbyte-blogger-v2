@@ -124,7 +124,26 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
   function openSettings(id: string) {
     setSettingsField(id); setSettingsKind("document"); setPanelKind("document"); setPanelOpen(true); setFocused(false);
   }
+  /** "Görsel" from a menu: the lead picture first, then pictures placed after the current paragraph. */
+  function addImage() {
+    const current = latest.current;
+    if (current.kind !== "article" || !current.article.figure) { openSettings("figure"); return; }
+    const { article } = current;
+    if (article.paragraphs.length >= 200) return;
+    const at = (/^paragraph-\d+$/.test(field) ? Math.min(Number(field.slice(10)), article.paragraphs.length - 1) : article.paragraphs.length - 1) + 1;
+    const formats = article.paragraphs.map((_, i) => article.paragraphFormats?.[i] ?? { kind: "paragraph" as const });
+    const marks = article.paragraphs.map((_, i) => [...(article.paragraphMarks?.[i] ?? [])]);
+    const ids = article.blockIds ? { ...article.blockIds, paragraphs: [...article.blockIds.paragraphs] } : undefined;
+    const paragraphs = [...article.paragraphs]; paragraphs.splice(at, 0, "");
+    formats.splice(at, 0, { kind: "image", image: { src: "", alt: "", caption: "", width: 1200, height: 675 } });
+    marks.splice(at, 0, []); ids?.paragraphs.splice(at, 0, crypto.randomUUID());
+    change({ kind: "article", article: { ...article, paragraphs, paragraphFormats: formats, paragraphMarks: marks, ...(ids ? { blockIds: ids } : {}) } }, true);
+    setField(`paragraph-${at}`); setAnchorField(`paragraph-${at}`); openSettings(`paragraph-${at}`);
+  }
   function select(id: string, _fromCanvas = false) {
+    if (id === "figure-new") { addImage(); return; }
+    const current = latest.current;
+    if (id.startsWith("paragraph-") && current.kind === "article" && current.article.paragraphFormats?.[Number(id.slice(10))]?.kind === "image") { setField(id); setAnchorField(id); openSettings(id); return; }
     if (!id.startsWith("paragraph-") && !fields.some(([known]) => known === id)) return;
     if (["title","excerpt","summary","body"].includes(id) || id.startsWith("paragraph-")) {
       setField(id); setAnchorField(id); setEditing(true); setRequest(n => n + 1);
@@ -256,7 +275,7 @@ export function DocumentEditor({ navigation, initial, fieldRequest = null, artic
         <p role="status" className="studio-status">{missingBody ? "Yazını kaydetmek için en az bir paragraf ekle." : !valid ? "Eksik veya geçersiz alan var. Tuval son geçerli düzenlemeyi gösteriyor." : message}</p>
         {!creatingSeries && error && <p role="alert" className="studio-error">{error}</p>}
         <PreviewCanvas showNotes={showNotes} onSaveRequest={() => {void save();}} onHistory={historyMove} onOutlineCurrent={setOutlineCurrent} outlineJump={outlineJump} onInlineEdit={canvasEdit} resetKey={resetKey} workspace={workspace} document={preview} mobile={mobile} selection={{id:field,request,editing}} onSelect={id => select(id,true)} onNavigate={onNavigate}/>
-        <WritingTools article={draft.kind === "article"} disabled={!ready || saving || creatingSeries || !editing} full={draft.kind === "article" && draft.article.paragraphs.length >= 200} onInsert={insert} onSelect={openSettings} onDesign={openDesign}/>
+        <WritingTools article={draft.kind === "article"} disabled={!ready || saving || creatingSeries || !editing} full={draft.kind === "article" && draft.article.paragraphs.length >= 200} onInsert={insert} onSelect={id => id === "figure" ? addImage() : openSettings(id)} onDesign={openDesign}/>
       </section>
       <aside ref={inspectorRef} hidden={!panelOpen} className="studio-inspector writing-companion" aria-label="Seçili alanın ayarları">
         <div className="writing-panel-tabs" role="tablist" aria-label="Yazı paneli" onKeyDown={event => {

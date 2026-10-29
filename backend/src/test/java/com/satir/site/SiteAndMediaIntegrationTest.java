@@ -85,7 +85,7 @@ class SiteAndMediaIntegrationTest extends IntegrationTest {
     }
 
     @Test
-    void onlyRealJpegAndPngAreAccepted() throws IOException {
+    void onlyRealJpegPngAndGifAreAccepted() throws IOException {
         createOwner();
         ApiClient owner = ownerClient();
         byte[] svg = "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>".getBytes(StandardCharsets.UTF_8);
@@ -96,6 +96,12 @@ class SiteAndMediaIntegrationTest extends IntegrationTest {
         byte[] truncated = java.util.Arrays.copyOf(png(16, 16), 20);
         assertThat(owner.upload("/api/v1/studio/media", "broken.png", truncated).code()).isEqualTo("MEDIA_DECODE_FAILED");
         assertThat(client().upload("/api/v1/studio/media", "x.png", png(4, 4)).status()).isIn(401, 403);
+
+        Response gif = owner.upload("/api/v1/studio/media", "hareket.gif", com.satir.media.application.GifReencoderTest.animated(3, 24));
+        assertThat(gif.status()).as(gif.json().toString()).isEqualTo(202);
+        assertThat(gif.json().get("width").asInt()).isEqualTo(24);
+        assertThat(owner.upload("/api/v1/studio/media", "kirik.gif", java.util.Arrays.copyOf(com.satir.media.application.GifReencoderTest.animated(2, 24), 30)).code())
+                .isEqualTo("MEDIA_DECODE_FAILED");
     }
 
     @Test

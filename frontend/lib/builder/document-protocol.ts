@@ -21,7 +21,7 @@ export function parseDocumentDraft(value: unknown): DocumentDraft | null {
   return null;
 }
 export function isDocumentField(id: unknown): id is string {
-  return typeof id === "string" && (/^(title|excerpt|body|figure|code|table|meta|publication|layout|summary|cover|chapters|notes)$/.test(id) || /^paragraph-\d{1,3}$/.test(id));
+  return typeof id === "string" && (/^(title|excerpt|body|figure|figure-new|code|table|meta|publication|layout|summary|cover|chapters|notes)$/.test(id) || /^paragraph-\d{1,3}$/.test(id));
 }
 export function targetFromLink(href: string): StudioTarget | null {
   if (href === "/") return { kind: "home" };

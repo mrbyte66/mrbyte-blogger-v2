@@ -27,6 +27,12 @@ function CodeBlock({ code, language = "java" }: { code: string; language?: strin
 
 function ParagraphContent({article,index,text,preview}: {article:Article;index:number;text:string;preview:boolean}) {
   const format=article.paragraphFormats?.[index];
+  if (format?.kind === "image") {
+    const image = format.image;
+    const identity={"data-edit-field":`paragraph-${index}`,"data-reading-anchor":article.blockIds?.paragraphs[index] ?? `paragraph-${index}`};
+    if (!image?.src) return preview ? <figure {...identity} className="article-figure-pending"><span>Görsel yükle · sağ panelden seç</span></figure> : null;
+    return <figure {...identity}><img src={image.src} alt={image.alt} width={image.width} height={image.height} loading="lazy" decoding="async" />{image.caption && <figcaption>{image.caption}</figcaption>}</figure>;
+  }
   const Tag=format?.kind==="heading" ? format.level===3 ? "h3" : "h2" : format?.kind==="quote" ? "blockquote" : "p";
   const marks=format?.kind==="heading" ? undefined : article.paragraphMarks?.[index];
   const identity={"data-edit-field":`paragraph-${index}`,"data-reading-anchor":article.blockIds?.paragraphs[index] ?? `paragraph-${index}`,"data-reading-legacy":`paragraph-${index}`};

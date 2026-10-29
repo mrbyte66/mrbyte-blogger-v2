@@ -19,7 +19,9 @@ export function documentText(draft: DocumentDraft, field: string): { value: stri
     if (field === "excerpt") return { value: draft.article.excerpt, max: 4000 };
     if (/^paragraph-\d{1,3}$/.test(field)) {
       const value = draft.article.paragraphs[Number(field.slice(10))];
-      if (typeof value === "string") { const format=draft.article.paragraphFormats?.[Number(field.slice(10))]; return {value,max:format?.kind === "heading" ? 300 : format?.kind === "quote" ? 4000 : 20000,...(format?.kind !== "heading" ? {marks:draft.article.paragraphMarks?.[Number(field.slice(10))] ?? []} : {})}; }
+      const format=draft.article.paragraphFormats?.[Number(field.slice(10))];
+      // A picture in the text has no writable text; it is edited from its properties.
+      if (typeof value === "string" && format?.kind !== "image") { return {value,max:format?.kind === "heading" ? 300 : format?.kind === "quote" ? 4000 : 20000,...(format?.kind !== "heading" ? {marks:draft.article.paragraphMarks?.[Number(field.slice(10))] ?? []} : {})}; }
     }
   } else {
     if (field === "title") return { value: draft.series.title, max: 160 };
@@ -68,6 +70,7 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
     if (edit.action === "join-previous" || edit.action === "join-next") {
       const left=edit.action==="join-previous" ? index-1 : index, right=left+1;
       if(left<0 || right>=paragraphs.length || paragraphs[left].length+paragraphs[right].length>20000) return null;
+      if(paragraphFormats[left].kind==="image" || paragraphFormats[right].kind==="image") return null;
       const length=paragraphs[left].length;
       paragraphs[left]+=paragraphs[right];
       paragraphMarks[left]=safeMarks(paragraphs[left],[...paragraphMarks[left],...paragraphMarks[right].map(mark=>({...mark,start:mark.start+length,end:mark.end+length}))]);

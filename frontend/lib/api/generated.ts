@@ -2605,7 +2605,7 @@ export interface components {
             /** @enum {string} */
             state: "quarantined" | "ready" | "failed";
             /** @enum {string} */
-            mime?: "image/jpeg" | "image/png" | "image/webp";
+            mime?: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
             /** Format: int64 */
             size?: number;
             width?: number;
@@ -4904,6 +4904,7 @@ export interface operations {
                 content: {
                     "image/jpeg": string;
                     "image/png": string;
+                    "image/gif": string;
                     "image/webp": string;
                 };
             };
@@ -5880,7 +5881,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description `MEDIA_EMPTY`, `MEDIA_DECODE_FAILED`, `MEDIA_TOO_MANY_PIXELS` */
+            /** @description `MEDIA_EMPTY`, `MEDIA_DECODE_FAILED`, `MEDIA_TOO_MANY_PIXELS`, `MEDIA_TOO_MANY_FRAMES` (GIF over 300 frames or too many pixels in total) */
             422: {
                 headers: {
                     [name: string]: unknown;

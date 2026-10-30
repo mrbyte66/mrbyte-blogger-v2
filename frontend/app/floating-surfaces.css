@@ -105,6 +105,13 @@ html :is(.wordmark,.panel-mark) .brand-logo-switch { color:inherit; }
 .catalog-heading>.writing-tabs { margin-left:auto; }
 .catalog-heading>.writing-tabs button { min-height:36px; padding:7px 16px; }
 .catalog-heading>.catalog-count { flex-basis:100%; margin-left:0; }
+/* Wider screens: the switch sits far from the title, so the chosen view is filled like the active filter chip. */
+@media(min-width:561px) {
+ .catalog-heading>.writing-tabs { padding:4px; gap:4px; border-color:color-mix(in srgb,var(--ink) 22%,transparent); }
+ .catalog-heading>.writing-tabs button { min-height:42px; padding:9px 22px; font-size:15px; font-weight:550; color:var(--ink); border-radius:9px; }
+ .catalog-heading>.writing-tabs button:hover:not([aria-selected=true]) { background:color-mix(in srgb,var(--ink) 8%,transparent); }
+ .catalog-heading>.writing-tabs button[aria-selected=true] { background:var(--ink); border-color:var(--ink); color:var(--panel); font-weight:650; }
+}
 .panel-topbar { flex-wrap:nowrap; }
 @media(max-width:600px) {
  .panel-topbar:has(.utility-island) { flex-wrap:nowrap; padding:10px 12px; gap:8px; }

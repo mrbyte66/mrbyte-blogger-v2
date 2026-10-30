@@ -175,7 +175,7 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
           <p className="sample-note">Tanışma metni taslağı; kişisel anlatımınla birlikte şekillenecek.</p>
         </section>}
       </div></div></CoverTransition>
-      <div className="panel-bottom"><span>{canGoBack ? "SOL KENARDAN SAĞA ÇEK · GERİ DÖN" : "KOD, KELİME VE ARADAKİLER."}</span><span>ESC <span className="escape-label">{canGoBack ? "geri dön" : "kapat"}</span></span><AmbientAudioToggle embedded /></div>
+      <div className="panel-bottom"><span>{canGoBack ? "SOL KENARDAN SAĞA ÇEK · GERİ DÖN" : "KOD, KELİME VE ARADAKİLER."}</span><AmbientAudioToggle embedded /></div>
     </div>
   </dialog>;
 }

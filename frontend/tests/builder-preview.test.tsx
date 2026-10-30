@@ -1,5 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
-import { renderWithSite as render } from "./support/memory-site";
+import { MemorySite, renderWithSite as render } from "./support/memory-site";
+// Series chapters are not listed in article feeds, so feed tests use a site without series.
+const standalone = () => ({ site: new MemorySite({ series: [] }) });
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PreviewCanvas } from "../components/builder/PreviewCanvas";
 import { ThemeRenderer } from "../components/builder/ThemeRenderer";
@@ -99,7 +101,7 @@ describe("rendered theme appearance and canvas interaction", () => {
   });
   it("applies all visual choices and custom accent to the renderer while preserving article urls", () => {
     const theme: Theme = { ...createTheme("magazine"), accent: "#123456", surface: "night", spacing: "compact" };
-    const { container } = render(<ThemeRenderer theme={theme} />);
+    const { container } = render(<ThemeRenderer theme={theme} />, standalone());
     const main = screen.getByRole("main");
     expect(main.className).toContain("typography-editorial surface-night width-wide spacing-compact");
     expect(main.style.getPropertyValue("--theme-accent")).toBe("#123456");
@@ -121,7 +123,7 @@ describe("rendered theme appearance and canvas interaction", () => {
   it("highlights and scrolls the selected block, then lets mouse and keyboard select another block", () => {
     const theme = createTheme("feed");
     const onSelect = vi.fn();
-    const { container, rerender } = render(<ThemeRenderer theme={theme} preview selection={selection} onSelect={onSelect} />);
+    const { container, rerender } = render(<ThemeRenderer theme={theme} preview selection={selection} onSelect={onSelect} />, standalone());
     const intro = screen.getByRole("group", { name: "Giriş düzenleme alanı" });
     expect(intro.className).toContain("is-active");
     expect(screen.getByRole("main").className).toContain("canvas-spotlight");

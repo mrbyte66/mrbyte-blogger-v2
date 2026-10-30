@@ -96,3 +96,24 @@ html body :is(.account-dropdown,.auth-dialog,.account-confirm,.footer-info-dialo
 }
 @media(prefers-reduced-motion:reduce) { .content-dialog .cover-current { transition:none; } }
 html[data-motion=off] .content-dialog .cover-current { transition:none; }
+/* Phones: a compact header that leaves the screen to the scene, and text that stays readable over the character. */
+@media(max-width:560px) {
+ .experience .site-header:has(.utility-island) { padding:10px 12px 0; gap:6px; }
+ .site-header:has(.utility-island) .wordmark { font-size:20px; }
+ .experience .site-header>.utility-island .color-mode-switch,.utility-island .color-mode-switch { --cm-size:32px; }
+ .utility-island { padding:3px; gap:2px; }
+ .utility-island .island-motion,.utility-island .saved-library-link { width:36px; height:36px; }
+ .utility-island :is(.account-avatar,.account-access) { width:34px; height:34px; }
+ .utility-island .rn-notebook-control>:is(a,button) { height:32px; min-width:32px; padding:5px 8px; }
+ .experience:has(.utility-island) .introduction { top:112px; }
+ .experience .introduction { left:12px; width:fit-content; max-width:calc(100% - 24px); padding:10px 14px 12px; border-radius:16px; background:#e7ece2c9; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+ .experience .navigation-label { padding:4px 10px; border-radius:999px; background:#e7ece2d9; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+ .theme-dark .introduction,.theme-dark .navigation-label { background:#18251ce3; }
+ html[data-tone=reading] .experience :is(.introduction,.navigation-label,.scene-navigation) { background:#f1e6d4de; }
+}
+@media(max-width:600px) {
+ .panel-topbar:has(.utility-island) { padding:10px 14px; gap:8px; }
+ /* The writing tabs belong to the content, so they sit under the logo and the tools, not above them. */
+ .panel-topbar>.panel-content-switch { order:3; flex-basis:100%; }
+ .panel-topbar .writing-tabs button { padding:7px 14px; }
+}

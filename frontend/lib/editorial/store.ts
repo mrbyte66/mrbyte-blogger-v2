@@ -7,6 +7,11 @@ export const statusLabels: Record<ContentStatus, string> = { scheduled: "Planlan
 export function articleStatus(article: Article): ContentStatus { return article.status ?? "published"; }
 /** Visitor-visible writing: published and not private, newest display date first. */
 export function publicArticles(articles: readonly Article[]): Article[] { return sortArticlesByDate(articles.filter((a) => articleStatus(a) === "published" && a.visibility !== "private")); }
+/** The Yazılar catalog: series chapters are read inside their series, so they are left out (docs/series.md). */
+export function catalogArticles(articles: readonly Article[], series: readonly BlogSeries[]): Article[] {
+  const chapters = new Set(series.flatMap((s) => s.articleSlugs));
+  return articles.filter((a) => !chapters.has(a.slug) && !a.seriesId);
+}
 /** Published series with only their visitor-visible chapters; series without any are hidden. */
 export function publicSeries(series: readonly BlogSeries[], articles: readonly Article[]): BlogSeries[] {
   const visible = new Set(publicArticles(articles).map((a) => a.slug));

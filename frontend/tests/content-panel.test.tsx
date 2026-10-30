@@ -1,6 +1,8 @@
 import { useReducer } from "react";
 import { fireEvent, screen } from "@testing-library/react";
-import { renderWithSite as render } from "./support/memory-site";
+import { MemorySite, renderWithSite as render } from "./support/memory-site";
+// Series chapters are not listed under Yazılar, so list tests use a site without series.
+const standalone = () => ({ site: new MemorySite({ series: [] }) });
 import { beforeEach, describe, expect, it } from "vitest";
 import { ContentPanel } from "../components/ContentPanel";
 import {readingStorageKey} from "../lib/reading/storage";
@@ -49,7 +51,7 @@ describe("reader return shortcuts", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
   it("returns to the filtered list on Escape, then closes on a second Escape", () => {
-    render(<Reader />);
+    render(<Reader />, standalone());
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     expect(screen.getByRole("heading", { name: "Yazılar" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Yazılım", pressed: true })).toBeTruthy();
@@ -58,7 +60,7 @@ describe("reader return shortcuts", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
   it("returns with Alt+Left without changing the selected category", () => {
-    render(<Reader />);
+    render(<Reader />, standalone());
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "ArrowLeft", altKey: true });
     expect(screen.getByRole("heading", { name: "Yazılar" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Yazılım", pressed: true })).toBeTruthy();

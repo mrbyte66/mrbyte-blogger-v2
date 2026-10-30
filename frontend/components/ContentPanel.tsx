@@ -8,7 +8,7 @@ import { articleCategories } from "../lib/articles/metadata";
 
 import { useEffect, useRef, useState, type Dispatch, type PointerEvent } from "react";
 import { useContent } from "./data/SiteData";
-import { publicArticles } from "../lib/editorial/store";
+import { catalogArticles, publicArticles } from "../lib/editorial/store";
 import { useArticles } from "../lib/articles/use-articles";
 import { useEdgeElasticity } from "../lib/use-edge-elasticity";
 import { CoverTransition } from "./CoverTransition";
@@ -30,9 +30,11 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
   const { series } = useSeriesWorkspace();
   const { articles: storedArticles } = useArticles();
   const articles = publicArticles(storedArticles);
+  // The list leaves series chapters to their series; opening one by slug still works.
+  const catalog = catalogArticles(articles, series);
   const { categories } = useContent();
   // Only tags that listed articles carry; the shared list's order first, then any others.
-  const used = new Set(articles.flatMap(articleCategories));
+  const used = new Set(catalog.flatMap(articleCategories));
   const topics = ["Tümü", ...new Set([...(categories ?? []).map((c) => c.name).filter((name) => used.has(name)), ...used])];
   const [backward, setBackward] = useState(false);
   const [animated, setAnimated] = useState(false);
@@ -53,7 +55,7 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
   const article = displayedNavigation.articleSlug ? articles.find((item) => item.slug === displayedNavigation.articleSlug) : undefined;
   const canGoBack = !!article || !!displayedNavigation.seriesSlug;
   const viewKey = `${displayedNavigation.section}:${displayedNavigation.articleSlug ?? displayedNavigation.seriesSlug ?? displayedNavigation.writingView ?? "articles"}`;
-  const filtered = articles.filter((item) => displayedNavigation.topic === "Tümü" || articleCategories(item).includes(displayedNavigation.topic));
+  const filtered = catalog.filter((item) => displayedNavigation.topic === "Tümü" || articleCategories(item).includes(displayedNavigation.topic));
   const feed = useProgressiveItems({ total: filtered.length, listKey: displayedNavigation.topic, contextKey: viewKey });
   useEdgeElasticity(scrollArea, viewKey);
   const swipe = useRef<{ x: number; y: number; time: number; pointerId: number } | null>(null);

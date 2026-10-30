@@ -8,7 +8,7 @@ import { scrollBehavior } from "../../lib/motion";
 
 import { SlideLink as Link } from "../SlideLink";
 import { useEffect, useRef, useState } from "react";
-import { publicArticles } from "../../lib/editorial/store";
+import { catalogArticles, publicArticles } from "../../lib/editorial/store";
 import { articleCategories, articleDate, formatArticleDate } from "../../lib/articles/metadata";
 import { useArticles } from "../../lib/articles/use-articles";
 import { blockLabels, footerBlock, parseWorkspace, type Workspace, type PageBlock, type Theme } from "../../lib/builder/model";
@@ -41,7 +41,8 @@ function FeedArticle({ article, index, preview }: { article: Article; index: num
 }
 function ArticleFeed({ block, preview }: { block: ArticlesBlock; preview: boolean }) {
   const { articles: storedArticles } = useArticles();
-  const articles = publicArticles(storedArticles);
+  const { series } = useSeriesWorkspace();
+  const articles = catalogArticles(publicArticles(storedArticles), series);
   const items = articles.filter((item) => block.categoryId ? item.categoryIds?.includes(block.categoryId) : block.category === "Tümü" || articleCategories(item).includes(block.category));
   const progressive = block.loading === "progressive";
   const feed = useProgressiveItems({ total: progressive ? items.length : 0, listKey: `${block.id}-${block.category}` });

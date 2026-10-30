@@ -13,7 +13,7 @@ import { SlideLink } from "./SlideLink";
 export function ArticleCard({ article, onOpen, chapter, excerpt = article.excerpt, preview = false }: { article: Article; onOpen?: (slug: string) => void; chapter?: number; excerpt?: string; preview?: boolean }) {
   const view = useVisibleArticleView(article.slug, !preview);
   const content = <>
-    <span className="article-card-visual"><CatalogCover fallback={articleDraftCover(article)} />{chapter !== undefined && <span className="article-chapter-label">{String(chapter).padStart(2, "0")} · Bölüm</span>}</span>
+    <span className="article-card-visual"><CatalogCover src={article.coverUrl} fallback={articleDraftCover(article)} />{chapter !== undefined && <span className="article-chapter-label">{String(chapter).padStart(2, "0")} · Bölüm</span>}</span>
     <span className="article-card-main">
       <span className="article-card-metadata"><span className="article-category">{articleCategories(article).join(" · ")}</span><time dateTime={articleDate(article)}>{formatArticleDate(article)}</time></span>
       <span className="article-card-title">{article.title}</span>

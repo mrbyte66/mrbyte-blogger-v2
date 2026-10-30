@@ -85,6 +85,17 @@ class SiteAndMediaIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void serverDiskSpaceIsForTheOwnerOnly() {
+        createOwner();
+        Response disk = ownerClient().get("/api/v1/studio/storage");
+        assertThat(disk.status()).isEqualTo(200);
+        long free = disk.json().get("freeBytes").asLong(), total = disk.json().get("totalBytes").asLong();
+        assertThat(total).isPositive();
+        assertThat(free).isBetween(0L, total);
+        assertThat(client().get("/api/v1/studio/storage").status()).isIn(401, 403);
+    }
+
+    @Test
     void onlyRealJpegPngAndGifAreAccepted() throws IOException {
         createOwner();
         ApiClient owner = ownerClient();

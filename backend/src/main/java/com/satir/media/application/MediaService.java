@@ -92,6 +92,15 @@ public class MediaService {
         return asset;
     }
 
+    /** Free and total bytes of the server's data disk (where media lives), for the owner's Studio footer. */
+    public record DiskSpace(long freeBytes, long totalBytes) {
+    }
+
+    public DiskSpace diskSpace() {
+        MediaStorage.DiskSpace disk = storage.diskSpace();
+        return new DiskSpace(disk.freeBytes(), disk.totalBytes());
+    }
+
     @Transactional(readOnly = true)
     public Optional<MediaAsset> find(UUID id) {
         return assets.find(id);

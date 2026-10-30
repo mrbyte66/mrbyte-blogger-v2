@@ -1872,6 +1872,19 @@ paths:
         '412': {$ref: '#/components/responses/Problem'}
         '428': {$ref: '#/components/responses/Problem'}
 
+  /studio/storage:
+    get:
+      tags: [studio]
+      operationId: studioGetStorage
+      summary: Free and total space of the server's data disk (owner only, shown in the Studio footer)
+      responses:
+        '200':
+          description: Disk space in bytes
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DiskSpace'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
   /studio/media:
     post:
       tags: [studio]
@@ -3170,6 +3183,14 @@ components:
         kind: {type: string, const: footer}
         id: {$ref: '#/components/schemas/ThemeBlockId'}
         text: {type: string, maxLength: 160}
+
+    DiskSpace:
+      type: object
+      additionalProperties: false
+      required: [freeBytes, totalBytes]
+      properties:
+        freeBytes: {type: integer, format: int64, minimum: 0}
+        totalBytes: {type: integer, format: int64, minimum: 0}
 
     MediaStatus:
       type: object

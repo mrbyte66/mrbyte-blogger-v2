@@ -69,6 +69,12 @@ class MediaController {
     }
 
     /** Owner upload. Processed synchronously: the response already reports READY (or an error). */
+    /** Free space of the server's data disk; only the owner (Studio) reaches /studio/**. */
+    @GetMapping("/api/v1/studio/storage")
+    MediaService.DiskSpace storage() {
+        return media.diskSpace();
+    }
+
     @PostMapping("/api/v1/studio/media")
     ResponseEntity<MediaStatus> upload(@AuthenticationPrincipal SatirPrincipal owner, @RequestParam("file") MultipartFile file)
             throws IOException {

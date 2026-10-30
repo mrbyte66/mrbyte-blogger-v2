@@ -28,6 +28,19 @@ public class MediaStorage {
         }
     }
 
+    /** Free and total bytes of the disk that holds the media files (the server's data disk). */
+    public record DiskSpace(long freeBytes, long totalBytes) {
+    }
+
+    public DiskSpace diskSpace() {
+        try {
+            var store = Files.getFileStore(root);
+            return new DiskSpace(store.getUsableSpace(), store.getTotalSpace());
+        } catch (IOException e) {
+            throw new UncheckedIOException("Disk space of the media directory is unavailable", e);
+        }
+    }
+
     public String newKey(String extension) {
         String id = UUID.randomUUID().toString();
         return id.substring(0, 2) + "/" + id + "." + extension;

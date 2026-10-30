@@ -38,6 +38,7 @@ export function fakeBackend(options: { signedIn?: Partial<Profile> | null; passw
     if (member) return member;
     switch (`${method} ${path}`) {
       case "GET /auth/csrf": return json(200, { token: "csrf-token", headerName: "X-CSRF-TOKEN" });
+      case "GET /studio/storage": return state.profile?.role === "owner" ? json(200, { freeBytes: 185_300_000_000, totalBytes: 193_000_000_000 }) : problem(state.profile ? 403 : 401, "FORBIDDEN", "Yetki yok");
       case "GET /auth/session": return json(200, state.profile ? { authenticated: true, profile: state.profile, expiresAt: new Date(Date.now() + 3_600_000).toISOString() } : { authenticated: false });
       case "GET /me": return state.profile ? json(200, state.profile) : problem(401, "UNAUTHENTICATED", "Giriş yapman gerekiyor");
       case "GET /me/connections": return json(200, { items: state.connections });

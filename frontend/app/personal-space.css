@@ -18,6 +18,8 @@
 .public-footer-line i { display:block; position:absolute; left:0; top:50%; transform:translateY(-50%); width:8px; height:8px; border-radius:50%; background:var(--personal-accent); }
 .public-footer-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:9px; font-size:10px; color:var(--muted); }
 .public-footer-bottom button { padding:4px 0; font-size:10px; }
+.footer-storage { margin:0 auto 0 16px; font-family:var(--mono); letter-spacing:.02em; }
+.footer-storage.is-low { color:var(--form-error,#b3412e); }
 .ambient-footer { position:relative; flex-shrink:0; }
 .ambient-footer .ambient-toggle { display:flex; gap:12px; align-items:center; padding:6px 7px 6px 14px; border:0; border-radius:99px; min-width:148px; min-height:44px; background:var(--personal-accent); color:var(--personal-accent-ink); font-size:12px; }
 .footer-play { width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:#fff9; font-size:12px; margin-left:auto; }

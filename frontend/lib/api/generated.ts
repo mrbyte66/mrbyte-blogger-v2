@@ -1434,6 +1434,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/studio/storage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Free and total space of the server's data disk (owner only, shown in the Studio footer) */
+        get: operations["studioGetStorage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/studio/media": {
         parameters: {
             query?: never;
@@ -2591,6 +2608,12 @@ export interface components {
             kind: "footer";
             id: components["schemas"]["ThemeBlockId"];
             text: string;
+        };
+        DiskSpace: {
+            /** Format: int64 */
+            freeBytes: number;
+            /** Format: int64 */
+            totalBytes: number;
         };
         MediaStatus: {
             /** Format: uuid */
@@ -5826,6 +5849,28 @@ export interface operations {
             };
             412: components["responses"]["Problem"];
             428: components["responses"]["Problem"];
+        };
+    };
+    studioGetStorage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disk space in bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiskSpace"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
         };
     };
     studioUploadMedia: {

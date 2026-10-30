@@ -16,13 +16,12 @@ it("lists the article's images in reading order, lead figure after the first par
   expect(articleImages({ ...article, figure: undefined, paragraphFormats: undefined })).toEqual([]);
 });
 
-it("shows the summary, the cover and the first two pictures, then links to the full article", () => {
+it("puts the cover beside the title, then the summary and the first two pictures, then links to the full article", () => {
   const { container, getByRole } = render(<ArticlePreview article={article} />);
   expect(getByRole("heading", { name: "MK-82" })).toBeTruthy();
   expect(container.querySelector(".article-lead")?.textContent).toBe("Kısa özet.");
-  const gallery = container.querySelector(".article-preview-gallery")!;
-  expect(gallery.className).toContain("has-2");
-  expect([...gallery.querySelectorAll("img")].map((img) => img.getAttribute("src"))).toEqual(["/media/kapak.png", "/media/kesit.png", "/media/dusus.png"]);
+  expect(container.querySelector(".article-preview-head .article-preview-cover")?.getAttribute("src")).toBe("/media/kapak.png");
+  expect([...container.querySelectorAll(".article-preview-shots img")].map((img) => img.getAttribute("src"))).toEqual(["/media/kesit.png", "/media/dusus.png"]);
   expect(getByRole("link", { name: /Yazının tamamını oku/ }).getAttribute("href")).toBe("/yazilar/mk-82");
   expect(container.textContent).not.toContain("Giriş");
 });

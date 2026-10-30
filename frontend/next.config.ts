@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   agentRules: false,
   devIndicators: false,
   output: "standalone",
-  images: { qualities: [75, 90] },
+  // AVIF first: the character art is far smaller than WebP at the same look.
+  images: { qualities: [75, 80, 90], formats: ["image/avif", "image/webp"] },
   // Same-origin API: the browser calls /api/v1/*. In production the reverse proxy routes /api to
   // Spring before Next; locally this rewrite forwards it. Transport only — no business API in Next.
   async rewrites() {

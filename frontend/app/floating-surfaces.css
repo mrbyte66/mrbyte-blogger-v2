@@ -96,24 +96,45 @@ html body :is(.account-dropdown,.auth-dialog,.account-confirm,.footer-info-dialo
 }
 @media(prefers-reduced-motion:reduce) { .content-dialog .cover-current { transition:none; } }
 html[data-motion=off] .content-dialog .cover-current { transition:none; }
-/* Phones: a compact header that leaves the screen to the scene, and text that stays readable over the character. */
+/* One header row at every width: logo left, tools right. The Yazılar / Seriler switch sits in the content heading. */
+.brand-logo-switch { display:block; }
+/* The old text wordmark tinted its dot span; the logo keeps the ink colour. */
+html :is(.wordmark,.panel-mark) .brand-logo-switch { color:inherit; }
+.brand-mark { display:none; height:1.3em; width:auto; overflow:visible; }
+.catalog-heading { align-items:center; }
+.catalog-heading>.writing-tabs { margin-left:auto; }
+.catalog-heading>.writing-tabs button { min-height:36px; padding:7px 16px; }
+.catalog-heading>.catalog-count { flex-basis:100%; margin-left:0; }
+.panel-topbar { flex-wrap:nowrap; }
+@media(max-width:600px) {
+ .panel-topbar:has(.utility-island) { flex-wrap:nowrap; padding:10px 12px; gap:8px; }
+ /* Only the arrow on phones; the label stays the button's accessible name. */
+ .panel-topbar .panel-back { font-size:0; gap:0; }
+ .panel-topbar .panel-back>span { font-size:20px; }
+ .panel-topbar .panel-location { display:none; }
+}
+/* Phones: the pixel mark instead of the wordmark, compact tools, and text that stays readable over the character. */
 @media(max-width:560px) {
- .experience .site-header:has(.utility-island) { padding:10px 12px 0; gap:6px; }
- .site-header:has(.utility-island) .wordmark { font-size:20px; }
- .experience .site-header>.utility-island .color-mode-switch,.utility-island .color-mode-switch { --cm-size:32px; }
+ .brand-logo-switch>.brand-logo { display:none; }
+ .brand-logo-switch>.brand-mark { display:block; }
+ .experience .site-header:has(.utility-island) { flex-wrap:nowrap; justify-content:space-between; align-items:center; padding:10px 12px 0; gap:8px; }
+ .site-header:has(.utility-island) .wordmark { flex-basis:auto; font-size:26px; text-align:left; }
+ .experience .site-header>.utility-island { margin:0 0 0 auto; }
+ .experience .site-header>.utility-island .color-mode-switch,.utility-island .color-mode-switch { --cm-size:30px; }
  .utility-island { padding:3px; gap:2px; }
- .utility-island .island-motion,.utility-island .saved-library-link { width:36px; height:36px; }
- .utility-island :is(.account-avatar,.account-access) { width:34px; height:34px; }
- .utility-island .rn-notebook-control>:is(a,button) { height:32px; min-width:32px; padding:5px 8px; }
- .experience:has(.utility-island) .introduction { top:112px; }
+ .utility-island .island-motion,.utility-island .saved-library-link { width:34px; height:34px; }
+ .utility-island :is(.account-avatar,.account-access) { width:32px; height:32px; }
+ .utility-island .rn-notebook-control>:is(a,button) { height:30px; min-width:30px; padding:5px 7px; }
+ .panel-topbar .utility-island .close-button { width:30px; height:30px; font-size:22px; }
+ html .utility-island .saved-library-link { width:32px; height:32px; min-width:0; padding:0; }
+ /* The panel leaves a strip of the scene on the left, so its tools are a little tighter still. */
+ .panel-topbar .utility-island { gap:0; }
+ .panel-topbar .utility-island .color-mode-switch { --cm-size:28px; }
+ .panel-topbar .utility-island .rn-notebook-control>:is(a,button) { padding:4px 6px; }
+ .experience:has(.utility-island) .introduction { top:76px; }
  .experience .introduction { left:12px; width:fit-content; max-width:calc(100% - 24px); padding:10px 14px 12px; border-radius:16px; background:#e7ece2c9; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
  .experience .navigation-label { padding:4px 10px; border-radius:999px; background:#e7ece2d9; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
  .theme-dark .introduction,.theme-dark .navigation-label { background:#18251ce3; }
  html[data-tone=reading] .experience :is(.introduction,.navigation-label,.scene-navigation) { background:#f1e6d4de; }
-}
-@media(max-width:600px) {
- .panel-topbar:has(.utility-island) { padding:10px 14px; gap:8px; }
- /* The writing tabs belong to the content, so they sit under the logo and the tools, not above them. */
- .panel-topbar>.panel-content-switch { order:3; flex-basis:100%; }
- .panel-topbar .writing-tabs button { padding:7px 14px; }
+ .catalog-heading>.writing-tabs { margin-left:0; }
 }

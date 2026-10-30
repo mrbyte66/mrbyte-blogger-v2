@@ -294,9 +294,9 @@ pre { font: 12px/1.9 var(--mono); overflow-x: auto; padding: 8px 20px 16px; tab-
 .publication-schedule .property-note { margin:0; }
 
 /* MrByte pixel logo: ink letters, muted "mr", green bit tuned per colour mode. */
-.brand-logo { --brand-bit:#28674f; display:block; height:1.1em; width:auto; overflow:visible; }
+.brand-logo,.brand-mark { --brand-bit:#28674f; display:block; height:1.1em; width:auto; overflow:visible; }
 .brand-logo-byte { fill:currentColor; }
 .brand-logo-mr,.brand-logo-studio { stroke:var(--muted,currentColor); }
 .brand-logo-bit { fill:var(--brand-bit); }
-:is(.theme-dark,.surface-night) .brand-logo,html[data-theme=dark] .brand-logo { --brand-bit:#a8d5b1; }
-html[data-tone=reading] .brand-logo { --brand-bit:#365e46; }
+:is(.theme-dark,.surface-night) :is(.brand-logo,.brand-mark),html[data-theme=dark] :is(.brand-logo,.brand-mark) { --brand-bit:#a8d5b1; }
+html[data-tone=reading] :is(.brand-logo,.brand-mark) { --brand-bit:#365e46; }

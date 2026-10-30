@@ -20,7 +20,16 @@ function touch(element: Element, type: string, x: number, y: number) {
 
 describe("reader return shortcuts", () => {
   beforeEach(() => { localStorage.clear(); });
-  it("keeps header tabs keyboard accessible without sliding catalog content", () => {
+  it("puts the Yazılar / Seriler switch in the content heading and counts only listed articles", () => {
+    const { container } = render(<Reader />);
+    fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
+    expect(container.querySelector(".panel-topbar [role=tab]")).toBeNull();
+    expect(container.querySelector(".catalog-heading [role=tab]")).not.toBeNull();
+    // Every fixture article is a series chapter, so the Yazılar list is empty and says where they are.
+    expect(screen.getByText("0 yazı")).toBeTruthy();
+    expect(screen.getByText(/Seri bölümleri Seriler sekmesinde/)).toBeTruthy();
+  });
+  it("keeps the heading tabs keyboard accessible without sliding catalog content", () => {
     const { container } = render(<Reader />);
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     const articles = screen.getByRole("tab", { name: "Yazılar", selected: true });

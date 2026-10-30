@@ -118,7 +118,23 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
   function selectTab(view: "articles" | "series") {
     if (view !== (displayedNavigation.writingView ?? "articles") || displayedNavigation.seriesSlug) go({ type: "writing-view", view });
   }
+  // The tabs live in each view's heading, so switching views renders new tab elements; keyboard focus follows.
+  const tabFocus = useRef<"articles" | "series" | null>(null);
+  useEffect(() => {
+    if (!tabFocus.current) return;
+    document.getElementById(`reader-tab-${tabFocus.current}`)?.focus(); tabFocus.current = null;
+  }, [displayedNavigation.writingView]);
 
+  // The Yazılar / Seriler switch belongs to the content heading, so the top bar stays one row (logo + tools).
+  const writingTabs = <div className="writing-tabs" role="tablist" aria-label="Defter içerikleri">{(["articles", "series"] as const).map((view) => {
+          const active = (displayedNavigation.writingView ?? "articles") === view;
+          return <RippleButton key={view} id={`reader-tab-${view}`} role="tab" aria-selected={active} aria-controls="reader-tabpanel" tabIndex={active ? 0 : -1} onClick={() => selectTab(view)} onKeyDown={(event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === "Home" ? "articles" : event.key === "End" ? "series" : view === "articles" ? "series" : "articles";
+            event.currentTarget.parentElement?.querySelector<HTMLElement>(`#reader-tab-${next}`)?.focus(); tabFocus.current = next; selectTab(next);
+          }}>{view === "articles" ? "Yazılar" : "Seriler"}</RippleButton>;
+        })}</div>;
   return <dialog ref={dialog} className="content-dialog" aria-labelledby="panel-title"
     onCancel={(event) => { event.preventDefault(); go({ type: canGoBack ? "back" : "close" }); }}
     onKeyDown={(event) => {
@@ -126,27 +142,20 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
     }}
     onClick={(event) => { if (event.target === event.currentTarget) go({ type: "close" }); }}>
     <div className="panel-shell">
-      <div className="panel-topbar"><span className="panel-mark"><BrandLogo label={siteName} /></span>
-        {displayedNavigation.section === "writing" && !article ? <div className="panel-content-switch"><span className="panel-switch-label">DEFTER</span><div className="writing-tabs" role="tablist" aria-label="Defter içerikleri">{(["articles", "series"] as const).map((view) => {
-          const active = (displayedNavigation.writingView ?? "articles") === view;
-          return <RippleButton key={view} id={`reader-tab-${view}`} role="tab" aria-selected={active} aria-controls="reader-tabpanel" tabIndex={active ? 0 : -1} onClick={() => selectTab(view)} onKeyDown={(event) => {
-            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-            event.preventDefault();
-            const next = event.key === "Home" ? "articles" : event.key === "End" ? "series" : view === "articles" ? "series" : "articles";
-            event.currentTarget.parentElement?.querySelector<HTMLElement>(`#reader-tab-${next}`)?.focus(); selectTab(next);
-          }}>{view === "articles" ? "Yazılar" : "Seriler"}</RippleButton>;
-        })}</div></div> : canGoBack ? <button className="panel-back" title="Geri dön (Esc veya Alt + ←)" onClick={() => go({ type: "back" })}><span aria-hidden="true">←</span> {displayedNavigation.seriesSlug ? "Bölümlere dön" : "Bütün yazılar"}</button> : <span className="panel-location">{displayedNavigation.section ? sectionNames[displayedNavigation.section] : ""}</span>}
+      <div className="panel-topbar"><span className="panel-mark"><BrandLogo label={siteName} compact /></span>
+        {displayedNavigation.section === "writing" && !article ? null : canGoBack ? <button className="panel-back" title="Geri dön (Esc veya Alt + ←)" onClick={() => go({ type: "back" })}><span aria-hidden="true">←</span> {displayedNavigation.seriesSlug ? "Bölümlere dön" : "Bütün yazılar"}</button> : <span className="panel-location">{displayedNavigation.section ? sectionNames[displayedNavigation.section] : ""}</span>}
         <UtilityIsland className="panel-account-actions"><ThemeToggle defaultDark={defaultDark} /><SavedLibraryLink />{!article&&<NotebookControl />}<AccountMenu />
         <button className="close-button" aria-label="İçeriği kapat" onClick={() => go({ type: "close" })}><span aria-hidden="true">×</span></button></UtilityIsland></div>
       {displayedNavigation.seriesSlug && !article && <div className="panel-context"><button className="panel-back" onClick={() => go({ type: "back" })}>← Bütün seriler</button><span>Bölüm listesi</span></div>}
       {canGoBack && <div className="panel-swipe-edge" aria-hidden="true" onPointerDown={startSwipe} onPointerMove={moveSwipe} onPointerUp={endSwipe} onPointerCancel={() => { swipe.current = null; setSwipeProgress(0); }}><span style={{ transform: `translateX(${swipeProgress * 24}px)`, opacity: .45 + swipeProgress * .55 }}>‹</span></div>}
       <CoverTransition viewKey={viewKey} backward={backward} animate={animated}><div className="panel-scroll" ref={scrollArea} role={displayedNavigation.section === "writing" && !article ? "tabpanel" : undefined} id="reader-tabpanel" aria-labelledby={displayedNavigation.section === "writing" && !article ? `reader-tab-${displayedNavigation.writingView ?? "articles"}` : undefined}><div className="elastic-content">
-        {displayedNavigation.section === "writing" && !article && displayedNavigation.writingView === "series" && <section>{!displayedNavigation.seriesSlug && <div className="catalog-heading"><h2 id="panel-title">Seriler</h2><p>Bir konuyu, adım adım.</p></div>}<SeriesCatalog series={series} selectedSeriesSlug={displayedNavigation.seriesSlug ?? undefined} onOpenSeries={(slug) => go({ type: "series", slug })} onOpenArticle={openArticle} chapterLimit={chapterLimits[displayedNavigation.seriesSlug ?? ""] ?? 5} onChapterLimitChange={(count) => setChapterLimits((value) => ({ ...value, [displayedNavigation.seriesSlug ?? ""]: count }))} /></section>}
+        {displayedNavigation.section === "writing" && !article && displayedNavigation.writingView === "series" && <section>{!displayedNavigation.seriesSlug && <div className="catalog-heading"><h2 id="panel-title">Seriler</h2><p>Bir konuyu, adım adım.</p>{writingTabs}</div>}<SeriesCatalog series={series} selectedSeriesSlug={displayedNavigation.seriesSlug ?? undefined} onOpenSeries={(slug) => go({ type: "series", slug })} onOpenArticle={openArticle} chapterLimit={chapterLimits[displayedNavigation.seriesSlug ?? ""] ?? 5} onChapterLimitChange={(count) => setChapterLimits((value) => ({ ...value, [displayedNavigation.seriesSlug ?? ""]: count }))} /></section>}
         {displayedNavigation.section === "writing" && (article || displayedNavigation.writingView !== "series") && (article ? <div key={article.slug} id="panel-reading-content"><SeriesArticleNav articleSlug={article.slug} onOpenArticle={openArticle} onOpenSeries={(slug) => go({ type: "series", slug })} /><ArticleContent article={article} /></div> : <section className="writing-view">
-          <div className="catalog-heading"><h2 id="panel-title">Yazılar</h2><p>Kod, kelime ve aradakiler.</p><span>{articles.length} yazı</span></div>
+          <div className="catalog-heading"><h2 id="panel-title">Yazılar</h2><p>Kod, kelime ve aradakiler.</p>{writingTabs}<span className="catalog-count">{catalog.length} yazı</span></div>
           <div className="topic-filter" role="group" aria-label="Yazıları etikete göre süz">{topics.map((topic) => <button key={topic} aria-pressed={topic === displayedNavigation.topic} onClick={() => go({ type: "filter", topic })}>{topic}</button>)}</div>
           <div className="article-list">{filtered.slice(0, feed.visible).map((item) => <ArticleCard article={item} key={item.slug} onOpen={openArticle} />)}</div>
-          <div className="progressive-footer" ref={feed.sentinel}><span role="status">{feed.visible} / {filtered.length} yazı</span>{feed.hasMore && <button onClick={feed.loadMore}>Sonraki 5 yazıyı göster ↓</button>}</div>
+          {!catalog.length && <p className="series-empty">Henüz seri dışında bir yazı yok. Seri bölümleri Seriler sekmesinde, kendi serilerinin içinde.</p>}
+          <div className="progressive-footer" ref={feed.sentinel}><span role="status">{filtered.length ? `${Math.min(feed.visible, filtered.length)} / ${filtered.length} yazı` : ""}</span>{feed.hasMore && <button onClick={feed.loadMore}>Sonraki 5 yazıyı göster ↓</button>}</div>
           {articles.some((item) => !item.authored) && <p className="sample-note">Bu ilk taslakta örnek içerikleri görüyorsun.</p>}
         </section>)}
         {displayedNavigation.section === "projects" && <section className="projects-view">

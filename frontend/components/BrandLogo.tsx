@@ -1,5 +1,14 @@
-/** MrByte pixel wordmark; colors follow the surrounding theme (ink, muted, --brand-bit). */
-export function BrandLogo({ label, studio = false, className = "" }: { label?: string; studio?: boolean; className?: string }) {
+/** The pixel "b" with its green bit (as in the favicon): the header mark on phones, where the wordmark does not fit beside the tools. */
+function BrandMark() {
+  return <svg className="brand-mark" viewBox="230 15 128 180" aria-hidden="true" focusable="false">
+    <path className="brand-logo-byte" fillRule="evenodd" d="M240 40H278V84H330V101H348V185H240ZM278 120V151H310V120Z" />
+    <rect className="brand-logo-bit" x="278" y="25" width="22" height="22" />
+  </svg>;
+}
+
+/** MrByte pixel wordmark; colors follow the surrounding theme (ink, muted, --brand-bit). `compact` swaps in the mark on phones. */
+export function BrandLogo({ label, studio = false, className = "", compact = false }: { label?: string; studio?: boolean; className?: string; compact?: boolean }) {
+  if (compact) return <span className="brand-logo-switch" role={label ? "img" : undefined} aria-label={label}><BrandLogo className={className} studio={studio} /><BrandMark /></span>;
   return <svg className={`brand-logo ${className}`.trim()} viewBox={studio ? "20 20 680 220" : "20 20 680 190"} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} focusable="false">
     <path className="brand-logo-mr" d="M29 185V119C29 87 78 87 78 119V185M78 119C78 87 127 87 127 119V185M157 185V120C157 99 177 94 211 94" fill="none" strokeWidth="17" />
     <path className="brand-logo-byte" fillRule="evenodd" d="M240 40H278V84H330V101H348V185H240ZM278 120V151H310V120ZM365 84H403V146H435V84H473V185H455V203H384V185H435V164H384V149H365ZM491 64H529V90H563V123H529V149H563V185H509V168H491ZM600 84H670V102H689V145H619V152H689V185H600V167H582V102H600ZM619 111V123H652V111Z" />

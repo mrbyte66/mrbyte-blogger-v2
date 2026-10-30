@@ -15,6 +15,7 @@
 | Yazı düzenleme | Yayındaki içerik ayrı çalışma taslağına kaydedilir; yalnız Yayımla kamu sürümünü değiştirir. |
 | URL | Yazı/seri ilk yayından sonra kalıcı kilit; öncesinde değişebilir. Alanda kısa info. Eski alias’lar kırılmaz. |
 | Seri | Bölümler Yazılar listesinde görünmez; ilk bölümle seri yayımlanır. Bölümün kalıcı adresi korunur. |
+| Panel önizlemesi | Yazılar/Seriler panelinde yazının tamamı değil, kaydırmasız önizleme: özet, kapak + ilk 2 görsel, seri bilgisi. Metnin tamamı, alkış ve yorumlar kalıcı sayfada (2026-10-31, #40). |
 | Silme | Önce geri alınabilir çöp kutusu; doğrudan kalıcı silme yok. |
 | Planlama | Tarih/saat ile sunucuda yayın planlama kalır. |
 | E-posta | Yazar ve doğrulanmış abone okuyucu; tercih kapatılabilir. Okuyucu başlangıçta açık, tüm yeni yayınlar; tekrar yayın bildirilmez. Kategori/seri seçimi Backlog. |

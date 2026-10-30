@@ -17,7 +17,7 @@ import { useProgressiveItems } from "../lib/use-progressive-items";
 import { SeriesCatalog } from "./series/SeriesCatalog";
 import { SeriesArticleNav } from "./series/SeriesArticleNav";
 import { useSeriesWorkspace } from "../lib/series/use-series-workspace";
-import { ArticleContent } from "./ArticleContent";
+import { ArticlePreview } from "./ArticlePreview";
 import { AmbientAudioToggle } from "./audio/AmbientAudio";
 import { SavedLibraryLink } from "./saved/SaveArticleButton";
 import { ArticleCard } from "./ArticleCard";
@@ -150,7 +150,7 @@ export function ContentPanel({ navigation, dispatch, siteName = DEFAULT_SITE_NAM
       {canGoBack && <div className="panel-swipe-edge" aria-hidden="true" onPointerDown={startSwipe} onPointerMove={moveSwipe} onPointerUp={endSwipe} onPointerCancel={() => { swipe.current = null; setSwipeProgress(0); }}><span style={{ transform: `translateX(${swipeProgress * 24}px)`, opacity: .45 + swipeProgress * .55 }}>‹</span></div>}
       <CoverTransition viewKey={viewKey} backward={backward} animate={animated}><div className="panel-scroll" ref={scrollArea} role={displayedNavigation.section === "writing" && !article ? "tabpanel" : undefined} id="reader-tabpanel" aria-labelledby={displayedNavigation.section === "writing" && !article ? `reader-tab-${displayedNavigation.writingView ?? "articles"}` : undefined}><div className="elastic-content">
         {displayedNavigation.section === "writing" && !article && displayedNavigation.writingView === "series" && <section>{!displayedNavigation.seriesSlug && <div className="catalog-heading"><h2 id="panel-title">Seriler</h2><p>Bir konuyu, adım adım.</p>{writingTabs}</div>}<SeriesCatalog series={series} selectedSeriesSlug={displayedNavigation.seriesSlug ?? undefined} onOpenSeries={(slug) => go({ type: "series", slug })} onOpenArticle={openArticle} chapterLimit={chapterLimits[displayedNavigation.seriesSlug ?? ""] ?? 5} onChapterLimitChange={(count) => setChapterLimits((value) => ({ ...value, [displayedNavigation.seriesSlug ?? ""]: count }))} /></section>}
-        {displayedNavigation.section === "writing" && (article || displayedNavigation.writingView !== "series") && (article ? <div key={article.slug} id="panel-reading-content"><SeriesArticleNav articleSlug={article.slug} onOpenArticle={openArticle} onOpenSeries={(slug) => go({ type: "series", slug })} /><ArticleContent article={article} /></div> : <section className="writing-view">
+        {displayedNavigation.section === "writing" && (article || displayedNavigation.writingView !== "series") && (article ? <div key={article.slug} id="panel-reading-content"><SeriesArticleNav articleSlug={article.slug} onOpenArticle={openArticle} onOpenSeries={(slug) => go({ type: "series", slug })} /><ArticlePreview article={article} /></div> : <section className="writing-view">
           <div className="catalog-heading"><h2 id="panel-title">Yazılar</h2><p>Kod, kelime ve aradakiler.</p>{writingTabs}<span className="catalog-count">{catalog.length} yazı</span></div>
           <div className="topic-filter" role="group" aria-label="Yazıları etikete göre süz">{topics.map((topic) => <button key={topic} aria-pressed={topic === displayedNavigation.topic} onClick={() => go({ type: "filter", topic })}>{topic}</button>)}</div>
           <div className="article-list">{filtered.slice(0, feed.visible).map((item) => <ArticleCard article={item} key={item.slug} onOpen={openArticle} />)}</div>

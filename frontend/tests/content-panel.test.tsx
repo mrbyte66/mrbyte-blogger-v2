@@ -98,5 +98,7 @@ it("keeps the home reader at preview width with a read-only note count linking t
  const {container}=render(<Reader/>);expect((await screen.findByRole("link",{name:"2 not · Yazının kalıcı bağlantısını aç"})).getAttribute("href")).toBe(`/yazilar/${slug}`);
  expect(container.querySelector(".panel-topbar .panel-notes-link")).toBeNull();expect(container.querySelector(".article-view .reading-links .panel-notes-link")).toBeTruthy();
  expect(container.querySelector("#panel-reading-content.rn-reading-root")).toBeNull();expect(screen.queryByRole("complementary",{name:"Okuma araçları"})).toBeNull();expect(screen.queryByRole("button",{name:"Serbest Not oluştur"})).toBeNull();expect(container.querySelector(".rn-reserve")).toBeNull();
- expect(screen.getByRole("link",{name:"Bu yazının kalıcı bağlantısını aç ↗"}).getAttribute("href")).toBe(`/yazilar/${slug}`);
+ expect(screen.getByRole("link",{name:/Yazının tamamını oku/}).getAttribute("href")).toBe(`/yazilar/${slug}`);
+ // The panel previews the article; its body, comments and claps stay at the permalink.
+ expect(container.querySelector(".article-preview .article-lead")).toBeTruthy();expect(container.querySelector(".article-view [data-reading-anchor^=paragraph]")).toBeNull();expect(container.querySelector(".article-engagement")).toBeNull();
 });

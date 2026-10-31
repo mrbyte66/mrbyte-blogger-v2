@@ -19,7 +19,7 @@ export function articleImages(article: Article): ArticleImage[] {
 }
 
 /** The opening body paragraphs (no headings, quotes or pictures), enough to fill a few preview lines. */
-export function articleIntro(article: Article, minLength = 1000): string {
+export function articleIntro(article: Article, minLength = 3000): string {
   const texts: string[] = [];
   for (const [index, text] of article.paragraphs.entries()) {
     const kind = article.paragraphFormats?.[index]?.kind ?? "paragraph";

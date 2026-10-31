@@ -25,7 +25,7 @@ export function ArticlePreview({ article }: { article: Article }) {
   const href = `/yazilar/${article.slug}`;
   return <article className="article-view article-preview">
     <div className="article-preview-head">
-      <CatalogCover className="article-preview-cover" src={article.coverUrl} fallback={articleDraftCover(article)} />
+      <CatalogCover className="article-preview-cover" src={article.coverUrl} fallback={articleDraftCover(article)} loading="eager" />
       <div>{article.eyebrow && <p className="eyebrow">{article.eyebrow}</p>}<h2 id="panel-title">{article.title}</h2></div>
     </div>
     <p className="article-lead">{article.excerpt}</p>

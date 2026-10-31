@@ -1,6 +1,6 @@
 import { render } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { ArticlePreview, articleImages } from "../components/ArticlePreview";
+import { ArticlePreview, articleImages, articleIntro } from "../components/ArticlePreview";
 import type { Article } from "../lib/content";
 
 const image = (name: string) => ({ src: `/media/${name}.png`, alt: name, width: 800, height: 450, caption: "" });
@@ -23,5 +23,13 @@ it("shows the cover, the summary and the first two pictures, then links to the f
   expect(container.querySelector(".article-preview-layout>.article-preview-cover")?.getAttribute("src")).toBe("/media/kapak.png");
   expect([...container.querySelectorAll(".article-preview-shots img")].map((img) => img.getAttribute("src"))).toEqual(["/media/kesit.png", "/media/dusus.png"]);
   expect(getByRole("link", { name: /Yazının tamamını oku/ }).getAttribute("href")).toBe("/yazilar/mk-82");
-  expect(container.textContent).not.toContain("Giriş");
+  expect(container.querySelector(".article-preview-intro")?.textContent).toBe("Giriş Ara");
+});
+
+it("builds the intro from body paragraphs only, skipping headings, pictures and a repeated summary", () => {
+  const withHeading: Article = { ...article, paragraphs: ["Kısa özet.", "Başlık", "Birinci paragraf.", "", "İkinci paragraf."], paragraphFormats: [{ kind: "paragraph" }, { kind: "heading", level: 2 }, { kind: "paragraph" }, { kind: "image", image: image("x") }, { kind: "paragraph" }] };
+  expect(articleIntro(withHeading)).toBe("Birinci paragraf. İkinci paragraf.");
+  expect(articleIntro(withHeading, 5)).toBe("Birinci paragraf.");
+  const { container } = render(<ArticlePreview article={withHeading} />);
+  expect(container.querySelector(".article-preview-intro")?.textContent).toBe("Birinci paragraf. İkinci paragraf.");
 });

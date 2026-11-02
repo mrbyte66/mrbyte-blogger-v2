@@ -1998,7 +1998,7 @@ export interface components {
             /** @constant */
             schemaVersion: 1;
             blocks: components["schemas"]["Block"][];
-            /** @description The article's bibliography */
+            /** @description The article's bibliography, shown after the text */
             sources?: components["schemas"]["Source"][];
         };
         /** @description One cited work */

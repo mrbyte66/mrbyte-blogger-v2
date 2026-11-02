@@ -2569,7 +2569,7 @@ components:
       properties:
         schemaVersion: {type: integer, const: 1}
         blocks: {type: array, maxItems: 500, items: {$ref: '#/components/schemas/Block'}}
-        sources: {type: array, maxItems: 50, items: {$ref: '#/components/schemas/Source'}, description: The article's bibliography, shown after the text}
+        sources: {type: array, maxItems: 50, items: {$ref: '#/components/schemas/Source'}, description: "The article's bibliography, shown after the text"}
 
     Source:
       type: object

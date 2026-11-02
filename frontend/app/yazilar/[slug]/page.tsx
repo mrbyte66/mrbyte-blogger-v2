@@ -5,7 +5,7 @@ import { ArticleRoute } from "../../../components/builder/ArticlePage";
 import { articleFromPublic } from "../../../lib/api/mapping";
 import { loadArticle, loadPublicContent, siteOrigin } from "../../../lib/api/server";
 import { JsonLd } from "../../../components/JsonLd";
-import { DEFAULT_SHARE_IMAGE, articleCrumbs, articleJsonLd, breadcrumbJsonLd, robotsFor } from "../../../lib/seo";
+import { DEFAULT_SHARE_IMAGE, articleCrumbs, articleJsonLd, breadcrumbJsonLd, robotsFor, siteNameOf } from "../../../lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: { canonical: url },
     robots: robotsFor(indexable),
     openGraph: {
-      type: "article", url, title: article.title, description, siteName: `${site.siteName}.`, locale: "tr_TR",
+      type: "article", url, title: article.title, description, siteName: `${siteNameOf(site)}.`, locale: "tr_TR",
       publishedTime: article.firstPublishedAt ?? undefined, modifiedTime: article.publicModifiedAt ?? undefined,
       ...(article.categories.length ? { tags: article.categories.map((category) => category.name) } : {}),
       images: [article.cover ? { url: article.cover.url, width: article.cover.width, height: article.cover.height, alt: article.title } : DEFAULT_SHARE_IMAGE],

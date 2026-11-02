@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import robots from "../app/robots";
-import { articleCrumbs, articleJsonLd, breadcrumbJsonLd, robotsFor } from "../lib/seo";
+import { articleCrumbs, articleJsonLd, breadcrumbJsonLd, robotsFor, websiteJsonLd } from "../lib/seo";
 
 const origin = "https://example.test";
 const site = { siteName: "MrByte Studio", authorPublicName: null };
@@ -24,6 +24,13 @@ it("describes an article with its author, picture, tags and series", () => {
     isPartOf: { "@type": "CreativeWorkSeries", url: `${origin}/seriler/gudumsuz-muhimmat` }, position: 2,
   });
   expect(articleJsonLd(origin, { ...site, authorPublicName: "Bey" }, { ...article, series: null }).author).toEqual({ "@type": "Person", name: "Bey", url: `${origin}/` });
+});
+
+it("falls back to the product name when the public site payload has none", () => {
+  const data = articleJsonLd(origin, {}, article);
+  expect(data.author).toMatchObject({ "@type": "Organization", name: "MrByte Studio" });
+  expect(data.publisher.name).toBe("MrByte Studio");
+  expect(websiteJsonLd(origin, { siteName: null }, "Açıklama").name).toBe("MrByte Studio");
 });
 
 it("builds the home › series › article breadcrumb", () => {

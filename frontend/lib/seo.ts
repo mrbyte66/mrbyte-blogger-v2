@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DEFAULT_SITE_NAME } from "./builder/model";
 
 /** Shared search-engine signals for public pages: robots directives, absolute URLs and Schema.org data. */
 
@@ -26,15 +27,17 @@ export function breadcrumbJsonLd(origin: string, crumbs: Crumb[]) {
 }
 
 type Site = { siteName?: string | null; authorPublicName?: string | null };
+/** The public site payload may omit the name; pages then use the product name, as the header does. */
+export const siteNameOf = (site: Site) => site.siteName || DEFAULT_SITE_NAME;
 /** The author is the named person when the owner set one, otherwise the site itself. */
 export function authorJsonLd(origin: string, site: Site) {
   return site.authorPublicName
     ? { "@type": "Person", name: site.authorPublicName, url: `${origin}/` }
-    : { "@type": "Organization", name: site.siteName ?? "", url: `${origin}/` };
+    : { "@type": "Organization", name: siteNameOf(site), url: `${origin}/` };
 }
 
 export function publisherJsonLd(origin: string, site: Site) {
-  return { "@type": "Organization", name: site.siteName ?? "", url: `${origin}/`, logo: { "@type": "ImageObject", url: `${origin}/apple-touch-icon.png` } };
+  return { "@type": "Organization", name: siteNameOf(site), url: `${origin}/`, logo: { "@type": "ImageObject", url: `${origin}/apple-touch-icon.png` } };
 }
 
 type Article = {
@@ -66,7 +69,7 @@ export function articleCrumbs(article: Pick<Article, "slug" | "title" | "series"
 
 export function websiteJsonLd(origin: string, site: Site, description: string) {
   return {
-    "@context": "https://schema.org", "@type": "WebSite", name: site.siteName ?? "", url: `${origin}/`, description, inLanguage: "tr",
+    "@context": "https://schema.org", "@type": "WebSite", name: siteNameOf(site), url: `${origin}/`, description, inLanguage: "tr",
     publisher: publisherJsonLd(origin, site),
   };
 }

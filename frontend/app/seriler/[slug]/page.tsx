@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { SeriesPage } from "../../../components/series/SeriesPage";
 import { loadPublicContent, loadSeries, siteOrigin } from "../../../lib/api/server";
 import { JsonLd } from "../../../components/JsonLd";
-import { DEFAULT_SHARE_IMAGE, absoluteUrl, breadcrumbJsonLd, robotsFor } from "../../../lib/seo";
+import { DEFAULT_SHARE_IMAGE, absoluteUrl, breadcrumbJsonLd, robotsFor, siteNameOf } from "../../../lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 const valid = (slug: string) => slug.length <= 100 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: series.seo?.title ?? series.title, description, alternates: { canonical: url },
     robots: robotsFor(site.indexingEnabled && series.seo?.indexable !== false),
     openGraph: {
-      type: "website", url, title: series.title, description, siteName: `${site.siteName}.`, locale: "tr_TR",
+      type: "website", url, title: series.title, description, siteName: `${siteNameOf(site)}.`, locale: "tr_TR",
       images: [series.cover ? { url: series.cover.url, width: series.cover.width, height: series.cover.height, alt: series.title } : DEFAULT_SHARE_IMAGE],
     },
   };

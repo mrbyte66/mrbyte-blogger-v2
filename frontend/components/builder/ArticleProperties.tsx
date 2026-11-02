@@ -5,6 +5,7 @@ import { type Article } from "../../lib/content";
 import { ArticleCategoryField } from "./ArticleCategoryField";
 import { ImageUpload } from "./ImageUpload";
 import { CoverField } from "./CoverSearch";
+import { EditorIcon } from "./EditorIcon";
 import { maxSources, type ArticleSource } from "../../lib/articles/blocks";
 export function TextField({ label, value, onChange, multiline = false }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
   return <label className="studio-field"><span>{label}</span>{multiline ? <textarea rows={5} value={value} onChange={(e) => onChange(e.target.value)} /> : <input value={value} onChange={(e) => onChange(e.target.value)} />}</label>;
@@ -40,20 +41,18 @@ function SourcesField({ sources, onChange }: { sources: readonly ArticleSource[]
   const badUrl = (url?: string) => !!url && !/^https:\/\/\S+$/.test(url.trim());
   return <>
     <p className="property-note">Yazının sonunda “Kaynaklar” başlığıyla, numaralı ve başlıkları italik gösterilir. Yalnız başlığı olan kaynaklar kaydedilir.</p>
-    {sources.map((source, index) => <fieldset className="document-source" key={index}>
-      <legend>Kaynak {index + 1}</legend>
-      <TextField label="Başlık" value={source.title} onChange={(title) => set(index, { title })} />
-      <TextField label="Yazar veya site" value={source.publisher ?? ""} onChange={(publisher) => set(index, { publisher })} />
-      <TextField label="Yıl" value={source.year ?? ""} onChange={(year) => set(index, { year })} />
-      <label className="studio-field"><span>Bağlantı</span><input type="url" inputMode="url" placeholder="https://…" aria-invalid={badUrl(source.url)} value={source.url ?? ""} onChange={(e) => set(index, { url: e.target.value })} /></label>
-      {badUrl(source.url) && <p className="property-note" role="alert">Bağlantı https:// ile başlamalı.</p>}
-      <div className="document-order">
-        <button type="button" disabled={index === 0} aria-label={`Kaynak ${index + 1} yukarı`} onClick={() => move(index, -1)}>↑</button>
-        <button type="button" disabled={index === sources.length - 1} aria-label={`Kaynak ${index + 1} aşağı`} onClick={() => move(index, 1)}>↓</button>
-        <button type="button" onClick={() => onChange(sources.filter((_, i) => i !== index).map((item) => ({ ...item })))}>Kaynağı kaldır</button>
+    <ol className="source-list">{sources.map((source, index) => <li className="source-card" key={index} aria-label={`Kaynak ${index + 1}`}>
+      <div className="source-card-head"><strong>Kaynak</strong>
+        <button type="button" disabled={index === 0} aria-label={`Kaynak ${index + 1} yukarı`} title="Yukarı taşı" onClick={() => move(index, -1)}><EditorIcon name="up" size={16}/></button>
+        <button type="button" disabled={index === sources.length - 1} aria-label={`Kaynak ${index + 1} aşağı`} title="Aşağı taşı" onClick={() => move(index, 1)}><EditorIcon name="down" size={16}/></button>
+        <button type="button" aria-label="Kaynağı kaldır" title="Kaldır" onClick={() => onChange(sources.filter((_, i) => i !== index).map((item) => ({ ...item })))}><EditorIcon name="trash" size={16}/></button>
       </div>
-    </fieldset>)}
-    <button type="button" className="studio-secondary" disabled={sources.length >= maxSources} onClick={() => onChange([...sources.map((source) => ({ ...source })), { title: "" }])}>Kaynak ekle</button>
+      <TextField label="Başlık" value={source.title} onChange={(title) => set(index, { title })} />
+      <div className="source-card-row"><TextField label="Yazar veya site" value={source.publisher ?? ""} onChange={(publisher) => set(index, { publisher })} /><TextField label="Yıl" value={source.year ?? ""} onChange={(year) => set(index, { year })} /></div>
+      <label className="studio-field"><span>Bağlantı</span><textarea className="source-url" rows={2} inputMode="url" spellCheck={false} placeholder="https://…" aria-invalid={badUrl(source.url)} value={source.url ?? ""} onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }} onChange={(e) => set(index, { url: e.target.value.replace(/\s+/g, "") })} /></label>
+      {badUrl(source.url) && <p className="source-warning" role="alert">Bağlantı https:// ile başlamalı.</p>}
+    </li>)}</ol>
+    <button type="button" className="studio-secondary source-add" disabled={sources.length >= maxSources} onClick={() => onChange([...sources.map((source) => ({ ...source })), { title: "" }])}>Kaynak ekle</button>
   </>;
 }
 /** Optional fields are left out instead of kept empty. */

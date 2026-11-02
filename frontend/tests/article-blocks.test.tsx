@@ -124,3 +124,15 @@ it("writes lists on the canvas: '- ' starts one, Enter adds an item, Enter on an
   fireEvent.keyDown(list, { key: "Enter" });
   expect(edits(post).at(-1)).toMatchObject({ field: "paragraph-1", value: "Bir", action: "split", offset: 3 });
 });
+
+it("lets the canvas open the Sources panel and shows a place for sources while writing", async () => {
+  const { isDocumentField } = await import("../lib/builder/document-protocol");
+  expect(isDocumentField("sources")).toBe(true);
+  const empty = { ...articleFromPublic(detail), sources: [] };
+  const studio = render(<ArticleContent article={empty} preview />);
+  expect(studio.container.querySelector('.article-sources.is-empty[data-edit-field="sources"]')?.textContent).toContain("Kaynak ekle");
+  studio.unmount();
+  const reader = render(<ArticleContent article={empty} fullPage />);
+  expect(reader.container.querySelector(".article-sources")).toBeNull();
+  expect(reader.container.textContent).not.toMatch(/^0|\b0\b(?=Şimdilik)/);
+});

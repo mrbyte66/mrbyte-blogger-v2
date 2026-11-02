@@ -147,13 +147,11 @@ html[data-studio-view] .inline-block-menu>button { min-height:79px; }
 
 /* Callout tone switch (selection toolbar and the ＋ menu) and list writing on the canvas. */
 .inline-canvas-root .callout-tones { display:flex; flex-wrap:wrap; gap:4px; padding:4px; }
-.inline-canvas-root .callout-tone { --tone:#8fbf9a; min-height:30px; padding:4px 10px; border:1px solid color-mix(in srgb,var(--tone) 55%,transparent); border-radius:999px; background:color-mix(in srgb,var(--tone) 12%,transparent); color:var(--inline-ink,inherit); font-size:12px; cursor:pointer; }
-.inline-canvas-root .callout-tone.tone-note { --tone:#8f9a92; }
-.inline-canvas-root .callout-tone.tone-tip { --tone:#6aa8b8; }
-.inline-canvas-root .callout-tone.tone-warning { --tone:#d9a441; }
+.inline-canvas-root .callout-tone { --tone:#5fae7a; min-height:30px; padding:4px 10px; border:1px solid color-mix(in srgb,var(--tone) 55%,transparent); border-radius:999px; background:color-mix(in srgb,var(--tone) 12%,transparent); color:var(--inline-ink,inherit); font-size:12px; cursor:pointer; }
+.inline-canvas-root .callout-tone.tone-note { --tone:#7f8f99; }
+.inline-canvas-root .callout-tone.tone-tip { --tone:#3f9fc4; }
+.inline-canvas-root .callout-tone.tone-warning { --tone:#d8952b; }
 .inline-canvas-root .callout-tone[aria-pressed="true"] { background:var(--tone); color:#13221a; font-weight:600; }
 .inline-canvas-root .inline-block-menu .callout-tones { border-top:1px solid var(--line); margin-top:4px; padding-top:8px; }
 .inline-canvas-root .article-items.is-writing { outline:none; }
 .inline-canvas-root .article-items:empty::before { content:attr(data-writing-placeholder); color:var(--muted); }
-.document-source { display:grid; gap:8px; margin:0 0 14px; padding:12px; border:1px solid var(--line); border-radius:10px; }
-.document-source legend { padding:0 6px; font-size:12px; color:var(--muted); }

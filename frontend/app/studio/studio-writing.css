@@ -25,6 +25,15 @@ html .studio.writing-studio[data-view] .studio-status:not(:empty) { position:abs
 .writing-tool-ribbon button:focus-visible { outline:2px solid var(--sv-primary); outline-offset:1px; }
 .writing-tool-ribbon button:disabled { opacity:.4; cursor:not-allowed; }
 .writing-tool-ribbon small { font-size:9px; color:var(--sv-sub); }
+/* With lists, callouts and sources the ribbon holds a dozen tools: on wider screens each stacks its icon over
+   a short label so the whole ribbon stays on one line, even beside the wide Sources panel. */
+@media(min-width:701px) {
+ .writing-tool-ribbon { gap:8px; padding:5px 6px; }
+ .writing-tool-ribbon button { flex-direction:column; gap:3px; min-height:50px; padding:5px 8px; font-size:11px; line-height:1.1; white-space:nowrap; }
+ .writing-tool-ribbon button svg { width:19px; height:19px; }
+ .writing-tool-settings { padding-left:6px; }
+ .writing-tool-ribbon .ribbon-voice small { display:none; }
+}
 html .studio.writing-studio[data-view] .writing-companion { z-index:30; padding:0; display:flex; flex-direction:column; min-height:0; border:1px solid var(--sv-line); border-radius:22px; background:var(--sv-card); box-shadow:none; overflow:hidden; animation:writing-panel-in 180ms ease-out; }
 html .studio.writing-studio[data-view] .writing-companion[hidden] { display:none; }
 .writing-panel-tabs { display:flex; align-items:center; gap:4px; padding:12px 14px 0; flex:0 0 auto; border-bottom:1px solid var(--sv-line); }
@@ -71,6 +80,7 @@ html .studio.writing-studio[data-view] .writing-companion .inspector-fields { di
  html .studio.writing-studio[data-view] .studio-page-trigger strong { max-width:100%; }
  html .studio.writing-studio[data-view] .studio-top-actions { margin-left:auto; display:flex; gap:8px; }
  html .studio.writing-studio.has-writing-panel:not(.studio-focus)[data-view]>.studio-workspace { grid-template-columns:minmax(0,1fr) 264px!important; grid-template-areas:"canvas inspector"!important; }
+ html .studio.writing-studio.has-writing-panel.has-wide-panel:not(.studio-focus)[data-view]>.studio-workspace { grid-template-columns:minmax(0,1fr) clamp(380px,34vw,560px)!important; }
  html .studio.writing-studio[data-view] .writing-companion { grid-area:inspector!important; position:relative!important; inset:auto!important; width:auto!important; height:auto!important; max-height:none!important; margin:14px 16px 16px 0; align-self:stretch; }
  html .studio.writing-studio[data-view="sahne"] .studio-canvas { padding:18px 28px; }
  html .studio.writing-studio[data-view="odak"] .writing-tool-ribbon { border-radius:999px; }
@@ -80,6 +90,7 @@ html .studio.writing-studio[data-view] .writing-companion .inspector-fields { di
 @media(max-width:1099px) {
  .studio .canvas-focus-toggle { display:none!important; }
  html .studio.writing-studio[data-view] .writing-companion { position:fixed; inset:100px 16px auto auto; width:min(310px,calc(100vw - 32px)); height:min(600px,calc(100dvh - 124px)); max-height:none; box-shadow:var(--sv-shadow); }
+ html .studio.writing-studio.has-wide-panel[data-view] .writing-companion { width:min(520px,calc(100vw - 32px)); }
  html .studio.writing-studio[data-view] .studio-header-state .studio-saved { display:none; }
 }
 @media(max-width:700px) {
@@ -94,7 +105,7 @@ html .studio.writing-studio[data-view] .writing-companion .inspector-fields { di
  .writing-tool-primary button svg { width:17px; height:17px; }
  .writing-tool-settings { width:100%; border-left:0; border-top:1px solid var(--sv-line); padding:4px 0 0; }
  .writing-tool-settings button { flex-basis:auto; }
- html .studio.writing-studio[data-view] .writing-companion { inset:auto 8px 8px; width:auto; height:min(60dvh,530px); border-radius:20px; }
+ html .studio.writing-studio[data-view] .writing-companion, html .studio.writing-studio.has-wide-panel[data-view] .writing-companion { inset:auto 8px 8px; width:auto; height:min(60dvh,530px); border-radius:20px; }
 }
 @media(prefers-reduced-motion:reduce) { .writing-companion,.writing-tool-ribbon button { animation:none!important; transition:none!important; } }
 html[data-motion=off] .writing-companion { animation:none!important; }
@@ -111,3 +122,20 @@ html .studio.writing-studio[data-view] .writing-companion { transition:none; }
  html .studio.writing-studio[data-view]>.studio-workspace { width:100%; margin:0; }
  html .studio.writing-studio[data-view] .studio-preview { max-width:100%; }
 }
+
+/* Sources panel: one card per cited work; title and address get the full width. */
+.source-list { display:grid; gap:12px; margin:0 0 14px; padding:0; list-style:none; counter-reset:source; }
+.source-card { counter-increment:source; display:grid; gap:10px; padding:12px 14px 14px; border:1px solid var(--sv-line, var(--line)); border-radius:14px; background:color-mix(in srgb,var(--sv-card, transparent) 70%,transparent); }
+.source-card-head { display:flex; align-items:center; gap:6px; }
+.source-card-head strong { flex:1; font:600 11px/1 var(--mono, monospace); letter-spacing:.12em; text-transform:uppercase; color:var(--sv-muted, var(--muted)); }
+.source-card-head strong::before { content:counter(source) ". "; }
+.source-card-head button { width:30px; height:30px; display:grid; place-items:center; padding:0; border:1px solid transparent; border-radius:9px; background:transparent; color:inherit; cursor:pointer; }
+.source-card-head button:hover:not(:disabled) { border-color:var(--sv-line, var(--line)); }
+.source-card-head button:disabled { opacity:.35; cursor:default; }
+.source-card .studio-field { margin:0; }
+.source-card input, .source-card textarea { width:100%; min-width:0; box-sizing:border-box; }
+.source-card .source-url { resize:none; field-sizing:content; min-height:2.6em; overflow-wrap:anywhere; word-break:break-all; line-height:1.4; font:inherit; }
+.source-card-row { display:grid; grid-template-columns:minmax(0,1fr) 92px; gap:10px; }
+.source-card [aria-invalid="true"] { border-color:#d9a441; }
+.source-card .source-warning { margin:-4px 0 0; font-size:12px; color:#d9a441; }
+.source-add { width:100%; justify-content:center; }

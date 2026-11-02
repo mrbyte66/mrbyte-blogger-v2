@@ -1998,9 +1998,19 @@ export interface components {
             /** @constant */
             schemaVersion: 1;
             blocks: components["schemas"]["Block"][];
+            /** @description The article's bibliography */
+            sources?: components["schemas"]["Source"][];
+        };
+        /** @description One cited work */
+        Source: {
+            title: string;
+            /** @description Author or site */
+            publisher?: string;
+            year?: string;
+            url?: string;
         };
         /** @description Plain-text body block; IDs stay stable across revisions so annotations can anchor */
-        Block: components["schemas"]["ParagraphBlock"] | components["schemas"]["HeadingBlock"] | components["schemas"]["QuoteBlock"] | components["schemas"]["CodeBlock"] | components["schemas"]["ImageBlock"] | components["schemas"]["TableBlock"];
+        Block: components["schemas"]["ParagraphBlock"] | components["schemas"]["HeadingBlock"] | components["schemas"]["QuoteBlock"] | components["schemas"]["CodeBlock"] | components["schemas"]["ImageBlock"] | components["schemas"]["TableBlock"] | components["schemas"]["ListBlock"] | components["schemas"]["CalloutBlock"];
         ParagraphBlock: {
             /**
              * @description discriminator enum property added by openapi-typescript
@@ -2087,6 +2097,37 @@ export interface components {
             columns: string[];
             /** @description Each row has as many cells as there are columns */
             rows: string[][];
+        };
+        ListBlock: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "list";
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            style: "bullet" | "ordered";
+            items: components["schemas"]["ListItem"][];
+        };
+        ListItem: {
+            /** @description One line; no line breaks */
+            text: string;
+            marks?: components["schemas"]["Mark"][];
+        };
+        CalloutBlock: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "callout";
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            tone: "note" | "tip" | "warning" | "summary";
+            title?: string;
+            text: string;
+            marks?: components["schemas"]["Mark"][];
         };
         CoverInput: {
             /** @enum {string} */

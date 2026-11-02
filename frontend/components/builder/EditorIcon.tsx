@@ -23,7 +23,7 @@ export function EditorIcon({ name, size = 18 }: { name: string; size?: number })
     note:"M5 4h14v12l-5 5H5zM14 21v-5h5", notes:"M5 4h14v12l-5 5H5zM14 21v-5h5M8.5 9h7M8.5 12.5h4", goal:"M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 12h.01",
     paragraph:"M13 4v16M17 4v16M13 4H9a4 4 0 0 0 0 8h4", heading:"M6 4v16M18 4v16M6 12h12", quote:"M7 8h4v4a4 4 0 0 1-4 4M15 8h4v4a4 4 0 0 1-4 4",
     device:"M3 5h18v11H3zM8 20h8M12 16v4", search:"M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zm9 3-4.5-4.5",
-    grid:"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z", list:"M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
+    grid:"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z", sources:"M6 3h9l3 3v15H6zM15 3v3h3M9 10h6M9 14h6M9 18h3", list:"M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01",
     trash:"M4 7h16M9 7V4h6v3M6.5 7l1 13h9l1-13M10 11v6M14 11v6", strike:"M5 12h14M16 6.5c-.7-1.5-2.2-2.5-4.2-2.5C9.4 4 8 5.4 8 7c0 1.6 1.2 2.4 3 3M8 17.5c.7 1.5 2.3 2.5 4.3 2.5 2.4 0 4-1.4 4-3.2 0-.9-.3-1.6-.9-2.1",
     highlight:"m9 11-5 5v4h4l5-5M9 11l6-6 4 4-6 6M9 11l4 4M3 21h18", clear:"M6 5h12M12 5 8 19M4 4l16 16", user:"M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
   };

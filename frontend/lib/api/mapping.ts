@@ -4,6 +4,7 @@ import type { PageBlock, Theme } from "../builder/model";
 import { withRequiredFooter } from "../builder/model";
 import { categoryIds, categoryNames, type Category } from "./categories";
 import type { TextMark } from "../articles/marks";
+import { joinListLines, listLines } from "../articles/blocks";
 
 import type { Schema, Output } from "./contract";
 export type BlockDto = Schema<"Block">;
@@ -31,7 +32,7 @@ const mediaPattern = /^\/api\/v1\/media\/([0-9a-f-]{36})$/;
 
 
 /** Body blocks → the editor's paragraph/figure/code/table model (render order preserved on save). */
-function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "paragraphMarks" | "figure" | "code" | "codeLanguage" | "table" | "blockIds"> {
+function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "paragraphFormats" | "paragraphMarks" | "figure" | "code" | "codeLanguage" | "table" | "blockIds" | "sources"> {
   const paragraphFormats: NonNullable<Article["paragraphFormats"]>[number][] = [];
   const paragraphMarks: TextMark[][] = [];
   const paragraphs: string[] = []; const ids: string[] = [];
@@ -45,11 +46,19 @@ function fromDocument(document: DocumentDto): Pick<Article, "paragraphs" | "para
       // The lead picture renders after the first paragraph; any other picture keeps its place in the text.
       if (!figure && paragraphs.length === 1 && paragraphFormats[0]?.kind !== "image") { figure = image; blockIds.figure = block.id; }
       else { paragraphs.push(""); ids.push(block.id); paragraphMarks.push([]); paragraphFormats.push({ kind: "image", image }); }
+    } else if (block.type === "list") {
+      const joined = joinListLines(block.items.map((item) => ({ text: item.text, marks: (item.marks ?? []).map(copyMark) })));
+      paragraphs.push(joined.text); ids.push(block.id); paragraphMarks.push(joined.marks); paragraphFormats.push({ kind: "list", style: block.style });
+    } else if (block.type === "callout") {
+      paragraphs.push(block.text); ids.push(block.id); paragraphMarks.push((block.marks ?? []).map(copyMark));
+      paragraphFormats.push({ kind: "callout", tone: block.tone, ...(block.title ? { title: block.title } : {}) });
     } else if (block.type === "code" && code === undefined) { code = block.text; codeLanguage = block.language; blockIds.code = block.id; }
     else if (block.type === "table" && !table) { table = { caption: block.caption ?? "", columns: block.columns, rows: block.rows }; blockIds.table = block.id; }
   }
-  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(paragraphMarks.some((marks) => marks.length) ? { paragraphMarks } : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code, codeLanguage } : {}), ...(table ? { table } : {}), blockIds };
+  const sources = (document.sources ?? []).map((source) => ({ title: source.title, ...(source.publisher ? { publisher: source.publisher } : {}), ...(source.year ? { year: source.year } : {}), ...(source.url ? { url: source.url } : {}) }));
+  return { paragraphs: paragraphs.length ? paragraphs : [""], ...(paragraphFormats.length ? {paragraphFormats} : {}), ...(paragraphMarks.some((marks) => marks.length) ? { paragraphMarks } : {}), ...(figure ? { figure } : {}), ...(code !== undefined ? { code, codeLanguage } : {}), ...(table ? { table } : {}), blockIds, ...(sources.length ? { sources } : {}) };
 }
+const copyMark = (mark: { type: TextMark["type"]; start: number; end: number; href?: string }): TextMark => ({ type: mark.type, start: mark.start, end: mark.end, ...(mark.href ? { href: mark.href } : {}) });
 
 /** Editor model → blocks, in the same order ArticleContent renders them; stable IDs are reused. */
 export function toDocument(article: Article): DocumentDto {
@@ -65,7 +74,12 @@ export function toDocument(article: Article): DocumentDto {
     }
     const marks = article.paragraphMarks?.[index];
     const withMarks = marks?.length ? { marks: marks.map((mark) => ({ ...mark })) } : {};
-    if (format?.kind !== "image") blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {}),...withMarks} : {id,type:"paragraph",text,...withMarks});
+    if (format?.kind === "list") {
+      // Blank lines are where the author is still typing: they are not saved as items.
+      const items = listLines(text, marks ?? []).filter((line) => line.text.trim()).map((line) => ({ text: line.text, ...(line.marks.length ? { marks: line.marks } : {}) }));
+      if (items.length) blocks.push({ id, type: "list", style: format.style ?? "bullet", items });
+    } else if (format?.kind === "callout") blocks.push({ id, type: "callout", tone: format.tone ?? "note", ...(format.title ? { title: format.title } : {}), text, ...withMarks });
+    else if (format?.kind !== "image") blocks.push(format?.kind === "heading" ? {id,type:"heading",text,level:format.level ?? 2} : format?.kind === "quote" ? {id,type:"quote",text,...(format.attribution ? {attribution:format.attribution} : {}),...withMarks} : {id,type:"paragraph",text,...withMarks});
     if (index === 0 && article.figure) {
       const match = mediaPattern.exec(article.figure.src);
       blocks.push({ id: ids?.figure ?? crypto.randomUUID(), type: "image", ...(match ? { assetId: match[1] } : { staticPath: article.figure.src }), alt: article.figure.alt, caption: article.figure.caption, width: article.figure.width, height: article.figure.height });
@@ -73,7 +87,11 @@ export function toDocument(article: Article): DocumentDto {
     if (index === anchor && article.code !== undefined) blocks.push({ id: ids?.code ?? crypto.randomUUID(), type: "code", text: article.code, language: (article.codeLanguage ?? "java") as Extract<BlockDto, {type:"code"}>["language"] });
     if (index === anchor && article.table) blocks.push({ id: ids?.table ?? crypto.randomUUID(), type: "table", caption: article.table.caption, columns: [...article.table.columns], rows: article.table.rows.map((row) => [...row]) });
   });
-  return { schemaVersion: 1, blocks };
+  const sources = (article.sources ?? []).filter((source) => source.title.trim()).map((source) => ({
+    title: source.title.trim(), ...(source.publisher?.trim() ? { publisher: source.publisher.trim() } : {}),
+    ...(source.year?.trim() ? { year: source.year.trim() } : {}), ...(source.url?.trim() ? { url: source.url.trim() } : {}),
+  }));
+  return { schemaVersion: 1, blocks, ...(sources.length ? { sources } : {}) };
 }
 
 export function articleFromPublic(dto: ArticleSummaryDto | ArticleDetailDto): Article {

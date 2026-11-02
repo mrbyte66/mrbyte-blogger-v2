@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Theme } from "../../lib/builder/model";
 import type { DocumentDraft } from "../../lib/builder/document-protocol";
-import { editDocumentText, documentText, inlineEditEvent, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
+import { editDocumentText, documentText, inlineEditEvent, kindName, themeText, type InlineEdit } from "../../lib/builder/inline-edit";
+import { calloutLabels, calloutTones, listHtml } from "../../lib/articles/blocks";
 import { previewEvents, rectOf, type CanvasSelection } from "../../lib/builder/preview-protocol";
 import { adjustMarks, clearMark, covers, isSafeHref, markAt, safeMarks, toggleMark, type MarkType, type TextMark } from "../../lib/articles/marks";
 import { markedHtml } from "../../lib/articles/marked-html";
@@ -24,17 +25,25 @@ const toggles: { type: Exclude<MarkType, "link">; label: string; keys: string; i
   { type: "code", label: "Satır içi kod", keys: "⌘E", icon: "code" },
 ];
 /** What the ＋ button and the "/" menu offer. Text kinds turn the line into that block; the rest open their settings. */
-type BlockChoice = { id: "paragraph" | "heading2" | "heading3" | "quote" | "figure" | "code" | "table"; label: string; hint: string; glyph: string; keys?: string; words: string };
+type BlockChoice = { id: "paragraph" | "heading2" | "heading3" | "quote" | "list" | "ordered" | "callout" | "figure" | "code" | "table"; label: string; hint: string; glyph: string; keys?: string; words: string };
+type TextKind = "heading2" | "heading3" | "quote" | "list" | "ordered" | "callout";
+const textKinds: readonly string[] = ["paragraph", "heading2", "heading3", "quote", "list", "ordered", "callout"];
+const isList = (node: HTMLElement) => node.tagName === "UL" || node.tagName === "OL";
+/** The canvas view of a rich field: list items for a list, marked text otherwise. */
+const htmlFor = (node: HTMLElement, text: string, marks: readonly TextMark[]) => isList(node) ? listHtml(text, marks) : markedHtml(text, marks);
 const blockChoices: BlockChoice[] = [
   { id: "paragraph", label: "Metin", hint: "Düz paragraf", glyph: "¶", words: "metin paragraf yazı text" },
   { id: "heading2", label: "Başlık", hint: "Bölüm başlığı", glyph: "H2", keys: "##", words: "başlık baslik heading h2" },
   { id: "heading3", label: "Alt başlık", hint: "Küçük başlık", glyph: "H3", keys: "###", words: "alt başlık altbaslik h3 subheading" },
   { id: "quote", label: "Alıntı", hint: "Öne çıkan söz", glyph: "“", keys: ">", words: "alıntı alinti quote söz" },
+  { id: "list", label: "Liste", hint: "Madde madde", glyph: "•", keys: "-", words: "liste madde list bullet" },
+  { id: "ordered", label: "Numaralı liste", hint: "Adım adım", glyph: "1.", keys: "1.", words: "numaralı numarali liste sıralı adım ordered" },
+  { id: "callout", label: "Bilgi kutusu", hint: "Kısaca, not, ipucu", glyph: "ⓘ", words: "kutu bilgi not ipucu dikkat kısaca callout" },
   { id: "figure", label: "Görsel", hint: "Fotoğraf ve açıklama", glyph: "▣", words: "görsel gorsel resim fotoğraf image" },
   { id: "code", label: "Kod", hint: "Kod örneği", glyph: "{ }", words: "kod code" },
   { id: "table", label: "Tablo", hint: "Satır ve sütun", glyph: "▦", words: "tablo table" },
 ];
-const starterText: Partial<Record<BlockChoice["id"], string>> = { heading2: "Başlık", heading3: "Alt başlık", quote: "Alıntı" };
+const starterText: Partial<Record<BlockChoice["id"], string>> = { heading2: "Başlık", heading3: "Alt başlık", quote: "Alıntı", list: "Madde", ordered: "Adım", callout: "Kısa bir not" };
 const blockTypes: { action: "paragraph" | "heading2" | "heading3" | "quote"; label: string; glyph: string }[] = [
   { action: "paragraph", label: "Metin", glyph: "¶" },
   { action: "heading2", label: "Başlık", glyph: "H2" },
@@ -145,7 +154,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       if (text.marks !== undefined) {
         const wanted = safeMarks(text.value, text.marks);
         const shown = readMarked(node);
-        if (shown.text !== text.value || JSON.stringify(shown.marks) !== JSON.stringify(wanted)) node.innerHTML = markedHtml(text.value, wanted);
+        if (shown.text !== text.value || JSON.stringify(shown.marks) !== JSON.stringify(wanted)) node.innerHTML = htmlFor(node, text.value, wanted);
       } else if (node.childElementCount === 0 && node.textContent !== text.value) node.textContent = text.value;
     });
   }, [draft, active]);
@@ -207,7 +216,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   }
   /** Rebuilds a rich node from text + marks and keeps the caret/selection on the same characters. */
   function paint(item: Active, text: string, nextMarks: TextMark[], select?: { start: number; end: number }) {
-    item.node.innerHTML = markedHtml(text, nextMarks);
+    item.node.innerHTML = htmlFor(item.node, text, nextMarks);
     if (select) selectOffsets(item.node, Math.min(select.start, text.length), Math.min(select.end, text.length));
   }
   function remember(next: Snapshot) {
@@ -268,7 +277,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       const item=live.current;
       if(!text || !item) return;
       const clean=item.edit.field==="title" ? text.replace(/\s*\r?\n\s*/g," ") : text.replace(/\r\n?/g,"\n"), at=selectionOffsets(node) ?? {start:textOf(item).length,end:textOf(item).length};
-      if(clean.includes("\n") && draft?.kind==="article" && item.edit.field.startsWith("paragraph-")) {
+      // In a list pasted lines become items of the same list; elsewhere they become paragraphs.
+      if(clean.includes("\n") && draft?.kind==="article" && item.edit.field.startsWith("paragraph-") && !isList(node)) {
         const lines=clean.split(/\n(?:[ \t]*\n)*/);
         const last=Number(item.edit.field.slice(10))+lines.length-1;
         const current=textOf(item);
@@ -337,7 +347,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     const node = root.current?.querySelector<HTMLElement>(`[data-edit-field="${pendingField.current}"]`);
     if (pendingKind.current && draft?.kind === "article") {
       const at = Number(pendingField.current.slice(10)), format = draft.article.paragraphFormats?.[at];
-      const now = format?.kind === "heading" ? `heading${format.level ?? 2}` : format?.kind ?? "paragraph";
+      const now = kindName(format);
       if (now !== pendingKind.current) return;
     }
     if (node && locate(node)) {
@@ -417,9 +427,9 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   /** Markdown-like starts ("## ", "### ", "> ") and the "/" menu, read after every keystroke in a paragraph. */
   function shortcuts(item: Active, text: string) {
     if (!item.edit.field.startsWith("paragraph-") || kindRef.current !== "paragraph") { if (menuRef.current) setMenu(null); return; }
-    const mark = /^(#{2,3}|>) /.exec(text);
+    const mark = /^(#{2,3}|>|[-*•]|1[.)]) /.exec(text);
     if (mark) {
-      const action = mark[1] === "##" ? "heading2" : mark[1] === "###" ? "heading3" : "quote";
+      const action: TextKind = mark[1] === "##" ? "heading2" : mark[1] === "###" ? "heading3" : mark[1] === ">" ? "quote" : mark[1].startsWith("1") ? "ordered" : "list";
       turnInto(item, action, text.slice(mark[0].length));
       return;
     }
@@ -427,7 +437,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     else if (menuRef.current) setMenu(null);
   }
   /** Turns the paragraph being written into another text block; an empty one gets a selected starter text. */
-  function turnInto(item: Active, action: "heading2" | "heading3" | "quote", text: string) {
+  function turnInto(item: Active, action: TextKind, text: string) {
     const value = text.trim() ? text : starterText[action] ?? "";
     paint(item, value, safeMarks(value, adjustMarks(textOf(item), value, marks.current)));
     if (!text.trim()) selectAllNext.current = true;
@@ -438,7 +448,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   function choose(choice: BlockChoice) {
     const item = live.current;
     if (!item) return;
-    if (menuInserts.current && ["paragraph","heading2","heading3","quote"].includes(choice.id)) {
+    if (menuInserts.current && textKinds.includes(choice.id)) {
       menuInserts.current=false; setMenu(null);
       pendingKind.current=choice.id === "paragraph" ? null : choice.id;
       selectAllNext.current=choice.id !== "paragraph";
@@ -447,7 +457,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     }
     const clearSlash = () => { if (menuRef.current && readMarked(item.node).text.startsWith("/")) { item.node.textContent = ""; item.node.dispatchEvent(new Event("input", { bubbles: true })); } };
     if (choice.id === "paragraph") { clearSlash(); setMenu(null); if(kindRef.current!=="paragraph") finish(true,"paragraph"); else item.node.focus(); return; }
-    if (choice.id === "heading2" || choice.id === "heading3" || choice.id === "quote") { turnInto(item, choice.id, menuRef.current && textOf(item).startsWith("/") ? "" : textOf(item)); return; }
+    if (choice.id !== "figure" && choice.id !== "code" && choice.id !== "table") { turnInto(item, choice.id, menuRef.current && textOf(item).startsWith("/") ? "" : textOf(item)); return; }
     // Figure, code and table have their own settings: the Studio opens them as a card beside this line.
     const rect = rectOf(item.node);
     clearSlash(); setMenu(null);
@@ -456,6 +466,14 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     window.parent.postMessage({ type: previewEvents.select, id: choice.id === "figure" ? "figure-new" : choice.id, rect }, window.location.origin);
   }
 
+  /** A callout's tone changes its format only; writing goes on at the same place. */
+  function changeTone(next: (typeof calloutTones)[number]) {
+    const item = live.current;
+    if (!item) return;
+    const at = selectionOffsets(item.node);
+    pendingField.current = item.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = "callout"; pendingOffset.current = at?.start ?? textOf(item).length;
+    setMenu(null); finish(true, `tone-${next}`);
+  }
   /** Removes every mark (links too) from the selection; with only a caret, from the word under it. */
   function clearFormatting() {
     const item = live.current;
@@ -516,7 +534,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
   const upperSelection = !!selected && selected === selected.toLocaleUpperCase("tr") && selected !== selected.toLocaleLowerCase("tr");
   const query = (menu?.query ?? "").toLocaleLowerCase("tr");
   const matches = blockChoices.filter((choice) => !query || choice.words.split(" ").some((word) => word.startsWith(query)) || choice.label.toLocaleLowerCase("tr").startsWith(query));
-  const kind = draft?.kind === "article" && index >= 0 ? (draft.article.paragraphFormats?.[index]?.kind === "heading" ? `heading${draft.article.paragraphFormats[index].level ?? 2}` : draft.article.paragraphFormats?.[index]?.kind ?? "paragraph") : null;
+  const kind = draft?.kind === "article" && index >= 0 ? kindName(draft.article.paragraphFormats?.[index]) : null;
+  const tone = draft?.kind === "article" && index >= 0 && kind === "callout" ? draft.article.paragraphFormats?.[index]?.tone ?? "note" : null;
   kindRef.current = kind;
   const plusBox = hoverBox ?? (index >= 0 ? lineBox : null);
   const showPlus = enabled && draft?.kind === "article" && !menu && !selectionText && !!plusBox;
@@ -557,6 +576,20 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
     }
     if (active && (active.node.contains(event.target as Node) || toolbar.current?.contains(event.target as Node))) {
       const insideNode = active.node.contains(event.target as Node);
+      if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && active.edit.field.startsWith("paragraph-") && insideNode && active.rich && isList(active.node)) {
+        // In a list Enter starts the next item; on an empty last item it leaves the list for a new paragraph.
+        event.preventDefault();
+        const text = textOf(active), at = selectionOffsets(active.node) ?? { start: text.length, end: text.length };
+        const lineStart = text.lastIndexOf("\n", at.start - 1) + 1;
+        if (at.start === at.end && at.start === text.length && lineStart === text.length && lineStart > 0) {
+          const kept = text.slice(0, lineStart - 1);
+          paint(active, kept, safeMarks(kept, marks.current));
+          finish(true, "split", kept.length, kept.length); return;
+        }
+        const next = text.slice(0, at.start) + "\n" + text.slice(at.end);
+        if (next.length > active.max || next.split("\n").length > 100) return;
+        apply(active, next, safeMarks(next, adjustMarks(text, next, marks.current)), { start: at.start + 1, end: at.start + 1 }); return;
+      }
       if (event.key === "Enter" && !event.shiftKey && !event.metaKey && !event.ctrlKey && active.edit.field.startsWith("paragraph-") && insideNode) {
         event.preventDefault();
         let offset = textOf(active).length, end=offset;
@@ -603,6 +636,7 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       <span className="inline-block-menu-title">{menu.query ? `“${menu.query}”` : "BLOK EKLE"}</span>
       {matches.map((choice, i) => <button key={choice.id} type="button" role="option" aria-label={choice.label} aria-selected={i === Math.min(menuIndex, matches.length - 1)} onMouseEnter={() => setMenuIndex(i)} onClick={() => choose(choice)}><span className="inline-block-glyph" aria-hidden="true"><WritingGlyph kind={choice.id} size={28}/></span><span className="inline-block-text"><strong>{choice.label}</strong><small>{choice.hint}</small></span></button>)}
       {!menu.query && <button disabled aria-label="Sesle yazma · Yakında"><span className="inline-block-glyph"><EditorIcon name="microphone" size={22}/></span><span className="inline-block-text"><strong>Ses</strong><small>Yakında</small></span></button>}
+      {tone && !menu.query && <CalloutTones tone={tone} onTone={changeTone}/>}
       {index>=0 && draft?.kind==="article" && !menu.query && <div className="writing-block-actions" role="group" aria-label="Paragraf işlemleri"><button aria-label="Paragrafı yukarı taşı" disabled={index===0} onClick={()=>finish(true,"move-up")}><EditorIcon name="up" size={16}/></button><button aria-label="Paragrafı aşağı taşı" disabled={index===draft.article.paragraphs.length-1} onClick={()=>finish(true,"move-down")}><EditorIcon name="down" size={16}/></button><button aria-label="Altına paragraf ekle" onClick={()=>finish(true,"insert-after")}><EditorIcon name="plus" size={16}/></button><button aria-label="Bloğu sil" onClick={()=>finish(true,"remove")}><EditorIcon name="trash" size={16}/></button></div>}
       {!matches.length && <p className="inline-block-empty">Eşleşen blok yok · Esc</p>}
     </div>}
@@ -611,7 +645,11 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       {active.rich && index >= 0 && <><div className="inline-group" role="group" aria-label="Paragraf biçimi">{(["heading2", "quote"] as const).map(kind => <button key={kind} type="button" aria-label={kind === "heading2" ? "Ara başlık" : "Alıntı"} title={kind === "heading2" ? "Ara başlık" : "Alıntı"} aria-pressed={kindRef.current === kind} onClick={() => {
         if (kindRef.current === kind) { pendingField.current = active.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = "paragraph"; finish(true, "paragraph"); }
         else turnInto(active, kind, textOf(active));
-      }}><EditorIcon name={kind === "heading2" ? "heading" : "quote"} size={17}/></button>)}</div><i/></>}
+      }}><EditorIcon name={kind === "heading2" ? "heading" : "quote"} size={17}/></button>)}<button type="button" aria-label="Liste" title="Liste" aria-pressed={kindRef.current === "list" || kindRef.current === "ordered"} onClick={() => {
+        if (kindRef.current === "list" || kindRef.current === "ordered") { pendingField.current = active.edit.field; pendingUntil.current = Date.now() + 2000; pendingKind.current = "paragraph"; finish(true, "paragraph"); }
+        else turnInto(active, "list", textOf(active));
+      }}><WritingGlyph kind="list" size={17}/></button></div><i/></>}
+      {tone && <><CalloutTones tone={tone} onTone={changeTone}/><i/></>}
       <button type="button" aria-label="Diğer metin araçları" title="Diğer araçlar" aria-expanded={moreFormats} onClick={()=>setMoreFormats(!moreFormats)}>•••</button>
       {moreFormats && <div className="writing-format-more" role="group" aria-label="Diğer metin araçları">
         {active.rich && <>{toggles.filter(item=>["strike","code"].includes(item.type)).map(item=><button key={item.type} aria-label={item.label} onClick={()=>format(item.type)}><EditorIcon name={item.icon} size={16}/>{item.label}</button>)}<button aria-label="Biçimi temizle" onClick={clearFormatting}><EditorIcon name="clear" size={16}/>Biçimi temizle</button></>}
@@ -625,4 +663,8 @@ export function InlineCanvasEditor({ theme, draft, enabled, selection, reset = 0
       </form>}
     </div>}
   </div>;
+}
+
+function CalloutTones({ tone, onTone }: { tone: string; onTone: (tone: (typeof calloutTones)[number]) => void }) {
+  return <div className="inline-group callout-tones" role="group" aria-label="Kutu türü">{calloutTones.map((item) => <button key={item} type="button" className={`callout-tone tone-${item}`} aria-pressed={tone === item} title={calloutLabels[item]} onClick={() => onTone(item)}>{calloutLabels[item]}</button>)}</div>;
 }

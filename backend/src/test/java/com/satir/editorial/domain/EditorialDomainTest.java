@@ -113,6 +113,35 @@ class EditorialDomainTest {
     }
 
     @Test
+    void listsCalloutsAndSourcesAreValidated() {
+        UUID a = UUID.randomUUID();
+        Block.Mark bold = new Block.Mark("bold", 0, 9, null);
+        ArticleDocument valid = new ArticleDocument(1, List.of(
+                new Block.ItemList(a, "bullet", List.of(new Block.Item("Denetimli öğrenme", List.of(bold)), new Block.Item("Pekiştirmeli"))),
+                new Block.Callout(UUID.randomUUID(), "summary", "Kısaca", "Derin öğrenme bir makine öğrenmesi yöntemidir.", null)),
+                List.of(new ArticleDocument.Source("AI vs ML vs DL", "All Things Open", "2025", "https://allthingsopen.org/x"),
+                        new ArticleDocument.Source("Yalnız başlık", null, null, null)));
+        valid.validated();
+        assertThat(valid.wordCount()).isEqualTo(9);
+        assertThat(valid.annotatableTexts()).hasSize(1);
+
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(new Block.ItemList(a, "stars", List.of(new Block.Item("x"))))).validated())
+                .extracting("field").isEqualTo("document.blocks[0].style");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(new Block.ItemList(a, "ordered", List.of()))).validated())
+                .extracting("field").isEqualTo("document.blocks[0].items");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(new Block.ItemList(a, "ordered", List.of(new Block.Item("iki\nsatır"))))).validated())
+                .extracting("code").isEqualTo("FORMAT");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(new Block.ItemList(a, "bullet", List.of(new Block.Item("kısa", List.of(new Block.Mark("bold", 0, 9, null))))))).validated())
+                .extracting("field").isEqualTo("document.blocks[0].items[0].marks[0].end");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(new Block.Callout(a, "danger", null, "x", null))).validated())
+                .extracting("field").isEqualTo("document.blocks[0].tone");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(), List.of(new ArticleDocument.Source(" ", null, null, null))).validated())
+                .extracting("field").isEqualTo("document.sources[0].title");
+        assertThatThrownBy(() -> new ArticleDocument(1, List.of(), List.of(new ArticleDocument.Source("x", null, null, "javascript:alert(1)"))).validated())
+                .extracting("field").isEqualTo("document.sources[0].url");
+    }
+
+    @Test
     void readingTimeAndPreviewAreDerivedFromTheBody() {
         String sentence = "Bu bir cümledir ve tam olarak on kelimeden oluşuyor burada. ";
         ArticleDocument document = new ArticleDocument(1, List.of(

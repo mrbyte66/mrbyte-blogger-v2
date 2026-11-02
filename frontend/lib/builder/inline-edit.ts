@@ -1,8 +1,18 @@
 import type { PageBlock } from "./model";
 import type { DocumentDraft } from "./document-protocol";
 import { adjustMarks, safeMarks, splitMarks, validMarks, type TextMark } from "../articles/marks";
+import { calloutTones, maxListItems, type CalloutTone } from "../articles/blocks";
 export const inlineEditEvent = "mrbyte:inline-edit";
-export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; insertKind?: "paragraph" | "heading2" | "heading3" | "quote"; offset?: number; end?: number; pasteText?: string; marks?: TextMark[]; action?: "join-previous" | "join-next" | "paste" | "split" | "move-up" | "move-down" | "insert-after" | "remove" | "paragraph" | "heading2" | "heading3" | "quote" };
+export type InlineEdit = { scope: "theme" | "document"; id: string; field: string; value: string; previous: string; insertKind?: "paragraph" | "heading2" | "heading3" | "quote" | "list" | "ordered" | "callout"; offset?: number; end?: number; pasteText?: string; marks?: TextMark[]; action?: "join-previous" | "join-next" | "paste" | "split" | "move-up" | "move-down" | "insert-after" | "remove" | "paragraph" | "heading2" | "heading3" | "quote" | "list" | "ordered" | "callout" | `tone-${CalloutTone}` };
+const textKinds = ["paragraph", "heading2", "heading3", "quote", "list", "ordered", "callout"];
+const actions = ["join-previous", "join-next", "paste", "split", "move-up", "move-down", "insert-after", "remove", ...textKinds, ...calloutTones.map((tone) => `tone-${tone}`)];
+/** The editor's name for a block's kind: heading2/heading3, list/ordered, or the format kind itself. */
+export function kindName(format: { kind: string; level?: number; style?: string } | undefined): string {
+  if (!format) return "paragraph";
+  if (format.kind === "heading") return `heading${format.level ?? 2}`;
+  if (format.kind === "list") return format.style === "ordered" ? "ordered" : "list";
+  return format.kind;
+}
 const themeFields: Partial<Record<PageBlock["kind"], Record<string, number>>> = {
   scene: { title: 160, emphasis: 160, description: 2000 }, intro: { title: 160, eyebrow: 120, description: 2000 },
   articles: { title: 160 }, series: { title: 160 }, projects: { title: 160 },
@@ -21,7 +31,7 @@ export function documentText(draft: DocumentDraft, field: string): { value: stri
       const value = draft.article.paragraphs[Number(field.slice(10))];
       const format=draft.article.paragraphFormats?.[Number(field.slice(10))];
       // A picture in the text has no writable text; it is edited from its properties.
-      if (typeof value === "string" && format?.kind !== "image") { return {value,max:format?.kind === "heading" ? 300 : format?.kind === "quote" ? 4000 : 20000,...(format?.kind !== "heading" ? {marks:draft.article.paragraphMarks?.[Number(field.slice(10))] ?? []} : {})}; }
+      if (typeof value === "string" && format?.kind !== "image") { return {value,max:format?.kind === "heading" ? 300 : format?.kind === "quote" || format?.kind === "callout" ? 4000 : 20000,...(format?.kind !== "heading" ? {marks:draft.article.paragraphMarks?.[Number(field.slice(10))] ?? []} : {})}; }
     }
   } else {
     if (field === "title") return { value: draft.series.title, max: 160 };
@@ -32,12 +42,19 @@ export function documentText(draft: DocumentDraft, field: string): { value: stri
 export function parseInlineEdit(value: unknown): InlineEdit | null {
   if (!value || typeof value !== "object") return null;
   const e = value as InlineEdit;
-  return (e.insertKind === undefined || (e.action === "insert-after" && ["paragraph","heading2","heading3","quote"].includes(e.insertKind))) && (e.end === undefined || (Number.isInteger(e.end) && e.end >= (e.offset ?? 0) && e.end <= 20000)) && (e.pasteText === undefined || (e.action === "paste" && typeof e.pasteText === "string" && e.pasteText.length <= 20000)) && (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || ["join-previous", "join-next", "paste", "split", "move-up", "move-down", "insert-after", "remove", "paragraph", "heading2", "heading3", "quote"].includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
+  return (e.insertKind === undefined || (e.action === "insert-after" && textKinds.includes(e.insertKind))) && (e.end === undefined || (Number.isInteger(e.end) && e.end >= (e.offset ?? 0) && e.end <= 20000)) && (e.pasteText === undefined || (e.action === "paste" && typeof e.pasteText === "string" && e.pasteText.length <= 20000)) && (e.marks === undefined || (typeof e.value === "string" && /^paragraph-\d{1,3}$/.test(String(e.field)) && validMarks(e.value, e.marks))) && (e.offset === undefined || (Number.isInteger(e.offset) && e.offset>=0 && e.offset<=20000)) && (e.action === undefined || actions.includes(e.action)) && (e.scope === "theme" || e.scope === "document") && typeof e.id === "string" && /^[a-zA-Z0-9-]{1,100}$/.test(e.id) && typeof e.field === "string" && /^[a-z-]+(?:\d{1,3})?$/.test(e.field) && typeof e.value === "string" && typeof e.previous === "string" && e.value.length <= 20000 && e.previous.length <= 20000 ? e : null;
 }
 export function editThemeText(block: PageBlock, edit: InlineEdit): PageBlock | null {
   const text = themeText(block, edit.field);
   if (edit.action || edit.scope !== "theme" || edit.id !== block.id || !text || text.value !== edit.previous || edit.value.length > text.max || !edit.value.trim()) return null;
   return { ...block, [edit.field]: edit.value } as PageBlock;
+}
+const starter: Record<NonNullable<InlineEdit["insertKind"]>, string> = { paragraph: "", heading2: "Başlık", heading3: "Alt başlık", quote: "Alıntı", list: "Madde", ordered: "Adım", callout: "Kısa bir not" };
+function formatOf(kind: NonNullable<InlineEdit["insertKind"]>): NonNullable<import("../content").Article["paragraphFormats"]>[number] {
+  if (kind === "heading2" || kind === "heading3") return { kind: "heading", level: kind === "heading3" ? 3 : 2 };
+  if (kind === "list" || kind === "ordered") return { kind: "list", style: kind === "ordered" ? "ordered" : "bullet" };
+  if (kind === "callout") return { kind: "callout", tone: "summary" };
+  return { kind };
 }
 export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): DocumentDraft | null {
   const record = draft.kind === "article" ? draft.article : draft.series;
@@ -56,8 +73,8 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
     const carried = paragraphFormats[index].kind === "heading" ? [] : safeMarks(edit.value, edit.marks ?? adjustMarks(edit.previous, edit.value, paragraphMarks[index]));
     paragraphMarks[index] = carried;
     if (edit.action === "insert-after") { const kind=edit.insertKind ?? "paragraph";
-      paragraphs.splice(index+1,0,kind === "paragraph" ? "" : kind === "quote" ? "Alıntı" : kind === "heading3" ? "Alt başlık" : "Başlık");
-      paragraphFormats.splice(index+1,0,kind === "heading2" || kind === "heading3" ? {kind:"heading",level:kind === "heading3" ? 3 : 2} : {kind}); paragraphMarks.splice(index+1,0,[]); blockIds?.paragraphs.splice(index+1,0,crypto.randomUUID()); }
+      paragraphs.splice(index+1,0,starter[kind]);
+      paragraphFormats.splice(index+1,0,formatOf(kind)); paragraphMarks.splice(index+1,0,[]); blockIds?.paragraphs.splice(index+1,0,crypto.randomUUID()); }
     if(edit.action === "split") {
       if(edit.offset === undefined || edit.offset>edit.value.length) return null;
       paragraphs[index]=edit.value.slice(0,edit.offset); paragraphs.splice(index+1,0,edit.value.slice(edit.end ?? edit.offset));
@@ -71,8 +88,11 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
       const left=edit.action==="join-previous" ? index-1 : index, right=left+1;
       if(left<0 || right>=paragraphs.length || paragraphs[left].length+paragraphs[right].length>20000) return null;
       if(paragraphFormats[left].kind==="image" || paragraphFormats[right].kind==="image") return null;
-      const length=paragraphs[left].length;
-      paragraphs[left]+=paragraphs[right];
+      // Backspace at the start of the line after a list makes that line the list's last item.
+      const glue=paragraphFormats[left].kind==="list" && paragraphs[right] ? "\n" : "";
+      if(glue && paragraphs[left].split("\n").length>=maxListItems) return null;
+      const length=paragraphs[left].length+glue.length;
+      paragraphs[left]+=glue+paragraphs[right].replace(/\n/g, paragraphFormats[left].kind==="list" ? "\n" : " ");
       paragraphMarks[left]=safeMarks(paragraphs[left],[...paragraphMarks[left],...paragraphMarks[right].map(mark=>({...mark,start:mark.start+length,end:mark.end+length}))]);
       if(paragraphFormats[left].kind==="heading" && paragraphs[left].length>300 || paragraphFormats[left].kind==="quote" && paragraphs[left].length>4000) paragraphFormats[left]={kind:"paragraph"};
       paragraphs.splice(right,1); paragraphFormats.splice(right,1); paragraphMarks.splice(right,1); blockIds?.paragraphs.splice(right,1);
@@ -107,9 +127,14 @@ export function editDocumentText(draft: DocumentDraft, edit: InlineEdit): Docume
       [paragraphMarks[index],paragraphMarks[target]]=[paragraphMarks[target],paragraphMarks[index]];
       if(blockIds) [blockIds.paragraphs[index],blockIds.paragraphs[target]]=[blockIds.paragraphs[target],blockIds.paragraphs[index]];
     }
-    if(edit.action === "heading2" || edit.action === "heading3") { if(!edit.value.trim() || edit.value.length>300) return null; paragraphFormats[index]={kind:"heading",level:edit.action==="heading2" ? 2 : 3}; paragraphMarks[index]=[]; }
-    if(edit.action === "quote") { if(!edit.value.trim() || edit.value.length>4000) return null; paragraphFormats[index]={kind:"quote"}; }
-    if(edit.action === "paragraph") paragraphFormats[index]={kind:"paragraph"};
+    // Only a list keeps line breaks: turning one into another block joins its items into one line.
+    const flatten = () => { if(paragraphFormats[index].kind==="list" && paragraphs[index].includes("\n")) { paragraphs[index]=paragraphs[index].replace(/\n/g," "); paragraphMarks[index]=safeMarks(paragraphs[index],paragraphMarks[index]); } };
+    if(edit.action === "heading2" || edit.action === "heading3") { flatten(); if(!paragraphs[index].trim() || paragraphs[index].length>300) return null; paragraphFormats[index]={kind:"heading",level:edit.action==="heading2" ? 2 : 3}; paragraphMarks[index]=[]; }
+    if(edit.action === "quote") { flatten(); if(!paragraphs[index].trim() || paragraphs[index].length>4000) return null; paragraphFormats[index]={kind:"quote"}; }
+    if(edit.action === "callout") { flatten(); if(!paragraphs[index].trim() || paragraphs[index].length>4000) return null; paragraphFormats[index]={kind:"callout",tone:"summary"}; }
+    if(edit.action === "list" || edit.action === "ordered") { if(!paragraphs[index].trim()) return null; paragraphFormats[index]={kind:"list",style:edit.action==="ordered" ? "ordered" : "bullet"}; }
+    if(edit.action?.startsWith("tone-")) { if(paragraphFormats[index].kind!=="callout") return null; paragraphFormats[index]={...paragraphFormats[index],tone:edit.action.slice(5) as CalloutTone}; }
+    if(edit.action === "paragraph") { flatten(); paragraphFormats[index]={kind:"paragraph"}; }
     const hasMarks = paragraphMarks.some((marks) => marks.length);
     const { paragraphMarks: _dropped, ...rest } = draft.article;
     return { ...draft, article: { ...rest, paragraphs, paragraphFormats, ...(hasMarks ? { paragraphMarks } : {}), ...(blockIds ? {blockIds} : {}) } };

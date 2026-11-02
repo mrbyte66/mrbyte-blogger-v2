@@ -3,14 +3,20 @@ import { isSafeHref, normalizeMarks, safeMarks, type TextMark } from "../article
 /**
  * Reading and restoring a rich paragraph that the canvas edits in place. The DOM is only a view of
  * `text` plus `marks`: <strong>/<b>, <em>/<i>, <code> and <a href> map to marks, <br> to a line break.
+ * In a list every <li> after the first starts a new line ("\n"); an empty item's <br data-empty> counts nothing.
  */
+const isEmptyMarker = (node: Node) => node instanceof HTMLElement && node.tagName === "BR" && node.hasAttribute("data-empty");
+/** An item boundary: a list item that follows another one stands for one "\n" before it. */
+const startsLine = (node: Node) => node instanceof HTMLElement && node.tagName === "LI" && node.previousElementSibling?.tagName === "LI";
 export function readMarked(root: HTMLElement): { text: string; marks: TextMark[] } {
   let text = "";
   const marks: TextMark[] = [];
   function walk(node: Node) {
     if (node.nodeType === Node.TEXT_NODE) { text += node.nodeValue ?? ""; return; }
     if (!(node instanceof HTMLElement)) return;
+    if (isEmptyMarker(node)) return;
     if (node.tagName === "BR") { text += "\n"; return; }
+    if (startsLine(node)) text += "\n";
     const start = text.length;
     node.childNodes.forEach(walk);
     const end = text.length;
@@ -32,8 +38,9 @@ export function readMarked(root: HTMLElement): { text: string; marks: TextMark[]
 
 function lengthOf(node: Node): number {
   if (node.nodeType === Node.TEXT_NODE) return node.nodeValue?.length ?? 0;
+  if (isEmptyMarker(node)) return 0;
   if (node instanceof HTMLElement && node.tagName === "BR") return 1;
-  let total = 0;
+  let total = startsLine(node) ? 1 : 0;
   node.childNodes.forEach((child) => { total += lengthOf(child); });
   return total;
 }
@@ -63,7 +70,13 @@ function position(root: HTMLElement, target: number): { node: Node; offset: numb
       const length = node.nodeValue?.length ?? 0;
       if (remaining <= length) return { node, offset: remaining };
       remaining -= length;
-    } else if (node instanceof HTMLElement && node.tagName === "BR") {
+    } else if (startsLine(node)) {
+      // The caret after an item's line break sits at the start of the next item.
+      const previous = (node as HTMLElement).previousElementSibling!;
+      if (remaining === 0) return { node: previous, offset: previous.childNodes.length };
+      remaining -= 1;
+      if (remaining === 0 && !node.textContent) return { node, offset: 0 };
+    } else if (node instanceof HTMLElement && node.tagName === "BR" && !isEmptyMarker(node)) {
       if (remaining === 0) { const parent = node.parentNode!; return { node: parent, offset: Array.prototype.indexOf.call(parent.childNodes, node) }; }
       remaining -= 1;
     }

@@ -5,14 +5,16 @@ import { type Article } from "../../lib/content";
 import { ArticleCategoryField } from "./ArticleCategoryField";
 import { ImageUpload } from "./ImageUpload";
 import { CoverField } from "./CoverSearch";
+import { maxSources, type ArticleSource } from "../../lib/articles/blocks";
 export function TextField({ label, value, onChange, multiline = false }: { label: string; value: string; onChange: (v: string) => void; multiline?: boolean }) {
   return <label className="studio-field"><span>{label}</span>{multiline ? <textarea rows={5} value={value} onChange={(e) => onChange(e.target.value)} /> : <input value={value} onChange={(e) => onChange(e.target.value)} />}</label>;
 }
-export const articleFields = [["title", "Başlık"], ["excerpt", "Özet / abstract"], ["cover", "Kapak görseli"], ["body", "Metin ve paragraflar"], ["figure", "Görsel"], ["code", "Kod örneği"], ["table", "Tablo"], ["meta", "Yazı bilgileri"], ["publication", "Yayın planı"], ["layout", "Sayfa düzeni"]] as const;
+export const articleFields = [["title", "Başlık"], ["excerpt", "Özet / abstract"], ["cover", "Kapak görseli"], ["body", "Metin ve paragraflar"], ["figure", "Görsel"], ["code", "Kod örneği"], ["table", "Tablo"], ["meta", "Yazı bilgileri"], ["sources", "Kaynaklar"], ["publication", "Yayın planı"], ["layout", "Sayfa düzeni"]] as const;
 export function ArticleProperties({ article, field, onChange, allowSlugEdit = false, onSchedule, onCancelSchedule, scheduleDisabled = false }: { onSchedule?: () => void; onCancelSchedule?: () => void; scheduleDisabled?: boolean; allowSlugEdit?: boolean; article: Article; field: string; onChange: (a: Article) => void }) {
   const update = (change: Partial<Article>) => onChange({ ...article, ...change });
   const presentation = article.presentation ?? { width: "comfortable", heading: "left", showMeta: true };
   if (field === "publication") return <>{article.visibility === "private" && <div role="note"><p>Bu eski özel kayıt yalnızca sana açık. Yayına hazırlamak için önce kamu taslağına dönüştür.</p><button type="button" onClick={() => update({visibility:"public",status:"draft"})}>Kamu yayınına hazırla</button></div>}<PublicationSchedule article={article} onChange={onChange} onSchedule={onSchedule} onCancel={onCancelSchedule} disabled={scheduleDisabled || article.visibility === "private"} /></>;
+  if (field === "sources") return <SourcesField sources={article.sources ?? []} onChange={(sources) => update({ sources })} />;
   if (field === "title") return <TextField label="Yazı başlığı" value={article.title} onChange={(title) => update({ title })} />;
   if (field === "cover") return <CoverField cover={article.coverUrl} resource={article.id && article.version !== undefined ? { type: "article", id: article.id, version: article.version } : null} privateContent={article.visibility === "private"} suggestedQuery={article.title} previewAlt="Yazı kapağı önizlemesi" onChange={(coverUrl) => update({ coverUrl })} />;
   if (field === "excerpt") return <TextField label="Özet / abstract" value={article.excerpt} multiline onChange={(excerpt) => update({ excerpt })} />;
@@ -29,6 +31,34 @@ export function ArticleProperties({ article, field, onChange, allowSlugEdit = fa
       const ids=article.blockIds ? {...article.blockIds,paragraphs:[...article.blockIds.paragraphs]} : undefined;
       if(ids) [ids.paragraphs[index],ids.paragraphs[index+direction]]=[ids.paragraphs[index+direction],ids.paragraphs[index]];
       update({ paragraphs, paragraphFormats:formats, ...(ids ? {blockIds:ids} : {}) }); }}>{direction === -1 ? "↑" : "↓"}</button>)}<button disabled={article.paragraphs.length === 1} onClick={() => update({ paragraphs: article.paragraphs.filter((_, i) => i !== index), ...(article.paragraphFormats ? {paragraphFormats:article.paragraphFormats.filter((_,i)=>i!==index)} : {}), ...(article.blockIds ? {blockIds:{...article.blockIds,paragraphs:article.blockIds.paragraphs.filter((_,i)=>i!==index)}} : {}) })}>Paragrafı kaldır</button></div></div>)}<button className="studio-secondary" onClick={() => update({ paragraphs: [...article.paragraphs, "Yeni paragraf."], ...(article.paragraphFormats ? {paragraphFormats:[...article.paragraphFormats,{kind:"paragraph"}]} : {}), ...(article.blockIds ? {blockIds:{...article.blockIds,paragraphs:[...article.blockIds.paragraphs,crypto.randomUUID()]}} : {}) })}>Paragraf ekle</button></>;
+}
+
+/** The article's bibliography: shown after the text, numbered, titles in italics. Untitled rows are not saved. */
+function SourcesField({ sources, onChange }: { sources: readonly ArticleSource[]; onChange: (sources: ArticleSource[]) => void }) {
+  const set = (index: number, change: Partial<ArticleSource>) => onChange(sources.map((source, i) => i === index ? clean({ ...source, ...change }) : { ...source }));
+  const move = (index: number, direction: -1 | 1) => { const next = sources.map((source) => ({ ...source })); [next[index], next[index + direction]] = [next[index + direction], next[index]]; onChange(next); };
+  const badUrl = (url?: string) => !!url && !/^https:\/\/\S+$/.test(url.trim());
+  return <>
+    <p className="property-note">Yazının sonunda “Kaynaklar” başlığıyla, numaralı ve başlıkları italik gösterilir. Yalnız başlığı olan kaynaklar kaydedilir.</p>
+    {sources.map((source, index) => <fieldset className="document-source" key={index}>
+      <legend>Kaynak {index + 1}</legend>
+      <TextField label="Başlık" value={source.title} onChange={(title) => set(index, { title })} />
+      <TextField label="Yazar veya site" value={source.publisher ?? ""} onChange={(publisher) => set(index, { publisher })} />
+      <TextField label="Yıl" value={source.year ?? ""} onChange={(year) => set(index, { year })} />
+      <label className="studio-field"><span>Bağlantı</span><input type="url" inputMode="url" placeholder="https://…" aria-invalid={badUrl(source.url)} value={source.url ?? ""} onChange={(e) => set(index, { url: e.target.value })} /></label>
+      {badUrl(source.url) && <p className="property-note" role="alert">Bağlantı https:// ile başlamalı.</p>}
+      <div className="document-order">
+        <button type="button" disabled={index === 0} aria-label={`Kaynak ${index + 1} yukarı`} onClick={() => move(index, -1)}>↑</button>
+        <button type="button" disabled={index === sources.length - 1} aria-label={`Kaynak ${index + 1} aşağı`} onClick={() => move(index, 1)}>↓</button>
+        <button type="button" onClick={() => onChange(sources.filter((_, i) => i !== index).map((item) => ({ ...item })))}>Kaynağı kaldır</button>
+      </div>
+    </fieldset>)}
+    <button type="button" className="studio-secondary" disabled={sources.length >= maxSources} onClick={() => onChange([...sources.map((source) => ({ ...source })), { title: "" }])}>Kaynak ekle</button>
+  </>;
+}
+/** Optional fields are left out instead of kept empty. */
+function clean(source: ArticleSource): ArticleSource {
+  return { title: source.title.slice(0, 300), ...(source.publisher ? { publisher: source.publisher.slice(0, 200) } : {}), ...(source.year ? { year: source.year.slice(0, 20) } : {}), ...(source.url ? { url: source.url.slice(0, 500) } : {}) };
 }
 
 /** A picture placed in the text: upload or replace it, describe it, or remove it from the text. */

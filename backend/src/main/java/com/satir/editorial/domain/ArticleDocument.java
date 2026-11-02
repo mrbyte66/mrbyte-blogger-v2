@@ -7,12 +7,31 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.satir.platform.validation.ValidationException;
 
-/** Versioned article body. Validation mirrors the limits in API contract §2. */
-public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
+/**
+ * Versioned article body. Validation mirrors the limits in API contract §2. {@code sources} is the
+ * article's bibliography, shown after the text; it travels with each revision like the blocks do.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ArticleDocument(Integer schemaVersion, List<Block> blocks, List<Source> sources) {
+
+    /** One cited work: what it is called, who published it, when, and where to read it. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Source(String title, String publisher, String year, String url) {
+    }
+
+    public ArticleDocument(Integer schemaVersion, List<Block> blocks) {
+        this(schemaVersion, blocks, null);
+    }
 
     public static final int MAX_BLOCKS = 500;
+    public static final int MAX_SOURCES = 50;
+    public static final int MAX_LIST_ITEMS = 100;
+    private static final Set<String> LIST_STYLES = Set.of("bullet", "ordered");
+    private static final Set<String> CALLOUT_TONES = Set.of("note", "tip", "warning", "summary");
+    private static final Pattern SOURCE_URL = Pattern.compile("https://[^\\s]{1,480}");
     private static final Set<String> CODE_LANGUAGES = Set.of("plain", "java", "javascript", "typescript", "python",
             "bash", "sql", "json", "yaml", "html", "css", "kotlin", "go", "rust", "csharp", "cpp");
     private static final Pattern STATIC_PATH = Pattern.compile("/assets/[a-zA-Z0-9._/-]{1,200}");
@@ -48,6 +67,24 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
                 throw new ValidationException(field + ".id", "DUPLICATE");
             }
             validateBlock(field, block);
+        }
+        if (sources != null) {
+            if (sources.size() > MAX_SOURCES) {
+                throw new ValidationException("document.sources", "LENGTH");
+            }
+            for (int i = 0; i < sources.size(); i++) {
+                Source source = sources.get(i);
+                String field = "document.sources[" + i + "]";
+                if (source == null) {
+                    throw new ValidationException(field, "REQUIRED");
+                }
+                text(field + ".title", source.title(), 1, 300);
+                optionalText(field + ".publisher", source.publisher(), 200);
+                optionalText(field + ".year", source.year(), 20);
+                if (source.url() != null && !SOURCE_URL.matcher(source.url()).matches()) {
+                    throw new ValidationException(field + ".url", "FORMAT");
+                }
+            }
         }
         return this;
     }
@@ -89,6 +126,34 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
                     throw new ValidationException(field + ".width", "INVALID");
                 }
             }
+            case Block.ItemList list -> {
+                if (list.style() == null || !LIST_STYLES.contains(list.style())) {
+                    throw new ValidationException(field + ".style", "INVALID");
+                }
+                if (list.items() == null || list.items().isEmpty() || list.items().size() > MAX_LIST_ITEMS) {
+                    throw new ValidationException(field + ".items", "LENGTH");
+                }
+                for (int i = 0; i < list.items().size(); i++) {
+                    Block.Item item = list.items().get(i);
+                    String at = field + ".items[" + i + "]";
+                    if (item == null) {
+                        throw new ValidationException(at, "REQUIRED");
+                    }
+                    text(at + ".text", item.text(), 1, 2000);
+                    if (item.text().contains("\n")) {
+                        throw new ValidationException(at + ".text", "FORMAT");
+                    }
+                    marks(at + ".marks", item.text(), item.marks());
+                }
+            }
+            case Block.Callout callout -> {
+                if (callout.tone() == null || !CALLOUT_TONES.contains(callout.tone())) {
+                    throw new ValidationException(field + ".tone", "INVALID");
+                }
+                optionalText(field + ".title", callout.title(), 120);
+                text(field + ".text", callout.text(), 1, 4000);
+                marks(field + ".marks", callout.text(), callout.marks());
+            }
             case Block.Table t -> {
                 optionalText(field + ".caption", t.caption(), 300);
                 if (t.columns() == null || t.columns().isEmpty() || t.columns().size() > 20) {
@@ -128,6 +193,7 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
                 case Block.Heading h -> h.text();
                 case Block.Quote q -> q.text();
                 case Block.Code c -> c.text();
+                case Block.Callout c -> c.text();
                 default -> null;
             };
             if (text != null) {
@@ -137,7 +203,7 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
         return texts;
     }
 
-    /** Words in the text a reader sees: paragraphs, headings and quotes. */
+    /** Words in the text a reader sees: paragraphs, headings, quotes, list items and callouts. */
     public long wordCount() {
         long words = 0;
         for (Block block : blocks) {
@@ -145,6 +211,9 @@ public record ArticleDocument(Integer schemaVersion, List<Block> blocks) {
                 case Block.Paragraph p -> p.text();
                 case Block.Heading h -> h.text();
                 case Block.Quote q -> q.text();
+                case Block.Callout c -> c.text();
+                case Block.ItemList l -> l.items() == null ? null
+                        : String.join(" ", l.items().stream().map(item -> item == null || item.text() == null ? "" : item.text()).toList());
                 default -> null;
             };
             if (text != null && !text.isBlank()) {

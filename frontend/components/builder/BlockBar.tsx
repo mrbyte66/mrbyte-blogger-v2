@@ -3,13 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { editDocumentText, type InlineEdit } from "../../lib/builder/inline-edit";
 import type { DocumentDraft } from "../../lib/builder/document-protocol";
 
-export type BlockKind = "paragraph" | "heading" | "quote";
+export type BlockKind = "paragraph" | "heading" | "quote" | "list" | "callout";
 export const blockKinds: { kind: BlockKind; label: string; hint: string; key: string }[] = [
   { kind: "paragraph", label: "Paragraf", hint: "¶", key: "↵" },
   { kind: "heading", label: "Başlık", hint: "H2", key: "#" },
   { kind: "quote", label: "Alıntı", hint: "“ ”", key: ">" },
+  { kind: "list", label: "Liste", hint: "•", key: "-" },
+  { kind: "callout", label: "Bilgi kutusu", hint: "ⓘ", key: "" },
 ];
-const starter: Record<BlockKind, string> = { paragraph: "", heading: "Yeni başlık", quote: "Alıntı metni" };
+const starter: Record<BlockKind, string> = { paragraph: "", heading: "Yeni başlık", quote: "Alıntı metni", list: "Madde", callout: "Kısa bir not" };
 
 /**
  * Inserts a text block after the selected paragraph (or at the end) through the same pure edit the
@@ -26,7 +28,7 @@ export function insertBlock(draft: DocumentDraft, field: string, kind: BlockKind
   if (!inserted) return null;
   const at = index + 1;
   if (kind === "paragraph") return { draft: inserted, field: `paragraph-${at}` };
-  const converted = editDocumentText(inserted, edit(at, starter[kind], "", kind === "heading" ? "heading2" : "quote"));
+  const converted = editDocumentText(inserted, edit(at, starter[kind], "", kind === "heading" ? "heading2" : kind));
   return converted ? { draft: converted, field: `paragraph-${at}` } : null;
 }
 
@@ -37,7 +39,7 @@ export function insertBlock(draft: DocumentDraft, field: string, kind: BlockKind
 export function BlockBar({ draft, caret }: { draft: DocumentDraft; caret?: { row: number; column: number } | null }) {
   if (draft.kind !== "article") return null;
   return <div className="block-bar">
-    <span className="block-bar-hint">Boş satırda <kbd>＋</kbd> ya da <kbd>/</kbd> ile blok ekle · <kbd>##</kbd> başlık · <kbd>&gt;</kbd> alıntı</span>
+    <span className="block-bar-hint">Boş satırda <kbd>＋</kbd> ya da <kbd>/</kbd> ile blok ekle · <kbd>##</kbd> başlık · <kbd>&gt;</kbd> alıntı · <kbd>-</kbd> liste · <kbd>1.</kbd> numaralı</span>
     {caret && <span className="block-bar-position" aria-live="off">SATIR {caret.row} · SÜTUN {caret.column}</span>}
   </div>;
 }

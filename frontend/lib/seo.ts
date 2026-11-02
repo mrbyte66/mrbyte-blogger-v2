@@ -44,6 +44,7 @@ type Article = {
   slug: string; title: string; abstract?: string | null; firstPublishedAt?: string | null; publicModifiedAt?: string | null;
   cover?: { url: string; width?: number; height?: number } | null; categories?: { name: string }[];
   series?: { slug: string; title: string; position: number } | null;
+  document?: { sources?: { title: string; publisher?: string; url?: string }[] };
 };
 export function articleJsonLd(origin: string, site: Site, article: Article) {
   const url = `${origin}/yazilar/${article.slug}`;
@@ -54,6 +55,7 @@ export function articleJsonLd(origin: string, site: Site, article: Article) {
     ...(article.cover ? { image: { "@type": "ImageObject", url: absoluteUrl(origin, article.cover.url), width: article.cover.width, height: article.cover.height } } : {}),
     ...(article.categories?.length ? { keywords: article.categories.map((category) => category.name).join(", ") } : {}),
     author: authorJsonLd(origin, site), publisher: publisherJsonLd(origin, site),
+    ...(article.document?.sources?.length ? { citation: article.document.sources.map((source) => ({ "@type": "CreativeWork", name: source.title, ...(source.url ? { url: source.url } : {}), ...(source.publisher ? { publisher: { "@type": "Organization", name: source.publisher } } : {}) })) } : {}),
     ...(article.series ? { isPartOf: { "@type": "CreativeWorkSeries", name: article.series.title, url: `${origin}/seriler/${article.series.slug}` }, position: article.series.position } : {}),
   };
 }

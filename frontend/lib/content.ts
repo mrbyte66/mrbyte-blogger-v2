@@ -1,4 +1,5 @@
 import type { TextMark } from "./articles/marks";
+import type { ArticleSource, CalloutTone, ListStyle } from "./articles/blocks";
 export type Topic = string;
 /** Public totals from the server: visible-card/permalink views, active claps and member saves. */
 import type { Schema } from "./api/contract";
@@ -35,8 +36,11 @@ export type Article = {
   excerpt: string;
   minutes: number;
   presentation?: { width: "comfortable" | "wide"; heading: "left" | "center"; showMeta: boolean };
-  /** Parallel to `paragraphs`. An "image" entry is a picture placed at that point of the text (its paragraph is ""). */
-  paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote" | "image"; level?: 2 | 3; attribution?: string; image?: ArticleImage }[];
+  /**
+   * Parallel to `paragraphs`. An "image" entry is a picture placed at that point of the text (its paragraph is "");
+   * a "list" entry keeps one item per line; a "callout" is a highlighted aside with a tone and optional title.
+   */
+  paragraphFormats?: readonly { kind: "paragraph" | "heading" | "quote" | "image" | "list" | "callout"; level?: 2 | 3; attribution?: string; image?: ArticleImage; style?: ListStyle; tone?: CalloutTone; title?: string }[];
   /** Inline formatting per paragraph, parallel to `paragraphs` (offsets are UTF-16 units of the plain text). */
   paragraphMarks?: readonly (readonly TextMark[])[];
   paragraphs: readonly string[];
@@ -49,6 +53,8 @@ export type Article = {
   /** The lead picture shown after the first paragraph; further pictures are "image" entries of `paragraphFormats`. */
   figure?: ArticleImage;
   table?: { caption: string; columns: readonly string[]; rows: readonly (readonly string[])[] };
+  /** The bibliography shown after the text (articles only). */
+  sources?: readonly ArticleSource[];
 };
 
 /** A compact chapter-list preview taken from the article body, not its editorial abstract. */

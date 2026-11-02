@@ -303,6 +303,33 @@ class EditorialIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void listsCalloutsAndSourcesReachReaders() {
+        createOwner();
+        owner = ownerClient();
+        Map<String, Object> document = Map.of("schemaVersion", 1,
+                "blocks", List.of(
+                        Map.of("id", UUID.randomUUID().toString(), "type", "paragraph", "text", "Giriş."),
+                        Map.of("id", UUID.randomUUID().toString(), "type", "list", "style", "ordered", "items", List.of(
+                                Map.of("text", "Denetimli öğrenme", "marks", List.of(Map.of("type", "bold", "start", 0, "end", 9))),
+                                Map.of("text", "Pekiştirmeli"))),
+                        Map.of("id", UUID.randomUUID().toString(), "type", "callout", "tone", "tip", "title", "Kısaca", "text", "Her soruna derin öğrenme gerekmez.")),
+                "sources", List.of(Map.of("title", "AI vs ML vs DL", "publisher", "All Things Open", "year", "2025", "url", "https://allthingsopen.org/x")));
+        Response draft = create(with(article("Bloklar", "bloklar", "x"), "document", document));
+        assertThat(draft.status()).isEqualTo(201);
+        act(draft, "publish");
+
+        var body = client().get("/api/v1/articles/by-slug/bloklar").json().get("document");
+        assertThat(body.get("blocks").get(1).get("type").asString()).isEqualTo("list");
+        assertThat(body.get("blocks").get(1).get("items").get(0).get("marks").get(0).get("end").asInt()).isEqualTo(9);
+        assertThat(body.get("blocks").get(1).get("items").get(1).has("marks")).isFalse();
+        assertThat(body.get("blocks").get(2).get("tone").asString()).isEqualTo("tip");
+        assertThat(body.get("sources").get(0).get("publisher").asString()).isEqualTo("All Things Open");
+
+        Map<String, Object> badList = Map.of("schemaVersion", 1, "blocks", List.of(Map.of("id", UUID.randomUUID().toString(), "type", "list", "style", "bullet", "items", List.of())));
+        assertThat(owner.command("/api/v1/studio/articles", with(article("y", "y", "y"), "document", badList), null).status()).isEqualTo(422);
+    }
+
+    @Test
     void unknownBlockTypesAreRejected() {
         createOwner();
         owner = ownerClient();

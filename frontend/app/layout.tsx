@@ -30,6 +30,7 @@ import { SiteDataProvider } from "../components/data/SiteData";
 import { PublicContentRefresh } from "../components/data/PublicContentRefresh";
 import { BackendUnavailable, loadPublicContent, siteOrigin, type PublicContent } from "../lib/api/server";
 import { DEFAULT_SITE_NAME } from "../lib/builder/model";
+import { DEFAULT_SHARE_IMAGE, DEFAULT_SITE_DESCRIPTION, robotsFor } from "../lib/seo";
 
 // Content comes from the API on every request; nothing published is baked in at build time.
 export const dynamic = "force-dynamic";
@@ -46,9 +47,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(siteOrigin()),
     title: { default: site?.seo?.title ?? `${name}. — Kod, kelime ve aradakiler`, template: `%s — ${name}.` },
-    description: site?.seo?.description ?? "Yazılım, yapay zekâ, edebiyat ve kültür üzerine kişisel bir evren.",
+    description: site?.seo?.description ?? DEFAULT_SITE_DESCRIPTION,
     // Indexing needs both the owner's site setting and the deployment gate (backend decides).
-    robots: site?.indexingEnabled ? { index: true, follow: true } : { index: false, follow: false },
+    robots: robotsFor(!!site?.indexingEnabled),
+    openGraph: { siteName: `${name}.`, locale: "tr_TR", type: "website", images: [DEFAULT_SHARE_IMAGE] },
     icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
   };
 }

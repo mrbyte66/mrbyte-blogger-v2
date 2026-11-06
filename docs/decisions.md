@@ -136,3 +136,7 @@ Footer düzeltmesi kullanıcının talimatıyla #11 Todo: Studio/public aynı zo
 - Etiket isteğe bağlıdır; etiketsiz yazı yayınlanabilir.
 - Yazılar sayfası ve seri sayfası aynı etiketlerle süzer. Seri sayfası yalnız kendi bölümlerinde kullanılan etiketleri gösterir; birden çok etiket seçilebilir (hepsini taşıyan bölümler kalır).
 - Ayrı "seri etiketi" alanı (#38) bu kararla kaldırıldı.
+
+## 6 Kasım 2026 — Geçici dosya alanı
+
+`/storage` yalnız doğrudan URL ile açılır; ana sayfa/hesap menüsüne bağlantı eklenmez. Yükleme ve yönetim yalnız site sahibine aittir, bağlantıyı alan indirebilir. Tek dosya sınırı 50 GB; isteğe bağlı indirme şifresi ve saklama süresi, erken kalıcı silme ve süre uzatma. Bu geçici dosyalar, yazıların geri alınabilir çöp kutusundan ayrıdır. Kullanıcı yerel Docker’ı duraklatılmış bırakmayı, sunucuda denemeyi ve doğrudan canlıya alınmasını istedi. Takip #43; ayrıntılar [storage](features/storage.md).

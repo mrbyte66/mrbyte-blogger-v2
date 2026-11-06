@@ -21,6 +21,9 @@ x-backend-env: &backend-env
   APP_TIME_ZONE: ${APP_TIME_ZONE:-Europe/Istanbul}
   INDEXING_ENABLED: ${INDEXING_ENABLED:-false}
   SATIR_MEDIA_ROOT: /var/lib/satir/media
+  SATIR_STORAGE_ROOT: /var/lib/satir/transfers
+  SATIR_STORAGE_QUOTA_BYTES: ${SATIR_STORAGE_QUOTA_BYTES:-150000000000}
+  SATIR_STORAGE_RESERVE_BYTES: ${SATIR_STORAGE_RESERVE_BYTES:-20000000000}
 
 services:
   postgres:
@@ -102,6 +105,7 @@ services:
         target: SATIR_COVERS_PEXELS_API_KEY
     volumes:
       - media:/var/lib/satir/media
+      - transfers:/var/lib/satir/transfers
     # db: PostgreSQL; app: Next.js and Caddy; egress: mail, Google and the cover provider.
     networks: [db, app, egress]
     mem_limit: 1280m
@@ -241,6 +245,7 @@ networks:
   egress: {}
 
 volumes:
+  transfers:
   postgres-data:
   media:
   backups:

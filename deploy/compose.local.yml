@@ -49,12 +49,14 @@ services:
       SPRING_MAIL_PORT: "1025"
       PUBLIC_SITE_ORIGIN: http://127.0.0.1:${LOCAL_WEB_PORT:-3010}
       INDEXING_ENABLED: "false"
+      SATIR_STORAGE_ROOT: /var/lib/satir/transfers
     # Optional, git-ignored: SATIR_GOOGLE_CLIENT_ID / SATIR_GOOGLE_CLIENT_SECRET for Google sign-in.
     env_file:
       - path: ./google.local.env
         required: false
     volumes:
       - media:/var/lib/satir/media
+      - transfers:/var/lib/satir/transfers
       # Dev-only seed for `seed-demo` (holds test passwords; never part of the image).
       - ./seed:/opt/satir/seed:ro
     depends_on:
@@ -79,5 +81,6 @@ services:
         condition: service_healthy
 
 volumes:
+  transfers:
   postgres:
   media:

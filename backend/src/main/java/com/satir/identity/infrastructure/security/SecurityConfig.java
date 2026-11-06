@@ -82,6 +82,8 @@ class SecurityConfig {
                 .addFilterBefore(new SessionAccessFilter(accountAccess, clock), AuthorizationFilter.class)
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/storage/*", "/api/v1/storage/*/download").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/storage/*/unlock").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/site", "/api/v1/categories", "/api/v1/articles",
                                 "/api/v1/articles/**", "/api/v1/series", "/api/v1/series/**", "/api/v1/seo/**",
                                 "/api/v1/media/**", "/api/v1/dictionary").permitAll()

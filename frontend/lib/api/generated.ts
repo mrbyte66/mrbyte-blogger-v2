@@ -1539,10 +1539,213 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/studio/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List owner files and available storage capacity */
+        get: operations["listStorageFiles"];
+        put?: never;
+        /** Reserve capacity and start a resumable file upload */
+        post: operations["startStorageFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/files/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Read committed upload offset and metadata */
+        get: operations["getStorageFile"];
+        put?: never;
+        post?: never;
+        /** Permanently delete a temporary file */
+        delete: operations["deleteStorageFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/files/{id}/chunks": {
+        parameters: {
+            query: {
+                offset: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Append a bounded chunk at the committed offset */
+        post: operations["uploadStorageChunk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/files/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete upload and start its retention period */
+        post: operations["completeStorageFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/studio/files/{id}/expiry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Extend a live file expiry */
+        patch: operations["extendStorageFile"];
+        trace?: never;
+    };
+    "/storage/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Read shared metadata after password authorization */
+        get: operations["getSharedStorageFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage/{id}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authorize a password-protected file in this session */
+        post: operations["unlockStorageFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storage/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Stream an authorized file or a single byte range */
+        get: operations["downloadStorageFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        StorageFile: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: int64 */
+            sizeBytes: number;
+            /** Format: int64 */
+            uploadedBytes: number;
+            fingerprint: string;
+            /** @enum {string} */
+            state: "UPLOADING" | "READY";
+            passwordRequired: boolean;
+            /** Format: int64 */
+            retentionHours: number;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        StorageListing: {
+            items: components["schemas"]["StorageFile"][];
+            /** Format: int64 */
+            availableBytes: number;
+            /** Format: int64 */
+            quotaBytes: number;
+            /** Format: int64 */
+            maxFileBytes: number;
+            /** Format: int64 */
+            chunkBytes: number;
+        };
+        StorageStart: {
+            name: string;
+            /** Format: int64 */
+            sizeBytes: number;
+            fingerprint: string;
+            password?: string;
+            /** Format: int64 */
+            retentionHours: number;
+        };
+        StorageShared: {
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            /** Format: int64 */
+            sizeBytes: number | null;
+            passwordRequired: boolean;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         CsrfToken: {
             token: string;
             /** @constant */
@@ -6150,6 +6353,265 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    listStorageFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageListing"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    startStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StorageStart"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageFile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageFile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    uploadStorageChunk: {
+        parameters: {
+            query: {
+                offset: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageFile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    completeStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageFile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    extendStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: int64 */
+                    hours: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageFile"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getSharedStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageShared"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    unlockStorageFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    password: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    downloadStorageFile: {
+        parameters: {
+            query?: never;
+            header?: {
+                Range?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attachment, no-store. Authorization and expiry checked on every request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Requested byte range */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            default: components["responses"]["Problem"];
         };
     };
 }

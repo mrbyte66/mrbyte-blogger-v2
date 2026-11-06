@@ -20,7 +20,7 @@ class ArchitectureTest {
             .that().resideInAPackage("com.satir.platform..")
             .should().dependOnClassesThat().resideInAnyPackage(
                     "com.satir.identity..", "com.satir.editorial..", "com.satir.site..", "com.satir.media..",
-                    "com.satir.library..", "com.satir.reading..", "com.satir.engagement..", "com.satir.delivery..");
+                    "com.satir.library..", "com.satir.reading..", "com.satir.engagement..", "com.satir.delivery..", "com.satir.storage..");
 
     @ArchTest
     static final ArchRule domainIsIndependentOfOuterLayers = noClasses()

@@ -2010,6 +2010,220 @@ paths:
         '422': {description: '`VALIDATION_FAILED` with candidateId `UNKNOWN` for a candidate not in the job', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
         '502': {description: '`COVER_DOWNLOAD_FAILED`', content: {application/problem+json: {schema: {$ref: '#/components/schemas/Problem'}}}}
 
+  /studio/files:
+    get:
+      operationId: "listStorageFiles"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": []}
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageListing"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "List owner files and available storage capacity"
+    post:
+      operationId: "startStorageFile"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": [], "csrfHeader": []}
+      responses:
+        "201":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageFile"
+        default:
+          $ref: "#/components/responses/Problem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageStart"
+      summary: "Reserve capacity and start a resumable file upload"
+  /studio/files/{id}:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+    get:
+      operationId: "getStorageFile"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": []}
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageFile"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "Read committed upload offset and metadata"
+    delete:
+      operationId: "deleteStorageFile"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": [], "csrfHeader": []}
+      responses:
+        "204":
+          description: "Success"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "Permanently delete a temporary file"
+  /studio/files/{id}/chunks:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+      - {"name": "offset", "in": "query", "required": true, "schema": {"type": "integer", "format": "int64", "minimum": 0}}
+    post:
+      operationId: "uploadStorageChunk"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": [], "csrfHeader": []}
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageFile"
+        default:
+          $ref: "#/components/responses/Problem"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: "object"
+              required: ["file"]
+              properties:
+                file:
+                  type: "string"
+                  format: "binary"
+      summary: "Append a bounded chunk at the committed offset"
+  /studio/files/{id}/complete:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+    post:
+      operationId: "completeStorageFile"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": [], "csrfHeader": []}
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageFile"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "Complete upload and start its retention period"
+  /studio/files/{id}/expiry:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+    patch:
+      operationId: "extendStorageFile"
+      tags: ["studio"]
+      security:
+        - {"sessionCookie": [], "csrfHeader": []}
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageFile"
+        default:
+          $ref: "#/components/responses/Problem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required: ["hours"]
+              properties:
+                hours:
+                  type: "integer"
+                  format: "int64"
+                  minimum: 1
+                  maximum: 720
+      summary: "Extend a live file expiry"
+  /storage/{id}:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+    get:
+      operationId: "getSharedStorageFile"
+      tags: ["public"]
+      security: []
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageShared"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "Read shared metadata after password authorization"
+  /storage/{id}/unlock:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+    post:
+      operationId: "unlockStorageFile"
+      tags: ["public"]
+      security:
+        - {"csrfHeader": []}
+      responses:
+        "204":
+          description: "Success"
+        default:
+          $ref: "#/components/responses/Problem"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required: ["password"]
+              properties:
+                password:
+                  type: "string"
+                  maxLength: 128
+      summary: "Authorize a password-protected file in this session"
+  /storage/{id}/download:
+    parameters:
+      - {"name": "id", "in": "path", "required": true, "schema": {"type": "string", "format": "uuid"}}
+      - {"name": "Range", "in": "header", "schema": {"type": "string"}}
+    get:
+      operationId: "downloadStorageFile"
+      tags: ["public"]
+      security: []
+      responses:
+        "200":
+          description: "Attachment, no-store. Authorization and expiry checked on every request."
+          content:
+            application/octet-stream:
+              schema:
+                type: "string"
+                format: "binary"
+        "206":
+          description: "Requested byte range"
+          content:
+            application/octet-stream:
+              schema:
+                type: "string"
+                format: "binary"
+        default:
+          $ref: "#/components/responses/Problem"
+      summary: "Stream an authorized file or a single byte range"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -2097,6 +2311,95 @@ components:
           schema: {$ref: '#/components/schemas/ThemeWorkspace'}
 
   schemas:
+    StorageFile:
+      type: "object"
+      required: ["id", "name", "sizeBytes", "uploadedBytes", "fingerprint", "state", "passwordRequired", "retentionHours", "expiresAt"]
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        sizeBytes:
+          type: "integer"
+          format: "int64"
+        uploadedBytes:
+          type: "integer"
+          format: "int64"
+        fingerprint:
+          type: "string"
+        state:
+          type: "string"
+          enum: ["UPLOADING", "READY"]
+        passwordRequired:
+          type: "boolean"
+        retentionHours:
+          type: "integer"
+          format: "int64"
+        expiresAt:
+          type: "string"
+          format: "date-time"
+    StorageListing:
+      type: "object"
+      required: ["items", "availableBytes", "quotaBytes", "maxFileBytes", "chunkBytes"]
+      properties:
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/StorageFile"
+        availableBytes:
+          type: "integer"
+          format: "int64"
+        quotaBytes:
+          type: "integer"
+          format: "int64"
+        maxFileBytes:
+          type: "integer"
+          format: "int64"
+        chunkBytes:
+          type: "integer"
+          format: "int64"
+    StorageStart:
+      type: "object"
+      required: ["name", "sizeBytes", "fingerprint", "retentionHours"]
+      properties:
+        name:
+          type: "string"
+          minLength: 1
+          maxLength: 240
+        sizeBytes:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 50000000000
+        fingerprint:
+          type: "string"
+          pattern: "^[a-f0-9]{64}$"
+        password:
+          type: "string"
+          maxLength: 128
+        retentionHours:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 720
+    StorageShared:
+      type: "object"
+      required: ["id", "name", "sizeBytes", "passwordRequired", "expiresAt"]
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: ["string", "null"]
+        sizeBytes:
+          type: ["integer", "null"]
+          format: "int64"
+        passwordRequired:
+          type: "boolean"
+        expiresAt:
+          type: "string"
+          format: "date-time"
     CsrfToken:
       type: object
       additionalProperties: false

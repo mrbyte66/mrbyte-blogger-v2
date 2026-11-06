@@ -86,6 +86,10 @@ satir:
     time-zone: ${APP_TIME_ZONE:Europe/Istanbul}
     # Deployment gate: production indexing needs this AND the owner's site setting.
     indexing-enabled: ${INDEXING_ENABLED:false}
+  storage:
+    root: ${SATIR_STORAGE_ROOT:./data/transfers}
+    quota-bytes: ${SATIR_STORAGE_QUOTA_BYTES:150000000000}
+    reserve-bytes: ${SATIR_STORAGE_RESERVE_BYTES:20000000000}
   media:
     root: ${SATIR_MEDIA_ROOT:./data/media}
   mail:

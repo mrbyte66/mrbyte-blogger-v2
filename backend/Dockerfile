@@ -14,15 +14,16 @@ RUN ./mvnw -B -q package -DskipTests \
     && cp target/satir-backend-*.jar /workspace/app.jar
 
 FROM eclipse-temurin:25-jre-noble
-# Non-root runtime user; the media volume is the only writable application path.
+# Non-root runtime user; media and temporary transfers use separate writable volumes.
 RUN groupadd --system --gid 10001 satir \
     && useradd --system --uid 10001 --gid satir --no-create-home --shell /usr/sbin/nologin satir \
-    && mkdir -p /var/lib/satir/media \
+    && mkdir -p /var/lib/satir/media /var/lib/satir/transfers \
     && chown -R satir:satir /var/lib/satir
 WORKDIR /app
 COPY --from=build --chown=root:root /workspace/app.jar /app/app.jar
 USER satir:satir
 ENV SATIR_MEDIA_ROOT=/var/lib/satir/media \
+    SATIR_STORAGE_ROOT=/var/lib/satir/transfers \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=55 -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/urandom"
 EXPOSE 8080
 # Readiness includes the database; liveness does not (management config). No curl needed.

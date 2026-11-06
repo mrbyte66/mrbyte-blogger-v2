@@ -16,6 +16,11 @@ satir:
   site:
     public-origin: https://satir.test
     indexing-enabled: true
+  storage:
+    root: ${java.io.tmpdir}/satir-test-transfers
+    reserve-bytes: 0
+    cleanup-delay: PT1H
+    cleanup-initial-delay: PT1H
   media:
     root: ${java.io.tmpdir}/satir-test-media
   mail:

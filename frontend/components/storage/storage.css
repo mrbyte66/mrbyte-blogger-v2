@@ -1,0 +1,30 @@
+.storage-page{min-height:70vh;color:var(--ink)}
+.storage-body{max-width:1160px;margin:0 auto;padding:48px 28px 72px}
+.storage-heading{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:36px}
+.storage-heading h1{font-family:var(--serif,Georgia,serif);font-size:clamp(28px,4vw,44px);font-weight:500;letter-spacing:-.04em;line-height:1.2;margin:12px 0}
+.storage-heading p,.storage-card p{line-height:1.6}
+.storage-eyebrow{font:11px var(--mono,monospace);letter-spacing:.14em;color:var(--muted)}
+.storage-layout{display:grid;grid-template-columns:minmax(260px,350px) minmax(0,1fr);gap:28px;align-items:start}
+.storage-card{border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 82%,transparent);border-radius:22px;padding:25px;min-width:0;backdrop-filter:blur(16px)}
+.storage-card h2{font-size:19px;margin:0 0 22px}.storage-card h3{font-size:17px;margin:0;overflow-wrap:anywhere}
+.storage-card form{display:grid;gap:18px}.storage-card label{display:grid;gap:8px;font-size:13px}.storage-card label span{color:var(--muted)}
+.storage-card input{font:inherit;color:inherit;min-width:0;max-width:100%;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:12px}
+.storage-card input:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.storage-card button,.storage-actions a,.storage-list-heading button{font:inherit;font-size:13px;padding:11px 15px;border:1px solid var(--line);border-radius:9px;color:var(--ink);background:var(--surface);cursor:pointer;text-decoration:none;min-height:44px}
+.storage-card button:disabled,.storage-card input:disabled{opacity:.5;cursor:not-allowed}
+.storage-card .storage-primary{display:inline-block;border:1px solid var(--ink);background:var(--ink);color:var(--panel);font-size:14px;padding:14px 22px;border-radius:10px;text-decoration:none;text-align:center}
+.storage-picker{border:1px dashed var(--line);border-radius:14px;padding:24px 16px;text-align:center;overflow-wrap:anywhere;background:color-mix(in srgb,var(--surface) 55%,transparent)}
+.storage-picker input{width:100%;font-size:12px}.storage-picker strong{font-size:17px}
+.storage-hint{font-size:12px;color:var(--muted);margin:0;line-height:1.7}.storage-capacity{font-size:12px;border-top:1px solid var(--line);padding-top:20px;margin-top:24px}
+.storage-files{display:grid;gap:16px;min-width:0}.storage-list-heading,.storage-file-title{display:flex;align-items:center;justify-content:space-between;gap:16px}.storage-list-heading h2{font-size:18px;margin:0}.storage-list-heading h2 span{color:var(--muted);font-size:13px;margin-left:7px}
+.storage-badge{font-size:11px;padding:7px 10px;border:1px solid var(--line);border-radius:30px;white-space:nowrap;color:var(--muted)}
+.storage-file>p{font-size:13px}.storage-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+.storage-card .storage-extend{display:flex;align-items:end;gap:12px;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}.storage-extend input{width:110px}
+.storage-resume{margin-top:16px}.storage-resume input{width:100%}
+.storage-confirm{margin-top:18px;padding:16px;border:1px solid var(--line);border-radius:12px}.storage-confirm button+button{margin-left:8px}
+.storage-card progress{width:100%;height:8px;accent-color:var(--ink);margin-top:16px}
+.storage-empty{padding:60px 24px;text-align:center;border:1px dashed var(--line);border-radius:22px;color:var(--muted)}.storage-empty>span{font-size:40px;letter-spacing:.25em}
+.storage-error{padding:14px;border:1px solid #b74f60;border-radius:10px;color:var(--ink);background:color-mix(in srgb,#b74f60 12%,var(--panel));font-size:14px;line-height:1.6}
+.storage-notice{padding:14px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--surface)}
+.storage-shared{max-width:560px;margin:36px auto;text-align:center}.storage-shared h1{overflow-wrap:anywhere;font-size:27px}.storage-shared form{text-align:left;margin:25px 0}.storage-shared .storage-hint{margin-top:24px}.storage-download-size{font-size:28px}
+@media(max-width:760px){.storage-body{padding:28px 16px 48px}.storage-layout{grid-template-columns:1fr}.storage-heading{align-items:start;flex-direction:column;gap:8px}.storage-card{padding:20px}.storage-file-title{align-items:start;flex-direction:column;gap:8px}.storage-card .storage-extend{flex-wrap:wrap}.storage-shared{margin:0 auto}}

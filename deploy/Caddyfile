@@ -29,6 +29,14 @@
 		reverse_proxy umami:3000
 	}
 
+	# Bounded chunks; 50 GB files never pass through a single proxy request.
+	handle /api/v1/studio/files/*/chunks {
+		request_body {
+			max_size 9MB
+		}
+		reverse_proxy backend:8080
+	}
+
 	# Owner image uploads (10 MiB file + multipart overhead).
 	@upload path /api/v1/studio/media
 	handle @upload {

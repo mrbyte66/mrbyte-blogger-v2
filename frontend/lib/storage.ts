@@ -15,6 +15,21 @@ export function remaining(expiresAt: string, now = Date.now()): string {
   if (minutes < 1440) return `${Math.ceil(minutes / 60)} saat kaldı`;
   return `${Math.ceil(minutes / 1440)} gün kaldı`;
 }
+/** "1 sa 12 dk", "4 dk", "35 sn": the time a transfer still needs at its current speed. */
+export function duration(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "";
+  if (seconds < 60) return `${Math.max(1, Math.round(seconds))} sn`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} dk`;
+  return `${Math.floor(minutes / 60)} sa ${minutes % 60} dk`;
+}
+/** Progress of the transfer running in this tab: percent, speed since it (re)started and the time left. */
+export function transferStats(file: { sizeBytes: number; uploadedBytes: number }, started: { at: number; bytes: number }, now = Date.now()) {
+  const percent = file.sizeBytes ? Math.min(100, Math.floor(file.uploadedBytes / file.sizeBytes * 100)) : 0;
+  const seconds = (now - started.at) / 1000, sent = file.uploadedBytes - started.bytes;
+  const speed = seconds >= 2 && sent > 0 ? sent / seconds : 0;
+  return { percent, speed, left: speed ? (file.sizeBytes - file.uploadedBytes) / speed : NaN };
+}
 /** Bounded memory even for 50 GB. This is a resume identity, not a full-file integrity digest. */
 export async function fingerprint(file: File): Promise<string> {
   const sample = 1024 * 1024;

@@ -33,3 +33,14 @@ describe("temporary storage transfer",()=>{
   expect(remaining("2026-11-07T00:00:00Z",Date.parse("2026-11-07T00:00:00Z"))).toBe("Süresi doldu");
  });
 });
+
+import { duration, transferStats } from "../lib/storage";
+it("reports percent, speed since the transfer started and the time left", () => {
+  const started = { at: 0, bytes: 1_000_000_000 };
+  const stats = transferStats({ sizeBytes: 15_000_000_000, uploadedBytes: 6_000_000_000 }, started, 100_000);
+  expect(stats.percent).toBe(40);
+  expect(stats.speed).toBe(50_000_000);
+  expect(duration(stats.left)).toBe("3 dk");
+  expect(transferStats({ sizeBytes: 10, uploadedBytes: 5 }, { at: 0, bytes: 5 }, 1000).speed).toBe(0);
+  expect(duration(45)).toBe("45 sn"); expect(duration(4380)).toBe("1 sa 13 dk"); expect(duration(NaN)).toBe("");
+});
